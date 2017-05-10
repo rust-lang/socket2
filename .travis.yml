@@ -7,7 +7,7 @@ before_script:
 script:
   - cargo test
   - cargo test --features reuseport
-  - cargo doc --no-deps
+  - cargo doc --no-deps --all-features
 after_success:
   - travis-cargo --only nightly doc-upload
 env:
