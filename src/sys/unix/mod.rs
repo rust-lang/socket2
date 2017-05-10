@@ -613,7 +613,7 @@ impl Socket {
     #[cfg(all(unix, feature = "reuseport"))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int)?
+            self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int)
         }
     }
 

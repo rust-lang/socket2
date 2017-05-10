@@ -298,7 +298,7 @@ impl Socket {
     /// This function is only available on Unix when the `reuseport` feature is
     /// enabled.
     #[cfg(all(unix, feature = "reuseport"))]
-    fn reuse_port(&self) -> io::Result<bool> {
+    pub fn reuse_port(&self) -> io::Result<bool> {
         self.inner.reuse_port()
     }
 
@@ -311,7 +311,7 @@ impl Socket {
     /// This function is only available on Unix when the `reuseport` feature is
     /// enabled.
     #[cfg(all(unix, feature = "reuseport"))]
-    fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
+    pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         self.inner.set_reuse_port(reuse)
     }
 }
