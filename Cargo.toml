@@ -1,0 +1,16 @@
+[package]
+name = "socket2"
+version = "0.1.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
+
+[target."cfg(windows)".dependencies]
+ws2_32-sys = "0.2"
+winapi = "0.2"
+kernel32-sys = "0.2"
+
+[target."cfg(unix)".dependencies]
+cfg-if = "0.1"
+libc = "0.2.14"
+
+[features]
+reuseport = []
