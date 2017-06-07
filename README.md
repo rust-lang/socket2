@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/rust-lang-nursery/socket2-rs.svg?branch=master)](https://travis-ci.org/rust-lang-nursery/socket2-rs)
 [![Build status](https://ci.appveyor.com/api/projects/status/68vjengx3n0rg843?svg=true)](https://ci.appveyor.com/project/alexcrichton/socket2-rs)
 
-[Documentation](http://alexcrichton.com/socket2-rs/)
+[Documentation](https://docs.rs/socket2)
 
 # License
 
