@@ -767,6 +767,24 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
+impl From<net::TcpStream> for Socket {
+    fn from(socket: net::TcpStream) -> Socket {
+        unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
+    }
+}
+
+impl From<net::TcpListener> for Socket {
+    fn from(socket: net::TcpListener) -> Socket {
+        unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
+    }
+}
+
+impl From<net::UdpSocket> for Socket {
+    fn from(socket: net::UdpSocket) -> Socket {
+        unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
+    }
+}
+
 fn clamp(input: usize) -> c_int {
     cmp::min(input, <c_int>::max_value() as usize) as c_int
 }

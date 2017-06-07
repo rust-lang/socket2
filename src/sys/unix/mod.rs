@@ -760,6 +760,24 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
+impl From<net::TcpStream> for Socket {
+    fn from(socket: net::TcpStream) -> Socket {
+        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+    }
+}
+
+impl From<net::TcpListener> for Socket {
+    fn from(socket: net::TcpListener) -> Socket {
+        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+    }
+}
+
+impl From<net::UdpSocket> for Socket {
+    fn from(socket: net::UdpSocket) -> Socket {
+        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+    }
+}
+
 fn max_len() -> usize {
     // The maximum read limit on most posix-like systems is `SSIZE_MAX`,
     // with the man page quoting that if the count of bytes to read is

@@ -22,6 +22,11 @@ use sys;
 use {Socket, Protocol, Domain, Type};
 
 impl Socket {
+    /// Creates a new socket ready to be configured.
+    ///
+    /// This function corresponds to `socket(2)` and simply creates a new
+    /// socket, no other configuration is done and further functions must be
+    /// invoked to configure this socket.
     pub fn new(domain: Domain,
                type_: Type,
                protocol: Option<Protocol>) -> io::Result<Socket> {
@@ -31,102 +36,233 @@ impl Socket {
         })
     }
 
+    /// Consumes this `Socket`, converting it to a `TcpStream`.
+    pub fn into_tcp_stream(self) -> net::TcpStream {
+        self.into()
+    }
+
+    /// Consumes this `Socket`, converting it to a `TcpListener`.
+    pub fn into_tcp_listener(self) -> net::TcpListener {
+        self.into()
+    }
+
+    /// Consumes this `Socket`, converting it to a `UdpSocket`.
+    pub fn into_udp_socket(self) -> net::UdpSocket {
+        self.into()
+    }
+
+    /// Initiate a connection on this socket to the specified address.
+    ///
+    /// This function directly corresponds to the connect(2) function on Windows
+    /// and Unix.
+    ///
+    /// An error will be returned if `listen` or `connect` has already been
+    /// called on this builder.
     pub fn connect(&self, addr: &SocketAddr) -> io::Result<()> {
         self.inner.connect(addr)
     }
 
+    /// Binds this socket to the specified address.
+    ///
+    /// This function directly corresponds to the bind(2) function on Windows
+    /// and Unix.
     pub fn bind(&self, addr: &SocketAddr) -> io::Result<()> {
         self.inner.bind(addr)
     }
 
+    /// Mark a socket as ready to accept incoming connection requests using
+    /// accept()
+    ///
+    /// This function directly corresponds to the listen(2) function on Windows
+    /// and Unix.
+    ///
+    /// An error will be returned if `listen` or `connect` has already been
+    /// called on this builder.
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         self.inner.listen(backlog)
     }
 
+    /// Accept a new incoming connection from this listener.
+    ///
+    /// This function will block the calling thread until a new connection is
+    /// established. When established, the corresponding `Socket` and the
+    /// remote peer's address will be returned.
     pub fn accept(&self) -> io::Result<(Socket, SocketAddr)> {
         self.inner.accept().map(|(socket, addr)| {
             (Socket { inner: socket }, addr)
         })
     }
 
+    /// Returns the socket address of the local half of this TCP connection.
     pub fn local_addr(&self) -> io::Result<SocketAddr> {
         self.inner.local_addr()
     }
 
+    /// Returns the socket address of the remote peer of this TCP connection.
     pub fn peer_addr(&self) -> io::Result<SocketAddr> {
         self.inner.peer_addr()
     }
 
+    /// Creates a new independently owned handle to the underlying socket.
+    ///
+    /// The returned `TcpStream` is a reference to the same stream that this
+    /// object references. Both handles will read and write the same stream of
+    /// data, and options set on one stream will be propagated to the other
+    /// stream.
     pub fn try_clone(&self) -> io::Result<Socket> {
         self.inner.try_clone().map(|s| Socket { inner: s })
     }
 
+    /// Get the value of the `SO_ERROR` option on this socket.
+    ///
+    /// This will retrieve the stored error in the underlying socket, clearing
+    /// the field in the process. This can be useful for checking errors between
+    /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
         self.inner.take_error()
     }
 
+    /// Moves this TCP stream into or out of nonblocking mode.
+    ///
+    /// On Unix this corresponds to calling fcntl, and on Windows this
+    /// corresponds to calling ioctlsocket.
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         self.inner.set_nonblocking(nonblocking)
     }
 
+    /// Shuts down the read, write, or both halves of this connection.
+    ///
+    /// This function will cause all pending and future I/O on the specified
+    /// portions to return immediately with an appropriate value.
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         self.inner.shutdown(how)
     }
 
+    /// Receives data on the socket from the remote address to which it is
+    /// connected.
+    ///
+    /// The [`connect`] method will connect this socket to a remote address. This
+    /// method will fail if the socket is not connected.
+    ///
+    /// [`connect`]: #method.connect
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.recv(buf)
     }
 
+    /// Receives data on the socket from the remote adress to which it is
+    /// connected, without removing that data from the queue. On success,
+    /// returns the number of bytes peeked.
+    ///
+    /// Successive calls return the same data. This is accomplished by passing
+    /// `MSG_PEEK` as a flag to the underlying `recv` system call.
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.peek(buf)
     }
 
+    /// Receives data from the socket. On success, returns the number of bytes
+    /// read and the address from whence the data came.
     pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
         self.inner.recv_from(buf)
     }
 
+    /// Receives data from the socket, without removing it from the queue.
+    ///
+    /// Successive calls return the same data. This is accomplished by passing
+    /// `MSG_PEEK` as a flag to the underlying `recvfrom` system call.
+    ///
+    /// On success, returns the number of bytes peeked and the address from
+    /// whence the data came.
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
         self.inner.peek_from(buf)
     }
 
+    /// Sends data on the socket to a connected peer.
+    ///
+    /// This is typically used on TCP sockets or datagram sockets which have
+    /// been connected.
+    ///
+    /// On success returns the number of bytes that were sent.
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
         self.inner.send(buf)
     }
 
+    /// Sends data on the socket to the given address. On success, returns the
+    /// number of bytes written.
+    ///
+    /// This is typically used on UDP or datagram-oriented sockets. On success
+    /// returns the number of bytes that were sent.
     pub fn send_to(&self, buf: &[u8], addr: &SocketAddr) -> io::Result<usize> {
         self.inner.send_to(buf, addr)
     }
 
     // ================================================
 
+    /// Gets the value of the `IP_TTL` option for this socket.
+    ///
+    /// For more information about this option, see [`set_ttl`][link].
+    ///
+    /// [link]: #method.set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
         self.inner.ttl()
     }
 
+    /// Sets the value for the `IP_TTL` option on this socket.
+    ///
+    /// This value sets the time-to-live field that is used in every packet sent
+    /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
         self.inner.set_ttl(ttl)
     }
 
+    /// Gets the value of the `IPV6_V6ONLY` option for this socket.
+    ///
+    /// For more information about this option, see [`set_only_v6`][link].
+    ///
+    /// [link]: #method.set_only_v6
     pub fn only_v6(&self) -> io::Result<bool> {
         self.inner.only_v6()
     }
 
+    /// Sets the value for the `IPV6_V6ONLY` option on this socket.
+    ///
+    /// If this is set to `true` then the socket is restricted to sending and
+    /// receiving IPv6 packets only. In this case two IPv4 and IPv6 applications
+    /// can bind the same port at the same time.
+    ///
+    /// If this is set to `false` then the socket can be used to send and
+    /// receive packets from an IPv4-mapped IPv6 address.
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
         self.inner.set_only_v6(only_v6)
     }
 
+    /// Returns the read timeout of this socket.
+    ///
+    /// If the timeout is `None`, then `read` calls will block indefinitely.
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         self.inner.read_timeout()
     }
 
+    /// Sets the read timeout to the timeout specified.
+    ///
+    /// If the value specified is `None`, then `read` calls will block
+    /// indefinitely. It is an error to pass the zero `Duration` to this
+    /// method.
     pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
         self.inner.set_read_timeout(dur)
     }
 
+    /// Returns the write timeout of this socket.
+    ///
+    /// If the timeout is `None`, then `write` calls will block indefinitely.
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         self.inner.write_timeout()
     }
 
+    /// Sets the write timeout to the timeout specified.
+    ///
+    /// If the value specified is `None`, then `write` calls will block
+    /// indefinitely. It is an error to pass the zero `Duration` to this
+    /// method.
     pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
         self.inner.set_write_timeout(dur)
     }
@@ -135,7 +271,7 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_nodelay`][link].
     ///
-    /// [link]: #tymethod.set_nodelay
+    /// [link]: #method.set_nodelay
     pub fn nodelay(&self) -> io::Result<bool> {
         self.inner.nodelay()
     }
@@ -151,56 +287,124 @@ impl Socket {
         self.inner.set_nodelay(nodelay)
     }
 
+    /// Sets the value of the `SO_BROADCAST` option for this socket.
+    ///
+    /// When enabled, this socket is allowed to send packets to a broadcast
+    /// address.
     pub fn broadcast(&self) -> io::Result<bool> {
         self.inner.broadcast()
     }
 
+    /// Gets the value of the `SO_BROADCAST` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`set_broadcast`][link].
+    ///
+    /// [link]: #method.set_broadcast
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
         self.inner.set_broadcast(broadcast)
     }
 
+    /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`set_multicast_ttl_v4`][link].
+    ///
+    /// [link]: #method.set_multicast_ttl_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
         self.inner.multicast_loop_v4()
     }
 
+    /// Sets the value of the `IP_MULTICAST_LOOP` option for this socket.
+    ///
+    /// If enabled, multicast packets will be looped back to the local socket.
+    /// Note that this may not have any affect on IPv6 sockets.
     pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
         self.inner.set_multicast_loop_v4(multicast_loop_v4)
     }
 
+    /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`set_multicast_ttl_v4`][link].
+    ///
+    /// [link]: #method.set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
         self.inner.multicast_ttl_v4()
     }
 
+    /// Sets the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// Indicates the time-to-live value of outgoing multicast packets for
+    /// this socket. The default value is 1 which means that multicast packets
+    /// don't leave the local network unless explicitly requested.
+    ///
+    /// Note that this may not have any affect on IPv6 sockets.
     pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
         self.inner.set_multicast_ttl_v4(multicast_ttl_v4)
     }
 
+    /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`set_multicast_loop_v6`][link].
+    ///
+    /// [link]: #method.set_multicast_loop_v6
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
         self.inner.multicast_loop_v6()
     }
 
+    /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// Controls whether this socket sees the multicast packets it sends itself.
+    /// Note that this may not have any affect on IPv4 sockets.
     pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
         self.inner.set_multicast_loop_v6(multicast_loop_v6)
     }
 
+
+    /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// address of the local interface with which the system should join the
+    /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
+    /// interface is chosen by the system.
     pub fn join_multicast_v4(&self,
                              multiaddr: &Ipv4Addr,
                              interface: &Ipv4Addr) -> io::Result<()> {
         self.inner.join_multicast_v4(multiaddr, interface)
     }
 
+    /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// index of the interface to join/leave (or 0 to indicate any interface).
     pub fn join_multicast_v6(&self,
                              multiaddr: &Ipv6Addr,
                              interface: u32) -> io::Result<()> {
         self.inner.join_multicast_v6(multiaddr, interface)
     }
 
+    /// Executes an operation of the `IP_DROP_MEMBERSHIP` type.
+    ///
+    /// For more information about this option, see
+    /// [`join_multicast_v4`][link].
+    ///
+    /// [link]: #method.join_multicast_v4
     pub fn leave_multicast_v4(&self,
                               multiaddr: &Ipv4Addr,
                               interface: &Ipv4Addr) -> io::Result<()> {
         self.inner.leave_multicast_v4(multiaddr, interface)
     }
 
+    /// Executes an operation of the `IPV6_DROP_MEMBERSHIP` type.
+    ///
+    /// For more information about this option, see
+    /// [`join_multicast_v6`][link].
+    ///
+    /// [link]: #method.join_multicast_v6
     pub fn leave_multicast_v6(&self,
                               multiaddr: &Ipv6Addr,
                               interface: u32) -> io::Result<()> {
@@ -237,7 +441,7 @@ impl Socket {
     /// For more information about this option, see
     /// [`set_recv_buffer_size`][link].
     ///
-    /// [link]: #tymethod.set_recv_buffer_size
+    /// [link]: #method.set_recv_buffer_size
     pub fn recv_buffer_size(&self) -> io::Result<usize> {
         self.inner.recv_buffer_size()
     }
@@ -254,7 +458,7 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_send_buffer`][link].
     ///
-    /// [link]: #tymethod.set_send_buffer
+    /// [link]: #method.set_send_buffer
     pub fn send_buffer_size(&self) -> io::Result<usize> {
         self.inner.send_buffer_size()
     }
@@ -272,7 +476,7 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_keepalive`][link].
     ///
-    /// [link]: #tymethod.set_keepalive
+    /// [link]: #method.set_keepalive
     pub fn keepalive(&self) -> io::Result<Option<Duration>> {
         self.inner.keepalive()
     }
@@ -354,6 +558,24 @@ impl fmt::Debug for Socket {
     }
 }
 
+impl From<net::TcpStream> for Socket {
+    fn from(socket: net::TcpStream) -> Socket {
+        Socket { inner: socket.into() }
+    }
+}
+
+impl From<net::TcpListener> for Socket {
+    fn from(socket: net::TcpListener) -> Socket {
+        Socket { inner: socket.into() }
+    }
+}
+
+impl From<net::UdpSocket> for Socket {
+    fn from(socket: net::UdpSocket) -> Socket {
+        Socket { inner: socket.into() }
+    }
+}
+
 impl From<Socket> for net::TcpStream {
     fn from(socket: Socket) -> net::TcpStream {
         socket.inner.into()
@@ -373,10 +595,12 @@ impl From<Socket> for net::UdpSocket {
 }
 
 impl Domain {
+    /// Domain for IPv4 communication, corresponding to `AF_INET`.
     pub fn ipv4() -> Domain {
         Domain(c::AF_INET)
     }
 
+    /// Domain for IPv6 communication, corresponding to `AF_INET6`.
     pub fn ipv6() -> Domain {
         Domain(c::AF_INET6)
     }
@@ -395,18 +619,26 @@ impl From<Domain> for i32 {
 }
 
 impl Type {
+    /// Type corresponding to `SOCK_STREAM`
+    ///
+    /// Used for protocols such as TCP.
     pub fn stream() -> Type {
         Type(c::SOCK_STREAM)
     }
 
+    /// Type corresponding to `SOCK_DGRAM`
+    ///
+    /// Used for protocols such as UDP.
     pub fn dgram() -> Type {
         Type(c::SOCK_DGRAM)
     }
 
+    /// Type corresponding to `SOCK_SEQPACKET`
     pub fn seqpacket() -> Type {
         Type(c::SOCK_SEQPACKET)
     }
 
+    /// Type corresponding to `SOCK_RAW`
     pub fn raw() -> Type {
         Type(c::SOCK_RAW)
     }
