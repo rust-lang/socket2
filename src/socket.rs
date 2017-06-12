@@ -10,7 +10,7 @@
 
 use std::fmt;
 use std::io::{self, Read, Write};
-use std::net::{self, SocketAddr, Ipv4Addr, Ipv6Addr, Shutdown};
+use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::time::Duration;
 
 #[cfg(unix)]
@@ -19,7 +19,7 @@ use libc as c;
 use winapi as c;
 
 use sys;
-use {Socket, Protocol, Domain, Type};
+use {Socket, Protocol, Domain, Type, SockAddr};
 
 impl Socket {
     /// Creates a new socket ready to be configured.
@@ -58,7 +58,7 @@ impl Socket {
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
-    pub fn connect(&self, addr: &SocketAddr) -> io::Result<()> {
+    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
         self.inner.connect(addr)
     }
 
@@ -81,7 +81,7 @@ impl Socket {
     ///
     /// If the connection request times out, it may still be processing in the
     /// background - a second call to `connect` or `connect_timeout` may fail.
-    pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
+    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
         self.inner.connect_timeout(addr, timeout)
     }
 
@@ -89,7 +89,7 @@ impl Socket {
     ///
     /// This function directly corresponds to the bind(2) function on Windows
     /// and Unix.
-    pub fn bind(&self, addr: &SocketAddr) -> io::Result<()> {
+    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         self.inner.bind(addr)
     }
 
@@ -110,19 +110,19 @@ impl Socket {
     /// This function will block the calling thread until a new connection is
     /// established. When established, the corresponding `Socket` and the
     /// remote peer's address will be returned.
-    pub fn accept(&self) -> io::Result<(Socket, SocketAddr)> {
+    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         self.inner.accept().map(|(socket, addr)| {
             (Socket { inner: socket }, addr)
         })
     }
 
     /// Returns the socket address of the local half of this TCP connection.
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_addr(&self) -> io::Result<SockAddr> {
         self.inner.local_addr()
     }
 
     /// Returns the socket address of the remote peer of this TCP connection.
-    pub fn peer_addr(&self) -> io::Result<SocketAddr> {
+    pub fn peer_addr(&self) -> io::Result<SockAddr> {
         self.inner.peer_addr()
     }
 
@@ -184,7 +184,7 @@ impl Socket {
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
-    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.inner.recv_from(buf)
     }
 
@@ -195,7 +195,7 @@ impl Socket {
     ///
     /// On success, returns the number of bytes peeked and the address from
     /// whence the data came.
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.inner.peek_from(buf)
     }
 
@@ -214,7 +214,7 @@ impl Socket {
     ///
     /// This is typically used on UDP or datagram-oriented sockets. On success
     /// returns the number of bytes that were sent.
-    pub fn send_to(&self, buf: &[u8], addr: &SocketAddr) -> io::Result<usize> {
+    pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         self.inner.send_to(buf, addr)
     }
 
@@ -693,12 +693,14 @@ impl From<Protocol> for i32 {
 
 #[cfg(test)]
 mod test {
+    use std::net::SocketAddr;
+
     use super::*;
 
     #[test]
     fn connect_timeout_unrouteable() {
         // this IP is unroutable, so connections should always time out
-        let addr: SocketAddr = "10.255.255.1:80".parse().unwrap();
+        let addr = "10.255.255.1:80".parse::<SocketAddr>().unwrap().into();
 
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
         match socket.connect_timeout(&addr, Duration::from_millis(250)) {
@@ -711,7 +713,7 @@ mod test {
     #[test]
     fn connect_timeout_valid() {
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
-        socket.bind(&"127.0.0.1:0".parse().unwrap()).unwrap();
+        socket.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into()).unwrap();
         socket.listen(128).unwrap();
 
         let addr = socket.local_addr().unwrap();
