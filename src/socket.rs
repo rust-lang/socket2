@@ -62,6 +62,29 @@ impl Socket {
         self.inner.connect(addr)
     }
 
+    /// Initiate a connection on this socket to the specified address, only
+    /// only waiting for a certain period of time for the connection to be
+    /// established.
+    ///
+    /// Unlike many other methods on `Socket`, this does *not* correspond to a
+    /// single C function. It sets the socket to nonblocking mode, connects via
+    /// connect(2), and then waits for the connection to complete with poll(2)
+    /// on Unix and select on Windows. When the connection is complete, the
+    /// socket is set back to blocking mode. On Unix, this will loop over
+    /// `EINTR` errors.
+    ///
+    /// # Warnings
+    ///
+    /// The nonblocking state of the socket is overridden by this function -
+    /// it will be returned in blocking mode on success, and in an indeterminate
+    /// state on failure.
+    ///
+    /// If the connection request times out, it may still be processing in the
+    /// background - a second call to `connect` or `connect_timeout` may fail.
+    pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
+        self.inner.connect_timeout(addr, timeout)
+    }
+
     /// Binds this socket to the specified address.
     ///
     /// This function directly corresponds to the bind(2) function on Windows
@@ -665,5 +688,35 @@ impl From<i32> for Protocol {
 impl From<Protocol> for i32 {
     fn from(a: Protocol) -> i32 {
         a.into()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn connect_timeout_unrouteable() {
+        // this IP is unroutable, so connections should always time out
+        let addr: SocketAddr = "10.255.255.1:80".parse().unwrap();
+
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        match socket.connect_timeout(&addr, Duration::from_millis(250)) {
+            Ok(_) => panic!("unexpected success"),
+            Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {}
+            Err(e) => panic!("unexpected error {}", e),
+        }
+    }
+
+    #[test]
+    fn connect_timeout_valid() {
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        socket.bind(&"127.0.0.1:0".parse().unwrap()).unwrap();
+        socket.listen(128).unwrap();
+
+        let addr = socket.local_addr().unwrap();
+
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        socket.connect_timeout(&addr, Duration::from_millis(250)).unwrap();
     }
 }

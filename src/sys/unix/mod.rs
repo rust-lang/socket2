@@ -18,7 +18,7 @@ use std::net::{self, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr}
 use std::ops::Neg;
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use libc::{self, c_void, c_int, sockaddr_in, sockaddr_storage, sockaddr_in6};
 use libc::{sockaddr, socklen_t, AF_INET, AF_INET6, ssize_t};
@@ -115,6 +115,67 @@ impl Socket {
         let (addr, len) = addr2raw(addr);
         unsafe {
             cvt(libc::connect(self.fd, addr, len)).map(|_| ())
+        }
+    }
+
+    pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
+        self.set_nonblocking(true)?;
+        let r = self.connect(addr);
+        self.set_nonblocking(false)?;
+
+        match r {
+            Ok(()) => return Ok(()),
+            // there's no io::ErrorKind conversion registered for EINPROGRESS :(
+            Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
+            Err(e) => return Err(e),
+        }
+
+        let mut pollfd = libc::pollfd {
+            fd: self.fd,
+            events: libc::POLLOUT,
+            revents: 0,
+        };
+
+        if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                    "cannot set a 0 duration timeout"));
+        }
+
+        let start = Instant::now();
+
+        loop {
+            let elapsed = start.elapsed();
+            if elapsed >= timeout {
+                return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out"));
+            }
+
+            let timeout = timeout - elapsed;
+            let mut timeout = timeout.as_secs()
+                .saturating_mul(1_000)
+                .saturating_add(timeout.subsec_nanos() as u64 / 1_000_000);
+            if timeout == 0 {
+                timeout = 1;
+            }
+
+            let timeout = cmp::min(timeout, c_int::max_value() as u64) as c_int;
+
+            match unsafe { libc::poll(&mut pollfd, 1, timeout) } {
+                -1 => {
+                    let err = io::Error::last_os_error();
+                    if err.kind() != io::ErrorKind::Interrupted {
+                        return Err(err);
+                    }
+                }
+                0 => return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out")),
+                _ => {
+                    if pollfd.revents & libc::POLLOUT == 0 {
+                        if let Some(e) = self.take_error()? {
+                            return Err(e);
+                        }
+                    }
+                    return Ok(());
+                }
+            }
         }
     }
 
