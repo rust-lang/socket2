@@ -14,7 +14,7 @@ use std::io::{Read, Write};
 use std::io;
 use std::mem;
 use std::net::Shutdown;
-use std::net::{self, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::windows::prelude::*;
 use std::ptr;
 use std::sync::{Once, ONCE_INIT};
@@ -23,6 +23,8 @@ use std::time::Duration;
 use kernel32;
 use winapi::*;
 use ws2_32;
+
+use SockAddr;
 
 const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
 const MSG_PEEK: c_int = 0x2;
@@ -77,10 +79,9 @@ impl Socket {
         }
     }
 
-    pub fn bind(&self, addr: &SocketAddr) -> io::Result<()> {
-        let (addr, len) = addr2raw(addr);
+    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
-            if ws2_32::bind(self.socket, addr, len) == 0 {
+            if ws2_32::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
                 Ok(())
             } else {
                 Err(last_error())
@@ -98,10 +99,9 @@ impl Socket {
         }
     }
 
-    pub fn connect(&self, addr: &SocketAddr) -> io::Result<()> {
-        let (addr, len) = addr2raw(addr);
+    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
-            if ws2_32::connect(self.socket, addr, len) == 0 {
+            if ws2_32::connect(self.socket, addr.as_ptr(), addr.len()) == 0 {
                 Ok(())
             } else {
                 Err(last_error())
@@ -109,7 +109,7 @@ impl Socket {
         }
     }
 
-    pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
+    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = self.connect(addr);
         self.set_nonblocking(true)?;
@@ -157,7 +157,7 @@ impl Socket {
         }
     }
 
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
@@ -166,11 +166,11 @@ impl Socket {
                                    &mut len) != 0 {
                 return Err(last_error())
             }
-            raw2addr(&storage, len)
+            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
         }
     }
 
-    pub fn peer_addr(&self) -> io::Result<SocketAddr> {
+    pub fn peer_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
@@ -179,7 +179,7 @@ impl Socket {
                                    &mut len) != 0 {
                 return Err(last_error())
             }
-            raw2addr(&storage, len)
+            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
         }
     }
 
@@ -207,7 +207,7 @@ impl Socket {
         }
     }
 
-    pub fn accept(&self) -> io::Result<(Socket, SocketAddr)> {
+    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
@@ -221,7 +221,7 @@ impl Socket {
                 socket => Socket::from_raw_socket(socket),
             };
             socket.set_no_inherit()?;
-            let addr = raw2addr(&storage, len)?;
+            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, len);
             Ok((socket, addr))
         }
     }
@@ -297,16 +297,16 @@ impl Socket {
         }
     }
 
-    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recvfrom(buf, 0)
     }
 
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recvfrom(buf, MSG_PEEK)
     }
 
     fn recvfrom(&self, buf: &mut [u8], flags: c_int)
-                -> io::Result<(usize, SocketAddr)> {
+                -> io::Result<(usize, SockAddr)> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut addrlen = mem::size_of_val(&storage) as c_int;
@@ -324,7 +324,8 @@ impl Socket {
                 SOCKET_ERROR => return Err(last_error()),
                 n => n as usize,
             };
-            Ok((n, raw2addr(&storage, addrlen)?))
+            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
+            Ok((n, addr))
         }
     }
 
@@ -344,16 +345,15 @@ impl Socket {
         }
     }
 
-    pub fn send_to(&self, buf: &[u8], addr: &SocketAddr) -> io::Result<usize> {
+    pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         unsafe {
-            let (addr, len) = addr2raw(addr);
             let n = {
                 ws2_32::sendto(self.socket,
                                buf.as_ptr() as *const c_char,
                                clamp(buf.len()),
                                0,
-                               addr,
-                               len)
+                               addr.as_ptr(),
+                               addr.len())
             };
             if n == SOCKET_ERROR {
                 Err(last_error())
@@ -835,59 +835,6 @@ impl From<net::UdpSocket> for Socket {
 
 fn clamp(input: usize) -> c_int {
     cmp::min(input, <c_int>::max_value() as usize) as c_int
-}
-
-fn addr2raw(addr: &SocketAddr) -> (*const SOCKADDR, c_int) {
-    match *addr {
-        SocketAddr::V4(ref a) => {
-            (a as *const _ as *const _, mem::size_of_val(a) as c_int)
-        }
-        SocketAddr::V6(ref a) => {
-            (a as *const _ as *const _, mem::size_of_val(a) as c_int)
-        }
-    }
-}
-
-fn raw2addr(storage: &SOCKADDR_STORAGE, len: c_int) -> io::Result<SocketAddr> {
-    match storage.ss_family as c_int {
-        AF_INET => {
-            unsafe {
-                assert!(len as usize >= mem::size_of::<SOCKADDR_IN>());
-                let sa = storage as *const _ as *const SOCKADDR_IN;
-                let bits = ::ntoh((*sa).sin_addr.S_un);
-                let ip = Ipv4Addr::new((bits >> 24) as u8,
-                                       (bits >> 16) as u8,
-                                       (bits >> 8) as u8,
-                                       bits as u8);
-                Ok(SocketAddr::V4(SocketAddrV4::new(ip, ::ntoh((*sa).sin_port))))
-            }
-        }
-        AF_INET6 => {
-            unsafe {
-                assert!(len as usize >= mem::size_of::<sockaddr_in6>());
-
-                let sa = storage as *const _ as *const sockaddr_in6;
-                let arr = (*sa).sin6_addr.s6_addr;
-
-                let ip = Ipv6Addr::new(
-                    (arr[0] as u16) << 8 | (arr[1] as u16),
-                    (arr[2] as u16) << 8 | (arr[3] as u16),
-                    (arr[4] as u16) << 8 | (arr[5] as u16),
-                    (arr[6] as u16) << 8 | (arr[7] as u16),
-                    (arr[8] as u16) << 8 | (arr[9] as u16),
-                    (arr[10] as u16) << 8 | (arr[11] as u16),
-                    (arr[12] as u16) << 8 | (arr[13] as u16),
-                    (arr[14] as u16) << 8 | (arr[15] as u16),
-                );
-
-                Ok(SocketAddr::V6(SocketAddrV6::new(ip,
-                                                    ::ntoh((*sa).sin6_port),
-                                                    (*sa).sin6_flowinfo,
-                                                    (*sa).sin6_scope_id)))
-            }
-        }
-        _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid argument")),
-    }
 }
 
 fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {

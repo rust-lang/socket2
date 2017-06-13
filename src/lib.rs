@@ -20,13 +20,14 @@
 //! # Examples
 //!
 //! ```no_run
+//! use std::net::SocketAddr;
 //! use socket2::{Socket, Domain, Type};
 //!
 //! // create a TCP listener bound to two addresses
 //! let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
 //!
-//! socket.bind(&"127.0.0.1:12345".parse().unwrap()).unwrap();
-//! socket.bind(&"127.0.0.1:12346".parse().unwrap()).unwrap();
+//! socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
+//! socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
 //! socket.listen(128).unwrap();
 //!
 //! let listener = socket.into_tcp_listener();
@@ -45,6 +46,10 @@
 
 use utils::NetInt;
 
+#[cfg(unix)] use libc::{sockaddr_storage, socklen_t};
+#[cfg(windows)] use winapi::{SOCKADDR_STORAGE as sockaddr_storage, socklen_t};
+
+mod sockaddr;
 mod socket;
 mod utils;
 
@@ -63,13 +68,14 @@ mod utils;
 /// # Examples
 ///
 /// ```no_run
-/// use socket2::{Socket, Domain, Type};
+/// use std::net::SocketAddr;
+/// use socket2::{Socket, Domain, Type, SockAddr};
 ///
 /// // create a TCP listener bound to two addresses
 /// let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
 ///
-/// socket.bind(&"127.0.0.1:12345".parse().unwrap()).unwrap();
-/// socket.bind(&"127.0.0.1:12346".parse().unwrap()).unwrap();
+/// socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
+/// socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
 /// socket.listen(128).unwrap();
 ///
 /// let listener = socket.into_tcp_listener();
@@ -77,6 +83,15 @@ mod utils;
 /// ```
 pub struct Socket {
     inner: sys::Socket,
+}
+
+/// The address of a socket.
+///
+/// `SockAddr`s may be constructed directly to and from the standard library
+/// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
+pub struct SockAddr {
+    storage: sockaddr_storage,
+    len: socklen_t,
 }
 
 /// Specification of the communication domain for a socket.
@@ -111,5 +126,3 @@ pub struct Type(i32);
 pub struct Protocol(i32);
 
 fn hton<I: NetInt>(i: I) -> I { i.to_be() }
-
-fn ntoh<I: NetInt>(i: I) -> I { I::from_be(i) }

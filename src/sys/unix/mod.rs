@@ -14,14 +14,14 @@ use std::io::{Read, Write, ErrorKind};
 use std::io;
 use std::mem;
 use std::net::Shutdown;
-use std::net::{self, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
 use std::time::{Duration, Instant};
 
-use libc::{self, c_void, c_int, sockaddr_in, sockaddr_storage, sockaddr_in6};
-use libc::{sockaddr, socklen_t, AF_INET, AF_INET6, ssize_t};
+use libc::{self, c_void, c_int};
+use libc::{sockaddr, socklen_t, ssize_t};
 
 cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -57,6 +57,7 @@ cfg_if! {
     }
 }
 
+use SockAddr;
 use utils::One;
 
 #[macro_use]
@@ -93,15 +94,9 @@ impl Socket {
         }
     }
 
-    pub fn bind(&self, addr: &SocketAddr) -> io::Result<()> {
-        #[cfg(not(all(target_arch = "aarch64",target_os = "android")))]
-        use libc::socklen_t as len_t;
-        #[cfg(all(target_arch = "aarch64",target_os = "android"))]
-        use libc::c_int as len_t;
-
-        let (addr, len) = addr2raw(addr);
+    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
-            cvt(libc::bind(self.fd, addr, len as len_t)).map(|_| ())
+            cvt(libc::bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
         }
     }
 
@@ -111,14 +106,13 @@ impl Socket {
         }
     }
 
-    pub fn connect(&self, addr: &SocketAddr) -> io::Result<()> {
-        let (addr, len) = addr2raw(addr);
+    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
-            cvt(libc::connect(self.fd, addr, len)).map(|_| ())
+            cvt(libc::connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ())
         }
     }
 
-    pub fn connect_timeout(&self, addr: &SocketAddr, timeout: Duration) -> io::Result<()> {
+    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = self.connect(addr);
         self.set_nonblocking(false)?;
@@ -179,25 +173,25 @@ impl Socket {
         }
     }
 
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as libc::socklen_t;
             cvt(libc::getsockname(self.fd,
                                   &mut storage as *mut _ as *mut _,
                                   &mut len))?;
-            raw2addr(&storage, len)
+            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
         }
     }
 
-    pub fn peer_addr(&self) -> io::Result<SocketAddr> {
+    pub fn peer_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as libc::socklen_t;
             cvt(libc::getpeername(self.fd,
                                   &mut storage as *mut _ as *mut _,
                                   &mut len))?;
-            raw2addr(&storage, len)
+            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
         }
     }
 
@@ -233,7 +227,7 @@ impl Socket {
     }
 
     #[allow(unused_mut)]
-    pub fn accept(&self) -> io::Result<(Socket, SocketAddr)> {
+    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
         let mut len = mem::size_of_val(&storage) as socklen_t;
 
@@ -270,7 +264,7 @@ impl Socket {
                 fd
             }
         };
-        let addr = raw2addr(&storage, len)?;
+        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
         Ok((socket, addr))
     }
 
@@ -334,16 +328,16 @@ impl Socket {
         }
     }
 
-    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recvfrom(buf, 0)
     }
 
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recvfrom(buf, libc::MSG_PEEK)
     }
 
     fn recvfrom(&self, buf: &mut [u8], flags: c_int)
-                -> io::Result<(usize, SocketAddr)> {
+                -> io::Result<(usize, SockAddr)> {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut addrlen = mem::size_of_val(&storage) as socklen_t;
@@ -356,7 +350,8 @@ impl Socket {
                                &mut storage as *mut _ as *mut _,
                                &mut addrlen)
             })?;
-            Ok((n as usize, raw2addr(&storage, addrlen)?))
+            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
+            Ok((n as usize, addr))
         }
     }
 
@@ -372,16 +367,15 @@ impl Socket {
         }
     }
 
-    pub fn send_to(&self, buf: &[u8], addr: &SocketAddr) -> io::Result<usize> {
+    pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         unsafe {
-            let (addr, len) = addr2raw(addr);
             let n = cvt({
                 libc::sendto(self.fd,
                              buf.as_ptr() as *const c_void,
                              cmp::min(buf.len(), max_len()),
                              MSG_NOSIGNAL,
-                             addr,
-                             len)
+                             addr.as_ptr(),
+                             addr.len())
             })?;
             Ok(n as usize)
         }
@@ -884,59 +878,6 @@ fn set_cloexec(fd: c_int) -> io::Result<()> {
             cvt(libc::fcntl(fd, libc::F_SETFD, new))?;
         }
         Ok(())
-    }
-}
-
-fn addr2raw(addr: &SocketAddr) -> (*const sockaddr, socklen_t) {
-    match *addr {
-        SocketAddr::V4(ref a) => {
-            (a as *const _ as *const _, mem::size_of_val(a) as socklen_t)
-        }
-        SocketAddr::V6(ref a) => {
-            (a as *const _ as *const _, mem::size_of_val(a) as socklen_t)
-        }
-    }
-}
-
-fn raw2addr(storage: &sockaddr_storage, len: socklen_t) -> io::Result<SocketAddr> {
-    match storage.ss_family as c_int {
-        AF_INET => {
-            unsafe {
-                assert!(len as usize >= mem::size_of::<sockaddr_in>());
-                let sa = storage as *const _ as *const sockaddr_in;
-                let bits = ::ntoh((*sa).sin_addr.s_addr);
-                let ip = Ipv4Addr::new((bits >> 24) as u8,
-                                       (bits >> 16) as u8,
-                                       (bits >> 8) as u8,
-                                       bits as u8);
-                Ok(SocketAddr::V4(SocketAddrV4::new(ip, ::ntoh((*sa).sin_port))))
-            }
-        }
-        AF_INET6 => {
-            unsafe {
-                assert!(len as usize >= mem::size_of::<sockaddr_in6>());
-
-                let sa = storage as *const _ as *const sockaddr_in6;
-                let arr = (*sa).sin6_addr.s6_addr;
-
-                let ip = Ipv6Addr::new(
-                    (arr[0] as u16) << 8 | (arr[1] as u16),
-                    (arr[2] as u16) << 8 | (arr[3] as u16),
-                    (arr[4] as u16) << 8 | (arr[5] as u16),
-                    (arr[6] as u16) << 8 | (arr[7] as u16),
-                    (arr[8] as u16) << 8 | (arr[9] as u16),
-                    (arr[10] as u16) << 8 | (arr[11] as u16),
-                    (arr[12] as u16) << 8 | (arr[13] as u16),
-                    (arr[14] as u16) << 8 | (arr[15] as u16),
-                );
-
-                Ok(SocketAddr::V6(SocketAddrV6::new(ip,
-                                                    ::ntoh((*sa).sin6_port),
-                                                    (*sa).sin6_flowinfo,
-                                                    (*sa).sin6_scope_id)))
-            }
-        }
-        _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid argument")),
     }
 }
 
