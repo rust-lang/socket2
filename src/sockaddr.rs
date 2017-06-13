@@ -4,9 +4,11 @@ use std::ptr;
 use std::fmt;
 
 #[cfg(unix)]
-use libc::{sockaddr, sockaddr_storage, sa_family_t, socklen_t, AF_INET, AF_INET6};
+use libc::{sockaddr, sockaddr_storage, sockaddr_in, sockaddr_in6, sa_family_t, socklen_t, AF_INET,
+           AF_INET6};
 #[cfg(windows)]
 use winapi::{SOCKADDR as sockaddr, SOCKADDR_STORAGE as sockaddr_storage,
+             SOCKADDR_IN as sockaddr_in, SOCKADDR_IN6 as sockaddr_in6,
              ADDRESS_FAMILY as sa_family_t, socklen_t, AF_INET, AF_INET6};
 
 use SockAddr;
@@ -76,6 +78,14 @@ impl SockAddr {
 
 // SocketAddrV4 and SocketAddrV6 are just wrappers around sockaddr_in and sockaddr_in6
 
+// check to make sure that the sizes at least match up
+fn _size_checks(v4: SocketAddrV4, v6: SocketAddrV6) {
+    unsafe {
+        mem::transmute::<SocketAddrV4, sockaddr_in>(v4);
+        mem::transmute::<SocketAddrV6, sockaddr_in6>(v6);
+    }
+}
+
 impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
         unsafe {
@@ -84,7 +94,6 @@ impl From<SocketAddrV4> for SockAddr {
         }
     }
 }
-
 
 impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
