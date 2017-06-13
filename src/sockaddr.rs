@@ -8,7 +8,7 @@ use libc::{sockaddr, sockaddr_storage, sockaddr_in, sockaddr_in6, sa_family_t, s
            AF_INET6};
 #[cfg(windows)]
 use winapi::{SOCKADDR as sockaddr, SOCKADDR_STORAGE as sockaddr_storage,
-             SOCKADDR_IN as sockaddr_in, SOCKADDR_IN6 as sockaddr_in6,
+             SOCKADDR_IN as sockaddr_in, sockaddr_in6,
              ADDRESS_FAMILY as sa_family_t, socklen_t, AF_INET, AF_INET6};
 
 use SockAddr;
