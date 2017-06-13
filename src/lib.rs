@@ -34,7 +34,7 @@
 //! // ...
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/socket2/0.1")]
+#![doc(html_root_url = "https://docs.rs/socket2/0.2")]
 #![deny(missing_docs)]
 
 #[cfg(unix)] extern crate libc;
