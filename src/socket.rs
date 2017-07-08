@@ -36,6 +36,19 @@ impl Socket {
         })
     }
 
+    /// Creates a pair of sockets which are connected to each other.
+    ///
+    /// This function corresponds to `socketpair(2)`.
+    ///
+    /// This function is only available on Unix when the `pair` feature is
+    /// enabled.
+    #[cfg(all(unix, feature = "pair"))]
+    pub fn pair(domain: Domain, type_: Type, protocol: Option<Protocol>) -> io::Result<(Socket, Socket)> {
+        let protocol = protocol.map(|p| p.0).unwrap_or(0);
+        let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
+        Ok((Socket { inner: sockets.0 }, Socket { inner: sockets.1 }))
+    }
+
     /// Consumes this `Socket`, converting it to a `TcpStream`.
     pub fn into_tcp_stream(self) -> net::TcpStream {
         self.into()
