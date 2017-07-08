@@ -24,3 +24,4 @@ libc = "0.2.14"
 [features]
 reuseport = []
 pair = []
+unix = []
