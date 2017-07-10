@@ -1,7 +1,7 @@
-use std::net::{SocketAddrV4, SocketAddrV6, SocketAddr};
-use std::mem;
-use std::ptr;
 use std::fmt;
+use std::mem;
+use std::net::{SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::ptr;
 
 #[cfg(unix)]
 use libc::{sockaddr, sockaddr_storage, sockaddr_in, sockaddr_in6, sa_family_t, socklen_t, AF_INET,
@@ -37,6 +37,61 @@ impl SockAddr {
         SockAddr {
             storage: storage,
             len: len,
+        }
+    }
+
+    /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// enabled.
+    ///
+    /// # Failure
+    ///
+    /// Returns an error if the path is longer than `SUN_LEN`.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn unix<P>(path: P) -> ::std::io::Result<SockAddr>
+        where P: AsRef<::std::path::Path>
+    {
+        use std::cmp::Ordering;
+        use std::io;
+        use std::os::unix::ffi::OsStrExt;
+        use libc::{sockaddr_un, AF_UNIX, c_char};
+
+        unsafe {
+            let mut addr = mem::zeroed::<sockaddr_un>();
+            addr.sun_family = AF_UNIX as sa_family_t;
+
+            let bytes = path.as_ref().as_os_str().as_bytes();
+
+            match (bytes.get(0), bytes.len().cmp(&addr.sun_path.len())) {
+                // Abstract paths don't need a null terminator
+                (Some(&0), Ordering::Greater) => {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                            "path must be no longer than SUN_LEN"));
+                }
+                (Some(&0), _) => {}
+                (_, Ordering::Greater) | (_, Ordering::Equal) => {
+                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                                            "path must be shorter than SUN_LEN"));
+                }
+                _ => {}
+            }
+
+            for (dst, src) in addr.sun_path.iter_mut().zip(bytes) {
+                *dst = *src as c_char;
+            }            
+            // null byte for pathname is already there since we zeroed up front
+
+            let base = &addr as *const _ as usize;
+            let path = &addr.sun_path as *const _ as usize;
+            let sun_path_offset = path - base;
+
+            let mut len = sun_path_offset + bytes.len();
+            match bytes.get(0) {
+                Some(&0) | None => {}
+                Some(_) => len += 1,
+            }
+            Ok(SockAddr::from_raw_parts(&addr as *const _ as *const _, len as socklen_t))
         }
     }
 

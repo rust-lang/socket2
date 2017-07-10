@@ -94,6 +94,21 @@ impl Socket {
         }
     }
 
+    pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
+        unsafe {
+            let mut fds = [0, 0];
+            cvt(libc::socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
+            let fds = (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1]));
+            set_cloexec(fds.0.as_raw_fd())?;
+            set_cloexec(fds.1.as_raw_fd())?;
+            #[cfg(target_os = "macos")] {
+                fds.0.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
+                fds.1.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
+            }
+            Ok(fds)
+        }
+    }
+
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
             cvt(libc::bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
