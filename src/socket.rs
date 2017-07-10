@@ -43,7 +43,9 @@ impl Socket {
     /// This function is only available on Unix when the `pair` feature is
     /// enabled.
     #[cfg(all(unix, feature = "pair"))]
-    pub fn pair(domain: Domain, type_: Type, protocol: Option<Protocol>) -> io::Result<(Socket, Socket)> {
+    pub fn pair(domain: Domain,
+                type_: Type,
+                protocol: Option<Protocol>) -> io::Result<(Socket, Socket)> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
         Ok((Socket { inner: sockets.0 }, Socket { inner: sockets.1 }))
@@ -640,6 +642,15 @@ impl Domain {
     pub fn ipv6() -> Domain {
         Domain(c::AF_INET6)
     }
+
+    /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// activated.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn unix() -> Domain {
+        Domain(c::AF_UNIX)
+    }
 }
 
 impl From<i32> for Domain {
@@ -733,5 +744,38 @@ mod test {
 
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
         socket.connect_timeout(&addr, Duration::from_millis(250)).unwrap();
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "pair", feature = "unix"))]
+    fn pair() {
+        let (mut a, mut b) = Socket::pair(Domain::unix(), Type::stream(), None).unwrap();
+        a.write_all(b"hello world").unwrap();
+        let mut buf = [0; 11];
+        b.read_exact(&mut buf).unwrap();
+        assert_eq!(buf, &b"hello world"[..]);
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "unix"))]
+    fn unix() {
+        use tempdir::TempDir;
+
+        let dir = TempDir::new("unix").unwrap();
+        let addr = SockAddr::unix(dir.path().join("sock")).unwrap();
+
+        let listener = Socket::new(Domain::unix(), Type::stream(), None).unwrap();
+        listener.bind(&addr).unwrap();
+        listener.listen(10).unwrap();
+
+        let mut a = Socket::new(Domain::unix(), Type::stream(), None).unwrap();
+        a.connect(&addr).unwrap();
+
+        let mut b = listener.accept().unwrap().0;
+
+        a.write_all(b"hello world").unwrap();
+        let mut buf = [0; 11];
+        b.read_exact(&mut buf).unwrap();
+        assert_eq!(buf, &b"hello world"[..]);
     }
 }

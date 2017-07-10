@@ -12,6 +12,9 @@ Utilities for handling networking sockets with a maximal amount of configuration
 possible intended.
 """
 
+[package.metadata.docs.rs]
+all-features = true
+
 [target."cfg(windows)".dependencies]
 ws2_32-sys = "0.2"
 winapi = "0.2"
@@ -20,6 +23,9 @@ kernel32-sys = "0.2"
 [target."cfg(unix)".dependencies]
 cfg-if = "0.1"
 libc = "0.2.14"
+
+[dev-dependencies]
+tempdir = "0.3"
 
 [features]
 reuseport = []
