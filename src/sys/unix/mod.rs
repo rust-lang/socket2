@@ -692,7 +692,9 @@ impl Socket {
     unsafe fn setsockopt<T>(&self,
                             opt: c_int,
                             val: c_int,
-                            payload: T) -> io::Result<()> {
+                            payload: T) -> io::Result<()>
+        where T: Copy,
+    {
         let payload = &payload as *const T as *const c_void;
         cvt(libc::setsockopt(self.fd,
                              opt,
