@@ -12,6 +12,8 @@ use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::time::Duration;
+#[cfg(all(unix, feature = "unix"))]
+use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 
 #[cfg(unix)]
 use libc as c;
@@ -63,6 +65,33 @@ impl Socket {
 
     /// Consumes this `Socket`, converting it to a `UdpSocket`.
     pub fn into_udp_socket(self) -> net::UdpSocket {
+        self.into()
+    }
+
+    /// Consumes this `Socket`, converting it into a `UnixStream`.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// enabled.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn into_unix_stream(self) -> UnixStream {
+        self.into()
+    }
+
+    /// Consumes this `Socket`, converting it into a `UnixListener`.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// enabled.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn into_unix_listener(self) -> UnixListener {
+        self.into()
+    }
+
+    /// Consumes this `Socket`, converting it into a `UnixDatagram`.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// enabled.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn into_unix_datagram(self) -> UnixDatagram {
         self.into()
     }
 
@@ -614,6 +643,27 @@ impl From<net::UdpSocket> for Socket {
     }
 }
 
+#[cfg(all(unix, feature = "unix"))]
+impl From<UnixStream> for Socket {
+    fn from(socket: UnixStream) -> Socket {
+        Socket { inner: socket.into() }
+    }
+}
+
+#[cfg(all(unix, feature = "unix"))]
+impl From<UnixListener> for Socket {
+    fn from(socket: UnixListener) -> Socket {
+        Socket { inner: socket.into() }
+    }
+}
+
+#[cfg(all(unix, feature = "unix"))]
+impl From<UnixDatagram> for Socket {
+    fn from(socket: UnixDatagram) -> Socket {
+        Socket { inner: socket.into() }
+    }
+}
+
 impl From<Socket> for net::TcpStream {
     fn from(socket: Socket) -> net::TcpStream {
         socket.inner.into()
@@ -628,6 +678,27 @@ impl From<Socket> for net::TcpListener {
 
 impl From<Socket> for net::UdpSocket {
     fn from(socket: Socket) -> net::UdpSocket {
+        socket.inner.into()
+    }
+}
+
+#[cfg(all(unix, feature = "unix"))]
+impl From<Socket> for UnixStream {
+    fn from(socket: Socket) -> UnixStream {
+        socket.inner.into()
+    }
+}
+
+#[cfg(all(unix, feature = "unix"))]
+impl From<Socket> for UnixListener {
+    fn from(socket: Socket) -> UnixListener {
+        socket.inner.into()
+    }
+}
+
+#[cfg(all(unix, feature = "unix"))]
+impl From<Socket> for UnixDatagram {
+    fn from(socket: Socket) -> UnixDatagram {
         socket.inner.into()
     }
 }
