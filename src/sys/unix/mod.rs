@@ -439,7 +439,7 @@ impl Socket {
         unsafe {
             self.setsockopt(libc::SOL_SOCKET,
                             libc::SO_RCVTIMEO,
-                            dur2timeval(dur))
+                            dur2timeval(dur)?)
         }
     }
 
@@ -453,7 +453,7 @@ impl Socket {
         unsafe {
             self.setsockopt(libc::SOL_SOCKET,
                             libc::SO_SNDTIMEO,
-                            dur2timeval(dur))
+                            dur2timeval(dur)?)
         }
     }
 
