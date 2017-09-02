@@ -52,7 +52,7 @@ cfg_if! {
 cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
         use libc::TCP_KEEPALIVE as KEEPALIVE_OPTION;
-    } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd"))] {
+    } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd", target_os = "haiku"))] {
         use libc::SO_KEEPALIVE as KEEPALIVE_OPTION;
     } else {
         use libc::TCP_KEEPIDLE as KEEPALIVE_OPTION;
