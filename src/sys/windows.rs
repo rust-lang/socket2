@@ -112,7 +112,7 @@ impl Socket {
     pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = self.connect(addr);
-        self.set_nonblocking(true)?;
+        self.set_nonblocking(false)?;
 
         match r {
             Ok(()) => return Ok(()),
