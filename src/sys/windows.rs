@@ -34,6 +34,11 @@ const SD_SEND: c_int = 1;
 const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
 const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 
+pub const IPPROTO_ICMP: i32 = ws2def::IPPROTO_ICMP.0 as i32;
+pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6.0 as i32;
+pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP.0 as i32;
+pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP.0 as i32;
+
 #[repr(C)]
 struct tcp_keepalive {
     onoff: c_ulong,
@@ -420,7 +425,7 @@ impl Socket {
 
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_TCP.0 as c_int,
+            let raw: c_int = self.getsockopt(IPPROTO_TCP,
                                              TCP_NODELAY)?;
             Ok(raw != 0)
         }
@@ -428,7 +433,7 @@ impl Socket {
 
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(IPPROTO_TCP.0 as c_int,
+            self.setsockopt(IPPROTO_TCP,
                             TCP_NODELAY,
                             nodelay as c_int)
         }
