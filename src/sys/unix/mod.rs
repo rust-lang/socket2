@@ -62,6 +62,11 @@ cfg_if! {
 use SockAddr;
 use utils::One;
 
+pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
+pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
+pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
+pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
+
 #[macro_use]
 #[cfg(target_os = "linux")]
 mod weak;

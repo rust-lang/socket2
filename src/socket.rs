@@ -762,6 +762,28 @@ impl Type {
     }
 }
 
+impl ::Protocol {
+    /// Protocol corresponding to `ICMPv4`
+    pub fn icmpv4() -> Self {
+        ::Protocol(sys::IPPROTO_ICMP)
+    }
+
+    /// Protocol corresponding to `ICMPv6`
+    pub fn icmpv6() -> Self {
+        ::Protocol(sys::IPPROTO_ICMPV6)
+    }
+
+    /// Protocol corresponding to `TCP`
+    pub fn tcp() -> Self {
+        ::Protocol(sys::IPPROTO_TCP)
+    }
+
+    /// Protocol corresponding to `UDP`
+    pub fn udp() -> Self {
+        ::Protocol(sys::IPPROTO_UDP)
+    }
+}
+
 impl From<i32> for Type {
     fn from(a: i32) -> Type {
         Type(a)
