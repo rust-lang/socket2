@@ -22,8 +22,7 @@ use std::time::{Duration, Instant};
 #[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 
-use libc::{self, c_void, c_int};
-use libc::{sockaddr, socklen_t, ssize_t};
+use libc::{self, c_void, c_int, socklen_t, ssize_t};
 
 cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -184,10 +183,14 @@ impl Socket {
                 }
                 0 => return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out")),
                 _ => {
-                    if pollfd.revents & libc::POLLOUT == 0 {
-                        if let Some(e) = self.take_error()? {
-                            return Err(e);
-                        }
+                    // linux returns POLLOUT|POLLERR|POLLHUP for refused connections (!), so look
+                    // for POLLHUP rather than read readiness
+                    if pollfd.revents & libc::POLLHUP != 0 {
+                        let e = self.take_error()?
+                            .unwrap_or_else(|| {
+                                io::Error::new(io::ErrorKind::Other, "no error set after POLLHUP")
+                            });
+                        return Err(e);
                     }
                     return Ok(());
                 }
@@ -256,7 +259,7 @@ impl Socket {
         let mut socket = None;
         #[cfg(target_os = "linux")] {
             weak! {
-                fn accept4(c_int, *mut sockaddr, *mut socklen_t, c_int) -> c_int
+                fn accept4(c_int, *mut libc::sockaddr, *mut socklen_t, c_int) -> c_int
             }
             if let Some(f) = accept4.get() {
                 let res = cvt_r(|| unsafe {

@@ -827,6 +827,24 @@ mod test {
         }
     }
 
+     #[test]
+    fn connect_timeout_unbound() {
+        // bind and drop a socket to track down a "probably unassigned" port
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();
+        socket.bind(&addr).unwrap();
+        let addr = socket.local_addr().unwrap();
+        drop(socket);
+
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        match socket.connect_timeout(&addr, Duration::from_millis(250)) {
+            Ok(_) => panic!("unexpected success"),
+            Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused ||
+                e.kind() == io::ErrorKind::TimedOut => {},
+            Err(e) => panic!("unexpected error {}", e),
+        }
+    }
+
     #[test]
     fn connect_timeout_valid() {
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
