@@ -18,7 +18,7 @@ use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(unix)]
 use libc as c;
 #[cfg(windows)]
-use winapi as c;
+use winapi::shared::ws2def as c;
 
 use sys;
 use {Socket, Protocol, Domain, Type, SockAddr};

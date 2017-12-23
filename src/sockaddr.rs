@@ -7,9 +7,13 @@ use std::ptr;
 use libc::{sockaddr, sockaddr_storage, sockaddr_in, sockaddr_in6, sa_family_t, socklen_t, AF_INET,
            AF_INET6};
 #[cfg(windows)]
-use winapi::{SOCKADDR as sockaddr, SOCKADDR_STORAGE as sockaddr_storage,
-             SOCKADDR_IN as sockaddr_in, sockaddr_in6,
-             ADDRESS_FAMILY as sa_family_t, socklen_t, AF_INET, AF_INET6};
+use winapi::shared::ws2def::{
+    SOCKADDR as sockaddr, SOCKADDR_STORAGE as sockaddr_storage,
+    SOCKADDR_IN as sockaddr_in,
+    ADDRESS_FAMILY as sa_family_t, AF_INET, AF_INET6
+};
+#[cfg(windows)] use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
+#[cfg(windows)] use winapi::um::ws2tcpip::socklen_t;
 
 use SockAddr;
 

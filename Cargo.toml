@@ -15,10 +15,9 @@ possible intended.
 [package.metadata.docs.rs]
 all-features = true
 
-[target."cfg(windows)".dependencies]
-ws2_32-sys = "0.2"
-winapi = "0.2"
-kernel32-sys = "0.2"
+[target."cfg(windows)".dependencies.winapi]
+version = "0.3"
+features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip"]
 
 [target."cfg(unix)".dependencies]
 cfg-if = "0.1"

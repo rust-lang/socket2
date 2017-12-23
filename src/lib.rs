@@ -40,16 +40,15 @@
 #[cfg(unix)] extern crate libc;
 #[cfg(unix)] #[macro_use] extern crate cfg_if;
 
-#[cfg(windows)] extern crate kernel32;
 #[cfg(windows)] extern crate winapi;
-#[cfg(windows)] extern crate ws2_32;
 
 #[cfg(test)] extern crate tempdir;
 
 use utils::NetInt;
 
 #[cfg(unix)] use libc::{sockaddr_storage, socklen_t};
-#[cfg(windows)] use winapi::{SOCKADDR_STORAGE as sockaddr_storage, socklen_t};
+#[cfg(windows)] use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
+#[cfg(windows)] use winapi::um::ws2tcpip::socklen_t;
 
 mod sockaddr;
 mod socket;

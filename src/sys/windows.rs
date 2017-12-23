@@ -20,9 +20,18 @@ use std::ptr;
 use std::sync::{Once, ONCE_INIT};
 use std::time::Duration;
 
-use kernel32;
-use winapi::*;
-use ws2_32;
+use winapi::ctypes::{c_char, c_int, c_long, c_ulong};
+use winapi::shared::inaddr::*;
+use winapi::shared::in6addr::*;
+use winapi::shared::minwindef::DWORD;
+use winapi::shared::ntdef::{HANDLE, ULONG};
+use winapi::shared::ws2def::*;
+use winapi::shared::ws2def;
+use winapi::shared::ws2ipdef::*;
+use winapi::um::handleapi::SetHandleInformation;
+use winapi::um::processthreadsapi::GetCurrentProcessId;
+use winapi::um::winbase::INFINITE;
+use winapi::um::winsock2 as sock;
 
 use SockAddr;
 
@@ -34,10 +43,10 @@ const SD_SEND: c_int = 1;
 const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
 const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 
-pub const IPPROTO_ICMP: i32 = ws2def::IPPROTO_ICMP.0 as i32;
-pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6.0 as i32;
-pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP.0 as i32;
-pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP.0 as i32;
+pub const IPPROTO_ICMP: i32 = ws2def::IPPROTO_ICMP as i32;
+pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6 as i32;
+pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP as i32;
+pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP as i32;
 
 #[repr(C)]
 struct tcp_keepalive {
@@ -58,27 +67,27 @@ fn init() {
 }
 
 fn last_error() -> io::Error {
-    io::Error::from_raw_os_error(unsafe { ws2_32::WSAGetLastError() })
+    io::Error::from_raw_os_error(unsafe { sock::WSAGetLastError() })
 }
 
 pub struct Socket {
-    socket: SOCKET,
+    socket: sock::SOCKET,
 }
 
 impl Socket {
     pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
         init();
         unsafe {
-            let socket = match ws2_32::WSASocketW(family,
-                                                  ty,
-                                                  protocol,
-                                                  ptr::null_mut(),
-                                                  0,
-                                                  WSA_FLAG_OVERLAPPED) {
-                INVALID_SOCKET => return Err(last_error()),
+            let socket = match sock::WSASocketW(family,
+                                                ty,
+                                                protocol,
+                                                ptr::null_mut(),
+                                                0,
+                                                WSA_FLAG_OVERLAPPED) {
+                sock::INVALID_SOCKET => return Err(last_error()),
                 socket => socket,
             };
-            let socket = Socket::from_raw_socket(socket);
+            let socket = Socket::from_raw_socket(socket as RawSocket);
             socket.set_no_inherit()?;
             Ok(socket)
         }
@@ -86,7 +95,7 @@ impl Socket {
 
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
-            if ws2_32::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
+            if sock::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
                 Ok(())
             } else {
                 Err(last_error())
@@ -96,7 +105,7 @@ impl Socket {
 
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         unsafe {
-            if ws2_32::listen(self.socket, backlog) == 0 {
+            if sock::listen(self.socket, backlog) == 0 {
                 Ok(())
             } else {
                 Err(last_error())
@@ -106,7 +115,7 @@ impl Socket {
 
     pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
-            if ws2_32::connect(self.socket, addr.as_ptr(), addr.len()) == 0 {
+            if sock::connect(self.socket, addr.as_ptr(), addr.len()) == 0 {
                 Ok(())
             } else {
                 Err(last_error())
@@ -130,7 +139,7 @@ impl Socket {
                                         "cannot set a 0 duration timeout"));
         }
 
-        let mut timeout = timeval {
+        let mut timeout = sock::timeval {
             tv_sec: timeout.as_secs() as c_long,
             tv_usec: (timeout.subsec_nanos() / 1000) as c_long,
         };
@@ -139,7 +148,7 @@ impl Socket {
         }
 
         let fds = unsafe {
-            let mut fds = mem::zeroed::<fd_set>();
+            let mut fds = mem::zeroed::<sock::fd_set>();
             fds.fd_count = 1;
             fds.fd_array[0] = self.socket;
             fds
@@ -148,8 +157,8 @@ impl Socket {
         let mut writefds = fds;
         let mut errorfds = fds;
 
-        match unsafe { ws2_32::select(1, ptr::null_mut(), &mut writefds, &mut errorfds, &timeout) } {
-            SOCKET_ERROR => return Err(io::Error::last_os_error()),
+        match unsafe { sock::select(1, ptr::null_mut(), &mut writefds, &mut errorfds, &timeout) } {
+            sock::SOCKET_ERROR => return Err(io::Error::last_os_error()),
             0 => return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out")),
             _ => {
                 if writefds.fd_count != 1 {
@@ -166,9 +175,9 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            if ws2_32::getsockname(self.socket,
-                                   &mut storage as *mut _ as *mut _,
-                                   &mut len) != 0 {
+            if sock::getsockname(self.socket,
+                                 &mut storage as *mut _ as *mut _,
+                                 &mut len) != 0 {
                 return Err(last_error())
             }
             Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
@@ -179,9 +188,9 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            if ws2_32::getpeername(self.socket,
-                                   &mut storage as *mut _ as *mut _,
-                                   &mut len) != 0 {
+            if sock::getpeername(self.socket,
+                                 &mut storage as *mut _ as *mut _,
+                                 &mut len) != 0 {
                 return Err(last_error())
             }
             Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
@@ -190,22 +199,22 @@ impl Socket {
 
     pub fn try_clone(&self) -> io::Result<Socket> {
         unsafe {
-            let mut info: WSAPROTOCOL_INFOW = mem::zeroed();
-            let r = ws2_32::WSADuplicateSocketW(self.socket,
-                                                kernel32::GetCurrentProcessId(),
-                                                &mut info);
+            let mut info: sock::WSAPROTOCOL_INFOW = mem::zeroed();
+            let r = sock::WSADuplicateSocketW(self.socket,
+                                              GetCurrentProcessId(),
+                                              &mut info);
             if r != 0 {
                 return Err(io::Error::last_os_error())
             }
-            let socket = ws2_32::WSASocketW(info.iAddressFamily,
-                                            info.iSocketType,
-                                            info.iProtocol,
-                                            &mut info,
-                                            0,
-                                            WSA_FLAG_OVERLAPPED);
+            let socket = sock::WSASocketW(info.iAddressFamily,
+                                          info.iSocketType,
+                                          info.iProtocol,
+                                          &mut info,
+                                          0,
+                                          WSA_FLAG_OVERLAPPED);
             let socket = match socket {
-                INVALID_SOCKET => return Err(last_error()),
-                n => Socket::from_raw_socket(n),
+                sock::INVALID_SOCKET => return Err(last_error()),
+                n => Socket::from_raw_socket(n as RawSocket),
             };
             socket.set_no_inherit()?;
             Ok(socket)
@@ -217,13 +226,13 @@ impl Socket {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
             let socket = {
-                ws2_32::accept(self.socket,
-                               &mut storage as *mut _ as *mut _,
-                               &mut len)
+                sock::accept(self.socket,
+                             &mut storage as *mut _ as *mut _,
+                             &mut len)
             };
             let socket = match socket {
-                INVALID_SOCKET => return Err(last_error()),
-                socket => Socket::from_raw_socket(socket),
+                sock::INVALID_SOCKET => return Err(last_error()),
+                socket => Socket::from_raw_socket(socket as RawSocket),
             };
             socket.set_no_inherit()?;
             let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, len);
@@ -245,9 +254,9 @@ impl Socket {
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         unsafe {
             let mut nonblocking = nonblocking as c_ulong;
-            let r = ws2_32::ioctlsocket(self.socket,
-                                        FIONBIO as c_int,
-                                        &mut nonblocking);
+            let r = sock::ioctlsocket(self.socket,
+                                      sock::FIONBIO as c_int,
+                                      &mut nonblocking);
             if r == 0 {
                 Ok(())
             } else {
@@ -263,7 +272,7 @@ impl Socket {
             Shutdown::Read => SD_RECEIVE,
             Shutdown::Both => SD_BOTH,
         };
-        if unsafe { ws2_32::shutdown(self.socket, how) == 0 } {
+        if unsafe { sock::shutdown(self.socket, how) == 0 } {
             Ok(())
         } else {
             Err(last_error())
@@ -273,14 +282,14 @@ impl Socket {
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = {
-                ws2_32::recv(self.socket,
+                sock::recv(self.socket,
                              buf.as_mut_ptr() as *mut c_char,
                              clamp(buf.len()),
                              0)
             };
             match n {
-                SOCKET_ERROR if ws2_32::WSAGetLastError() == WSAESHUTDOWN as i32 => Ok(0),
-                SOCKET_ERROR => Err(last_error()),
+                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
+                sock::SOCKET_ERROR => Err(last_error()),
                 n => Ok(n as usize)
             }
         }
@@ -289,14 +298,14 @@ impl Socket {
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = {
-                ws2_32::recv(self.socket,
+                sock::recv(self.socket,
                              buf.as_mut_ptr() as *mut c_char,
                              clamp(buf.len()),
                              MSG_PEEK)
             };
             match n {
-                SOCKET_ERROR if ws2_32::WSAGetLastError() == WSAESHUTDOWN as i32 => Ok(0),
-                SOCKET_ERROR => Err(last_error()),
+                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
+                sock::SOCKET_ERROR => Err(last_error()),
                 n => Ok(n as usize)
             }
         }
@@ -317,16 +326,16 @@ impl Socket {
             let mut addrlen = mem::size_of_val(&storage) as c_int;
 
             let n = {
-                ws2_32::recvfrom(self.socket,
-                                 buf.as_mut_ptr() as *mut c_char,
-                                 clamp(buf.len()),
-                                 flags,
-                                 &mut storage as *mut _ as *mut _,
-                                 &mut addrlen)
+                sock::recvfrom(self.socket,
+                               buf.as_mut_ptr() as *mut c_char,
+                               clamp(buf.len()),
+                               flags,
+                               &mut storage as *mut _ as *mut _,
+                               &mut addrlen)
             };
             let n = match n {
-                SOCKET_ERROR if ws2_32::WSAGetLastError() == WSAESHUTDOWN as i32 => 0,
-                SOCKET_ERROR => return Err(last_error()),
+                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => 0,
+                sock::SOCKET_ERROR => return Err(last_error()),
                 n => n as usize,
             };
             let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
@@ -337,12 +346,12 @@ impl Socket {
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
         unsafe {
             let n = {
-                ws2_32::send(self.socket,
-                             buf.as_ptr() as *const c_char,
-                             clamp(buf.len()),
-                             0)
+                sock::send(self.socket,
+                           buf.as_ptr() as *const c_char,
+                           clamp(buf.len()),
+                           0)
             };
-            if n == SOCKET_ERROR {
+            if n == sock::SOCKET_ERROR {
                 Err(last_error())
             } else {
                 Ok(n as usize)
@@ -353,14 +362,14 @@ impl Socket {
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         unsafe {
             let n = {
-                ws2_32::sendto(self.socket,
-                               buf.as_ptr() as *const c_char,
-                               clamp(buf.len()),
-                               0,
-                               addr.as_ptr(),
-                               addr.len())
+                sock::sendto(self.socket,
+                             buf.as_ptr() as *const c_char,
+                             clamp(buf.len()),
+                             0,
+                             addr.as_ptr(),
+                             addr.len())
             };
-            if n == SOCKET_ERROR {
+            if n == sock::SOCKET_ERROR {
                 Err(last_error())
             } else {
                 Ok(n as usize)
@@ -385,7 +394,7 @@ impl Socket {
 
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6.0 as c_int,
+            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int,
                                              IPV6_V6ONLY)?;
             Ok(raw != 0)
         }
@@ -393,7 +402,7 @@ impl Socket {
 
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(IPPROTO_IPV6.0 as c_int,
+            self.setsockopt(IPPROTO_IPV6 as c_int,
                             IPV6_V6ONLY,
                             only_v6 as c_int)
         }
@@ -484,7 +493,7 @@ impl Socket {
 
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6.0 as c_int,
+            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int,
                                              IPV6_MULTICAST_LOOP)?;
             Ok(raw != 0)
         }
@@ -492,7 +501,7 @@ impl Socket {
 
     pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(IPPROTO_IPV6.0 as c_int,
+            self.setsockopt(IPPROTO_IPV6 as c_int,
                             IPV6_MULTICAST_LOOP,
                             multicast_loop_v6 as c_int)
         }
@@ -503,9 +512,9 @@ impl Socket {
                              interface: &Ipv4Addr) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
-        let mreq = ip_mreq {
-            imr_multiaddr: in_addr { S_un: multiaddr },
-            imr_interface: in_addr { S_un: interface },
+        let mreq = IP_MREQ {
+            imr_multiaddr: IN_ADDR { S_un: multiaddr },
+            imr_interface: IN_ADDR { S_un: interface },
         };
         unsafe {
             self.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq)
@@ -516,7 +525,7 @@ impl Socket {
                              multiaddr: &Ipv6Addr,
                              interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
-        let mreq = ipv6_mreq {
+        let mreq = IPV6_MREQ {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: interface,
         };
@@ -530,9 +539,9 @@ impl Socket {
                               interface: &Ipv4Addr) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
-        let mreq = ip_mreq {
-            imr_multiaddr: in_addr { S_un: multiaddr },
-            imr_interface: in_addr { S_un: interface },
+        let mreq = IP_MREQ {
+            imr_multiaddr: IN_ADDR { S_un: multiaddr },
+            imr_interface: IN_ADDR { S_un: interface },
         };
         unsafe {
             self.setsockopt(IPPROTO_IP, IP_DROP_MEMBERSHIP, mreq)
@@ -543,7 +552,7 @@ impl Socket {
                               multiaddr: &Ipv6Addr,
                               interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
-        let mreq = ipv6_mreq {
+        let mreq = IPV6_MREQ {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: interface,
         };
@@ -612,15 +621,15 @@ impl Socket {
             keepaliveinterval: 0,
         };
         let n = unsafe {
-            ws2_32::WSAIoctl(self.socket,
-                             SIO_KEEPALIVE_VALS,
-                             0 as *mut _,
-                             0,
-                             &mut ka as *mut _ as *mut _,
-                             mem::size_of_val(&ka) as DWORD,
-                             0 as *mut _,
-                             0 as *mut _,
-                             None)
+            sock::WSAIoctl(self.socket,
+                           SIO_KEEPALIVE_VALS,
+                           0 as *mut _,
+                           0,
+                           &mut ka as *mut _ as *mut _,
+                           mem::size_of_val(&ka) as DWORD,
+                           0 as *mut _,
+                           0 as *mut _,
+                           None)
         };
         if n == 0 {
             Ok(if ka.onoff == 0 {
@@ -646,15 +655,15 @@ impl Socket {
             keepaliveinterval: ms as c_ulong,
         };
         let n = unsafe {
-            ws2_32::WSAIoctl(self.socket,
-                             SIO_KEEPALIVE_VALS,
-                             &ka as *const _ as *mut _,
-                             mem::size_of_val(&ka) as DWORD,
-                             0 as *mut _,
-                             0,
-                             0 as *mut _,
-                             0 as *mut _,
-                             None)
+            sock::WSAIoctl(self.socket,
+                           SIO_KEEPALIVE_VALS,
+                           &ka as *const _ as *mut _,
+                           mem::size_of_val(&ka) as DWORD,
+                           0 as *mut _,
+                           0,
+                           0 as *mut _,
+                           0 as *mut _,
+                           None)
         };
         if n == 0 {
             Ok(())
@@ -670,11 +679,11 @@ impl Socket {
         where T: Copy,
     {
         let payload = &payload as *const T as *const c_char;
-        if ws2_32::setsockopt(self.socket,
-                              opt,
-                              val,
-                              payload,
-                              mem::size_of::<T>() as c_int) == 0 {
+        if sock::setsockopt(self.socket,
+                            opt,
+                            val,
+                            payload,
+                            mem::size_of::<T>() as c_int) == 0 {
             Ok(())
         } else {
             Err(last_error())
@@ -684,11 +693,11 @@ impl Socket {
     unsafe fn getsockopt<T: Copy>(&self, opt: c_int, val: c_int) -> io::Result<T> {
         let mut slot: T = mem::zeroed();
         let mut len = mem::size_of::<T>() as c_int;
-        if ws2_32::getsockopt(self.socket,
-                              opt,
-                              val,
-                              &mut slot as *mut _ as *mut _,
-                              &mut len) == 0 {
+        if sock::getsockopt(self.socket,
+                            opt,
+                            val,
+                            &mut slot as *mut _ as *mut _,
+                            &mut len) == 0 {
             assert_eq!(len as usize, mem::size_of::<T>());
             Ok(slot)
         } else {
@@ -698,9 +707,9 @@ impl Socket {
 
     fn set_no_inherit(&self) -> io::Result<()> {
         unsafe {
-            let r = kernel32::SetHandleInformation(self.socket as HANDLE,
-                                                   HANDLE_FLAG_INHERIT,
-                                                   0);
+            let r = SetHandleInformation(self.socket as HANDLE,
+                                         HANDLE_FLAG_INHERIT,
+                                         0);
             if r == 0 {
                 Err(io::Error::last_os_error())
             } else {
@@ -757,39 +766,39 @@ impl fmt::Debug for Socket {
 }
 
 impl AsRawSocket for Socket {
-    fn as_raw_socket(&self) -> SOCKET {
-        self.socket
+    fn as_raw_socket(&self) -> RawSocket {
+        self.socket as RawSocket
     }
 }
 
 impl IntoRawSocket for Socket {
-    fn into_raw_socket(self) -> SOCKET {
+    fn into_raw_socket(self) -> RawSocket {
         let socket = self.socket;
         mem::forget(self);
-        return socket
+        socket as RawSocket
     }
 }
 
 impl FromRawSocket for Socket {
-    unsafe fn from_raw_socket(socket: SOCKET) -> Socket {
-        Socket { socket: socket }
+    unsafe fn from_raw_socket(socket: RawSocket) -> Socket {
+        Socket { socket: socket as sock::SOCKET }
     }
 }
 
 impl AsRawSocket for ::Socket {
-    fn as_raw_socket(&self) -> SOCKET {
+    fn as_raw_socket(&self) -> RawSocket {
         self.inner.as_raw_socket()
     }
 }
 
 impl IntoRawSocket for ::Socket {
-    fn into_raw_socket(self) -> SOCKET {
+    fn into_raw_socket(self) -> RawSocket {
         self.inner.into_raw_socket()
     }
 }
 
 impl FromRawSocket for ::Socket {
-    unsafe fn from_raw_socket(socket: SOCKET) -> ::Socket {
+    unsafe fn from_raw_socket(socket: RawSocket) -> ::Socket {
         ::Socket { inner: Socket::from_raw_socket(socket) }
     }
 }
@@ -797,7 +806,7 @@ impl FromRawSocket for ::Socket {
 impl Drop for Socket {
     fn drop(&mut self) {
         unsafe {
-            let _ = ws2_32::closesocket(self.socket);
+            let _ = sock::closesocket(self.socket);
         }
     }
 }
@@ -883,21 +892,26 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
     }
 }
 
-fn to_s_addr(addr: &Ipv4Addr) -> ULONG {
+fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
-    ::hton(((octets[0] as ULONG) << 24) |
-           ((octets[1] as ULONG) << 16) |
-           ((octets[2] as ULONG) <<  8) |
-           ((octets[3] as ULONG) <<  0))
+    let res = ::hton(((octets[0] as ULONG) << 24) |
+                     ((octets[1] as ULONG) << 16) |
+                     ((octets[2] as ULONG) <<  8) |
+                     ((octets[3] as ULONG) <<  0));
+    let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };
+    unsafe { *(new_addr.S_addr_mut()) = res };
+    new_addr
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
+    let mut ret_addr: in6_addr_u = unsafe { mem::zeroed() };
+    unsafe { *(ret_addr.Byte_mut()) = addr.octets() };
     let mut ret: in6_addr = unsafe { mem::zeroed() };
-    ret.s6_addr = addr.octets();
-    return ret
+    ret.u = ret_addr;
+    ret
 }
 
-fn linger2dur(linger_opt: linger) -> Option<Duration> {
+fn linger2dur(linger_opt: sock::linger) -> Option<Duration> {
     if linger_opt.l_onoff == 0 {
         None
     } else {
@@ -905,14 +919,14 @@ fn linger2dur(linger_opt: linger) -> Option<Duration> {
     }
 }
 
-fn dur2linger(dur: Option<Duration>) -> linger {
+fn dur2linger(dur: Option<Duration>) -> sock::linger {
     match dur {
         Some(d) => {
-            linger {
+            sock::linger {
                 l_onoff: 1,
                 l_linger: d.as_secs() as u16,
             }
         }
-        None => linger { l_onoff: 0, l_linger: 0 },
+        None => sock::linger { l_onoff: 0, l_linger: 0 },
     }
 }
