@@ -1,6 +1,6 @@
 [package]
 name = "socket2"
-version = "0.2.4"
+version = "0.3.0"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
@@ -11,7 +11,6 @@ description = """
 Utilities for handling networking sockets with a maximal amount of configuration
 possible intended.
 """
-publish = false # needs a major version bump w/ winapi change
 
 [package.metadata.docs.rs]
 all-features = true
