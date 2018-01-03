@@ -12,8 +12,26 @@ use winapi::shared::ws2def::{
     SOCKADDR_IN as sockaddr_in,
     ADDRESS_FAMILY as sa_family_t, AF_INET, AF_INET6
 };
-#[cfg(windows)] use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
-#[cfg(windows)] use winapi::um::ws2tcpip::socklen_t;
+#[cfg(windows)]
+use winapi::shared::minwindef::*;
+#[cfg(windows)]
+use winapi::um::ws2tcpip::{socklen_t};
+
+#[allow(dead_code, bad_style)]
+#[cfg(windows)]
+struct sockaddr_in6 {
+    sin6_family: sa_family_t,
+    sin6_port: USHORT,
+    sin6_flowinfo: ULONG,
+    sin6_addr: IN6_ADDR,
+    sin6_scope_id: ULONG,
+}
+
+#[cfg(windows)]
+#[allow(dead_code, bad_style)]
+struct IN6_ADDR {
+    u: [u8; 16],
+}
 
 use SockAddr;
 
@@ -83,7 +101,7 @@ impl SockAddr {
 
             for (dst, src) in addr.sun_path.iter_mut().zip(bytes) {
                 *dst = *src as c_char;
-            }            
+            }
             // null byte for pathname is already there since we zeroed up front
 
             let base = &addr as *const _ as usize;
