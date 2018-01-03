@@ -16,7 +16,7 @@ possible intended.
 all-features = true
 
 [target."cfg(windows)".dependencies.winapi]
-version = "0.3"
+version = "0.3.3"
 features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip", "minwindef"]
 
 [target."cfg(unix)".dependencies]
