@@ -104,6 +104,7 @@ pub struct SockAddr {
 ///
 /// This type is freely interconvertible with the `i32` type, however, if a raw
 /// value needs to be provided.
+#[derive(Copy, Clone)]
 pub struct Domain(i32);
 
 /// Specification of communication semantics on a socket.
@@ -115,6 +116,7 @@ pub struct Domain(i32);
 ///
 /// This type is freely interconvertible with the `i32` type, however, if a raw
 /// value needs to be provided.
+#[derive(Copy, Clone)]
 pub struct Type(i32);
 
 /// Protocol specification used for creating sockets via `Socket::new`.
@@ -124,6 +126,7 @@ pub struct Type(i32);
 ///
 /// This type is freely interconvertible with the `i32` type, however, if a raw
 /// value needs to be provided.
+#[derive(Copy, Clone)]
 pub struct Protocol(i32);
 
 fn hton<I: NetInt>(i: I) -> I { i.to_be() }
