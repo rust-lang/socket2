@@ -19,15 +19,15 @@
 //!
 //! # Examples
 //!
-//! ```no_run
+//! ```
 //! use std::net::SocketAddr;
 //! use socket2::{Socket, Domain, Type};
 //!
 //! // create a TCP listener bound to two addresses
-//! let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+//! let socket = Socket::new(Domain::ipv6(), Type::stream(), None).unwrap();
 //!
-//! socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
-//! socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
+//! socket.bind(&"[::1]:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
+//! socket.set_only_v6(false);
 //! socket.listen(128).unwrap();
 //!
 //! let listener = socket.into_tcp_listener();
