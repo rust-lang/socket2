@@ -19,7 +19,7 @@
 //!
 //! # Examples
 //!
-//! ```
+//! ```no_run
 //! use std::net::SocketAddr;
 //! use socket2::{Socket, Domain, Type};
 //!
