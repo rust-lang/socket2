@@ -372,12 +372,12 @@ impl Socket {
         self.inner.set_broadcast(broadcast)
     }
 
-    /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
+    /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
     ///
     /// For more information about this option, see
-    /// [`set_multicast_ttl_v4`][link].
+    /// [`set_multicast_loop_v4`][link].
     ///
-    /// [link]: #method.set_multicast_ttl_v4
+    /// [link]: #method.set_multicast_loop_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
         self.inner.multicast_loop_v4()
     }
