@@ -20,7 +20,7 @@ features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip", "minwindef"]
 
 [target."cfg(unix)".dependencies]
 cfg-if = "0.1"
-libc = "0.2.14"
+libc = { version = "0.2.17", git = "https://github.com/bluejekyll/libc" }
 
 [dev-dependencies]
 tempdir = "0.3"

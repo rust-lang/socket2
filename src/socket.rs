@@ -281,6 +281,20 @@ impl Socket {
         self.inner.set_ttl(ttl)
     }
 
+    /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
+    ///
+    /// Specifies the hop limit for ipv6 unicast packets
+    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
+        self.inner.unicast_hops_v6()
+    }
+
+    /// Sets the value for the `IPV6_UNICAST_HOPS` option on this socket.
+    ///
+    /// Specifies the hop limit for ipv6 unicast packets
+    pub fn set_unicast_hops_v6(&self, ttl: u32) -> io::Result<()> {
+        self.inner.set_unicast_hops_v6(ttl)
+    }
+
     /// Gets the value of the `IPV6_V6ONLY` option for this socket.
     ///
     /// For more information about this option, see [`set_only_v6`][link].
@@ -409,6 +423,44 @@ impl Socket {
     /// Note that this may not have any affect on IPv6 sockets.
     pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
         self.inner.set_multicast_ttl_v4(multicast_ttl_v4)
+    }
+
+    /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
+        self.inner.multicast_hops_v6()
+    }
+
+    /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        self.inner.set_multicast_hops_v6(hops)
+    }
+
+    /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// Returns the interface to use for routing multicast packets.
+    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
+        self.inner.multicast_if_v4()
+    }
+
+    /// Sets the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets.
+    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
+        self.inner.set_multicast_if_v4(interface)
+    }
+
+    /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
+    ///
+    /// Returns the interface to use for routing multicast packets.
+    pub fn multicast_if_v6(&self) -> io::Result<u32> {
+        self.inner.multicast_if_v6()
+    }
+
+    /// Sets the value of the `IPV6_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets.
+    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
+        self.inner.set_multicast_if_v6(interface)
     }
 
     /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.

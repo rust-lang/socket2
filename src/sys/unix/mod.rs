@@ -421,6 +421,19 @@ impl Socket {
         }
     }
 
+    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS)?;
+            Ok(raw as u32)
+        }
+    }
+
+    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        unsafe {
+            self.setsockopt(libc::IPPROTO_IPV6 as c_int, libc::IPV6_MULTICAST_HOPS, hops as c_int)
+        }
+    }
+
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
@@ -526,6 +539,54 @@ impl Socket {
             self.setsockopt(libc::IPPROTO_IP,
                             libc::IP_MULTICAST_TTL,
                             multicast_ttl_v4 as c_int)
+        }
+    }
+
+    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
+                                             libc::IPV6_MULTICAST_HOPS)?;
+            Ok(raw as u32)
+        }
+    }
+
+    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        unsafe {
+            self.setsockopt(libc::IPPROTO_IPV6,
+                            libc::IPV6_MULTICAST_HOPS,
+                            hops as c_int)
+        }
+    }
+
+    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
+        unsafe{
+            let imr_interface: libc::in_addr = self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF)?;
+            Ok(from_s_addr(imr_interface.s_addr))
+        }
+    }
+
+    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
+        let interface = to_s_addr(interface);
+        let imr_interface = libc::in_addr { s_addr: interface };
+
+        unsafe {
+            self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface)
+        }
+    }
+
+    pub fn multicast_if_v6(&self) -> io::Result<u32> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
+                                             libc::IPV6_MULTICAST_IF)?;
+            Ok(raw as u32)
+        }
+    }
+
+    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
+        unsafe {
+            self.setsockopt(libc::IPPROTO_IPV6,
+                            libc::IPV6_MULTICAST_IF,
+                            interface as c_int)
         }
     }
 
@@ -999,6 +1060,17 @@ fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
            ((octets[3] as libc::in_addr_t) <<  0))
 }
 
+fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
+    let h_addr = ::ntoh(in_addr);
+    
+    let a: u8 = (h_addr >> 24) as u8;
+    let b: u8 = (h_addr >> 16) as u8;
+    let c: u8 = (h_addr >> 8) as u8;
+    let d: u8 = (h_addr >> 0) as u8;
+
+    Ipv4Addr::new(a,b,c,d)
+}
+
 fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
     let mut ret: libc::in6_addr = unsafe { mem::zeroed() };
     ret.s6_addr = addr.octets();
@@ -1033,4 +1105,10 @@ fn dur2linger(dur: Option<Duration>) -> libc::linger {
         }
         None => libc::linger { l_onoff: 0, l_linger: 0 },
     }
+}
+
+#[test]
+fn test_ip() {
+    let ip = Ipv4Addr::new(127,0,0,1);
+    assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
 }
