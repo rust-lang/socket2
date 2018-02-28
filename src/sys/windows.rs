@@ -529,7 +529,7 @@ impl Socket {
 
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
         let interface = to_s_addr(interface);
-        let imr_interface = IN_ADDR { S_un: interface }
+        let imr_interface = IN_ADDR { S_un: interface };
         
         unsafe {
             self.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, imr_interface)
@@ -965,7 +965,7 @@ fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
 }
 
 fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    let h_addr = ::ntoh(unsafe { *in_addr.S_un.S_addr() });
+    let h_addr = ::ntoh(unsafe { *in_addr.S_addr() });
     
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;
