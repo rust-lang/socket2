@@ -426,16 +426,30 @@ impl Socket {
     }
 
     /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    ///
+    /// For more information about this option, see
+    /// [`set_multicast_hops_v6`][link].
+    ///
+    /// [link]: #method.set_multicast_hops_v6
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
         self.inner.multicast_hops_v6()
     }
 
     /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    ///
+    /// Indicates the number of "routers" multicast packets will transit for
+    /// this socket. The default value is 1 which means that multicast packets
+    /// don't leave the local network unless explicitly requested.
     pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
         self.inner.set_multicast_hops_v6(hops)
     }
 
     /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`set_multicast_if_v4`][link].
+    ///
+    /// [link]: #method.set_multicast_if_v4
     ///
     /// Returns the interface to use for routing multicast packets.
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
@@ -451,14 +465,21 @@ impl Socket {
 
     /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
     ///
-    /// Returns the interface to use for routing multicast packets.
+    /// For more information about this option, see
+    /// [`set_multicast_if_v6`][link].
+    ///
+    /// [link]: #method.set_multicast_if_v6
+    ///
+    /// Returns the interface to use for routing multicast packets. 
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         self.inner.multicast_if_v6()
     }
 
     /// Sets the value of the `IPV6_MULTICAST_IF` option for this socket.
     ///
-    /// Specifies the interface to use for routing multicast packets.
+    /// Specifies the interface to use for routing multicast packets. Unlike ipv4, this
+    /// is generally required in ipv6 contexts where network routing prefixes may
+    /// overlap.
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
         self.inner.set_multicast_if_v6(interface)
     }
