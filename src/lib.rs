@@ -130,3 +130,5 @@ pub struct Type(i32);
 pub struct Protocol(i32);
 
 fn hton<I: NetInt>(i: I) -> I { i.to_be() }
+
+fn ntoh<I: NetInt>(i: I) -> I { I::from_be(i) }
