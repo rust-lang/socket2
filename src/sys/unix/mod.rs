@@ -423,14 +423,14 @@ impl Socket {
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
             Ok(raw as u32)
         }
     }
 
     pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::IPPROTO_IPV6 as c_int, libc::IPV6_MULTICAST_HOPS, hops as c_int)
+            self.setsockopt(libc::IPPROTO_IPV6 as c_int, libc::IPV6_UNICAST_HOPS, hops as c_int)
         }
     }
 
