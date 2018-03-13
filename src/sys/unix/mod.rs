@@ -10,7 +10,7 @@
 
 use std::cmp;
 use std::fmt;
-use std::io::{Read, Write, ErrorKind};
+use std::io::{ErrorKind, Read, Write};
 use std::io;
 use std::mem;
 use std::net::Shutdown;
@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 #[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 
-use libc::{self, c_void, c_int, socklen_t, ssize_t};
+use libc::{self, c_int, c_void, socklen_t, ssize_t};
 
 cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -82,7 +82,8 @@ impl Socket {
             // this option, however, was added in 2.6.27, and we still support
             // 2.6.18 as a kernel, so if the returned error is EINVAL we
             // fallthrough to the fallback.
-            #[cfg(target_os = "linux")] {
+            #[cfg(target_os = "linux")]
+            {
                 match cvt(libc::socket(family, ty | libc::SOCK_CLOEXEC, protocol)) {
                     Ok(fd) => return Ok(Socket::from_raw_fd(fd)),
                     Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
@@ -93,7 +94,8 @@ impl Socket {
             let fd = cvt(libc::socket(family, ty, protocol))?;
             let fd = Socket::from_raw_fd(fd);
             set_cloexec(fd.as_raw_fd())?;
-            #[cfg(target_os = "macos")] {
+            #[cfg(target_os = "macos")]
+            {
                 fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
             }
             Ok(fd)
@@ -107,30 +109,27 @@ impl Socket {
             let fds = (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1]));
             set_cloexec(fds.0.as_raw_fd())?;
             set_cloexec(fds.1.as_raw_fd())?;
-            #[cfg(target_os = "macos")] {
-                fds.0.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-                fds.1.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
+            #[cfg(target_os = "macos")]
+            {
+                fds.0
+                    .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
+                fds.1
+                    .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
             }
             Ok(fds)
         }
     }
 
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe {
-            cvt(libc::bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
-        }
+        unsafe { cvt(libc::bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ()) }
     }
 
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        unsafe {
-            cvt(libc::listen(self.fd, backlog)).map(|_| ())
-        }
+        unsafe { cvt(libc::listen(self.fd, backlog)).map(|_| ()) }
     }
 
     pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe {
-            cvt(libc::connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ())
-        }
+        unsafe { cvt(libc::connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ()) }
     }
 
     pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
@@ -152,8 +151,10 @@ impl Socket {
         };
 
         if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                    "cannot set a 0 duration timeout"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "cannot set a 0 duration timeout",
+            ));
         }
 
         let start = Instant::now();
@@ -161,11 +162,15 @@ impl Socket {
         loop {
             let elapsed = start.elapsed();
             if elapsed >= timeout {
-                return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out"));
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "connection timed out",
+                ));
             }
 
             let timeout = timeout - elapsed;
-            let mut timeout = timeout.as_secs()
+            let mut timeout = timeout
+                .as_secs()
                 .saturating_mul(1_000)
                 .saturating_add(timeout.subsec_nanos() as u64 / 1_000_000);
             if timeout == 0 {
@@ -181,15 +186,19 @@ impl Socket {
                         return Err(err);
                     }
                 }
-                0 => return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out")),
+                0 => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        "connection timed out",
+                    ))
+                }
                 _ => {
                     // linux returns POLLOUT|POLLERR|POLLHUP for refused connections (!), so look
                     // for POLLHUP rather than read readiness
                     if pollfd.revents & libc::POLLHUP != 0 {
-                        let e = self.take_error()?
-                            .unwrap_or_else(|| {
-                                io::Error::new(io::ErrorKind::Other, "no error set after POLLHUP")
-                            });
+                        let e = self.take_error()?.unwrap_or_else(|| {
+                            io::Error::new(io::ErrorKind::Other, "no error set after POLLHUP")
+                        });
                         return Err(e);
                     }
                     return Ok(());
@@ -202,10 +211,15 @@ impl Socket {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as libc::socklen_t;
-            cvt(libc::getsockname(self.fd,
-                                  &mut storage as *mut _ as *mut _,
-                                  &mut len))?;
-            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
+            cvt(libc::getsockname(
+                self.fd,
+                &mut storage as *mut _ as *mut _,
+                &mut len,
+            ))?;
+            Ok(SockAddr::from_raw_parts(
+                &storage as *const _ as *const _,
+                len,
+            ))
         }
     }
 
@@ -213,10 +227,15 @@ impl Socket {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as libc::socklen_t;
-            cvt(libc::getpeername(self.fd,
-                                  &mut storage as *mut _ as *mut _,
-                                  &mut len))?;
-            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
+            cvt(libc::getpeername(
+                self.fd,
+                &mut storage as *mut _ as *mut _,
+                &mut len,
+            ))?;
+            Ok(SockAddr::from_raw_parts(
+                &storage as *const _ as *const _,
+                len,
+            ))
         }
     }
 
@@ -236,7 +255,7 @@ impl Socket {
                         if cfg!(target_os = "linux") {
                             set_cloexec(fd.as_raw_fd())?;
                         }
-                        return Ok(fd)
+                        return Ok(fd);
                     }
                     Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {
                         CLOEXEC_FAILED.store(true, Ordering::Relaxed);
@@ -257,16 +276,19 @@ impl Socket {
         let mut len = mem::size_of_val(&storage) as socklen_t;
 
         let mut socket = None;
-        #[cfg(target_os = "linux")] {
+        #[cfg(target_os = "linux")]
+        {
             weak! {
                 fn accept4(c_int, *mut libc::sockaddr, *mut socklen_t, c_int) -> c_int
             }
             if let Some(f) = accept4.get() {
                 let res = cvt_r(|| unsafe {
-                    f(self.fd,
-                      &mut storage as *mut _ as *mut _,
-                      &mut len,
-                      libc::SOCK_CLOEXEC)
+                    f(
+                        self.fd,
+                        &mut storage as *mut _ as *mut _,
+                        &mut len,
+                        libc::SOCK_CLOEXEC,
+                    )
                 });
                 match res {
                     Ok(fd) => socket = Some(Socket { fd: fd }),
@@ -279,15 +301,12 @@ impl Socket {
         let socket = match socket {
             Some(socket) => socket,
             None => unsafe {
-                let fd = cvt_r(|| {
-                    libc::accept(self.fd,
-                                 &mut storage as *mut _ as *mut _,
-                                 &mut len)
-                })?;
+                let fd =
+                    cvt_r(|| libc::accept(self.fd, &mut storage as *mut _ as *mut _, &mut len))?;
                 let fd = Socket::from_raw_fd(fd);
                 set_cloexec(fd.as_raw_fd())?;
                 fd
-            }
+            },
         };
         let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
         Ok((socket, addr))
@@ -332,10 +351,12 @@ impl Socket {
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = cvt({
-                libc::recv(self.fd,
-                           buf.as_mut_ptr() as *mut c_void,
-                           cmp::min(buf.len(), max_len()),
-                           0)
+                libc::recv(
+                    self.fd,
+                    buf.as_mut_ptr() as *mut c_void,
+                    cmp::min(buf.len(), max_len()),
+                    0,
+                )
             })?;
             Ok(n as usize)
         }
@@ -344,10 +365,12 @@ impl Socket {
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = cvt({
-                libc::recv(self.fd,
-                           buf.as_mut_ptr() as *mut c_void,
-                           cmp::min(buf.len(), max_len()),
-                           libc::MSG_PEEK)
+                libc::recv(
+                    self.fd,
+                    buf.as_mut_ptr() as *mut c_void,
+                    cmp::min(buf.len(), max_len()),
+                    libc::MSG_PEEK,
+                )
             })?;
             Ok(n as usize)
         }
@@ -361,19 +384,20 @@ impl Socket {
         self.recvfrom(buf, libc::MSG_PEEK)
     }
 
-    fn recvfrom(&self, buf: &mut [u8], flags: c_int)
-                -> io::Result<(usize, SockAddr)> {
+    fn recvfrom(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut addrlen = mem::size_of_val(&storage) as socklen_t;
 
             let n = cvt({
-                libc::recvfrom(self.fd,
-                               buf.as_mut_ptr() as *mut c_void,
-                               cmp::min(buf.len(), max_len()),
-                               flags,
-                               &mut storage as *mut _ as *mut _,
-                               &mut addrlen)
+                libc::recvfrom(
+                    self.fd,
+                    buf.as_mut_ptr() as *mut c_void,
+                    cmp::min(buf.len(), max_len()),
+                    flags,
+                    &mut storage as *mut _ as *mut _,
+                    &mut addrlen,
+                )
             })?;
             let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
             Ok((n as usize, addr))
@@ -383,10 +407,12 @@ impl Socket {
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
         unsafe {
             let n = cvt({
-                libc::send(self.fd,
-                           buf.as_ptr() as *const c_void,
-                           cmp::min(buf.len(), max_len()),
-                           MSG_NOSIGNAL)
+                libc::send(
+                    self.fd,
+                    buf.as_ptr() as *const c_void,
+                    cmp::min(buf.len(), max_len()),
+                    MSG_NOSIGNAL,
+                )
             })?;
             Ok(n as usize)
         }
@@ -395,12 +421,14 @@ impl Socket {
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         unsafe {
             let n = cvt({
-                libc::sendto(self.fd,
-                             buf.as_ptr() as *const c_void,
-                             cmp::min(buf.len(), max_len()),
-                             MSG_NOSIGNAL,
-                             addr.as_ptr(),
-                             addr.len())
+                libc::sendto(
+                    self.fd,
+                    buf.as_ptr() as *const c_void,
+                    cmp::min(buf.len(), max_len()),
+                    MSG_NOSIGNAL,
+                    addr.as_ptr(),
+                    addr.len(),
+                )
             })?;
             Ok(n as usize)
         }
@@ -416,9 +444,7 @@ impl Socket {
     }
 
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
     }
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
@@ -430,137 +456,122 @@ impl Socket {
 
     pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::IPPROTO_IPV6 as c_int, libc::IPV6_UNICAST_HOPS, hops as c_int)
+            self.setsockopt(
+                libc::IPPROTO_IPV6 as c_int,
+                libc::IPV6_UNICAST_HOPS,
+                hops as c_int,
+            )
         }
     }
 
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
-                                             libc::IPV6_V6ONLY)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_V6ONLY)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IPV6,
-                            libc::IPV6_V6ONLY,
-                            only_v6 as c_int)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IPV6, libc::IPV6_V6ONLY, only_v6 as c_int) }
     }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO)?))
+            Ok(timeval2dur(self.getsockopt(
+                libc::SOL_SOCKET,
+                libc::SO_RCVTIMEO,
+            )?))
         }
     }
 
     pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::SOL_SOCKET,
-                            libc::SO_RCVTIMEO,
-                            dur2timeval(dur)?)
-        }
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO, dur2timeval(dur)?) }
     }
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO)?))
+            Ok(timeval2dur(self.getsockopt(
+                libc::SOL_SOCKET,
+                libc::SO_SNDTIMEO,
+            )?))
         }
     }
 
     pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::SOL_SOCKET,
-                            libc::SO_SNDTIMEO,
-                            dur2timeval(dur)?)
-        }
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO, dur2timeval(dur)?) }
     }
 
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_TCP,
-                                             libc::TCP_NODELAY)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_TCP, libc::TCP_NODELAY)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::IPPROTO_TCP,
-                            libc::TCP_NODELAY,
-                            nodelay as c_int)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_TCP, libc::TCP_NODELAY, nodelay as c_int) }
     }
 
     pub fn broadcast(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET,
-                                             libc::SO_BROADCAST)?;
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_BROADCAST)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::SOL_SOCKET,
-                            libc::SO_BROADCAST,
-                            broadcast as c_int)
-        }
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_BROADCAST, broadcast as c_int) }
     }
 
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IP,
-                                             libc::IP_MULTICAST_LOOP)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_LOOP)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::IPPROTO_IP,
-                            libc::IP_MULTICAST_LOOP,
-                            multicast_loop_v4 as c_int)
+            self.setsockopt(
+                libc::IPPROTO_IP,
+                libc::IP_MULTICAST_LOOP,
+                multicast_loop_v4 as c_int,
+            )
         }
     }
 
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IP,
-                                             libc::IP_MULTICAST_TTL)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_TTL)?;
             Ok(raw as u32)
         }
     }
 
     pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::IPPROTO_IP,
-                            libc::IP_MULTICAST_TTL,
-                            multicast_ttl_v4 as c_int)
+            self.setsockopt(
+                libc::IPPROTO_IP,
+                libc::IP_MULTICAST_TTL,
+                multicast_ttl_v4 as c_int,
+            )
         }
     }
 
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
-                                             libc::IPV6_MULTICAST_HOPS)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS)?;
             Ok(raw as u32)
         }
     }
 
     pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IPV6,
-                            libc::IPV6_MULTICAST_HOPS,
-                            hops as c_int)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS, hops as c_int) }
     }
 
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        unsafe{
-            let imr_interface: libc::in_addr = self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF)?;
+        unsafe {
+            let imr_interface: libc::in_addr =
+                self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF)?;
             Ok(from_s_addr(imr_interface.s_addr))
         }
     }
@@ -569,119 +580,101 @@ impl Socket {
         let interface = to_s_addr(interface);
         let imr_interface = libc::in_addr { s_addr: interface };
 
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface) }
     }
 
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
-                                             libc::IPV6_MULTICAST_IF)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_IF)?;
             Ok(raw as u32)
         }
     }
 
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::IPPROTO_IPV6,
-                            libc::IPV6_MULTICAST_IF,
-                            interface as c_int)
+            self.setsockopt(
+                libc::IPPROTO_IPV6,
+                libc::IPV6_MULTICAST_IF,
+                interface as c_int,
+            )
         }
     }
 
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6,
-                                             libc::IPV6_MULTICAST_LOOP)?;
+            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_LOOP)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::IPPROTO_IPV6,
-                            libc::IPV6_MULTICAST_LOOP,
-                            multicast_loop_v6 as c_int)
+            self.setsockopt(
+                libc::IPPROTO_IPV6,
+                libc::IPV6_MULTICAST_LOOP,
+                multicast_loop_v6 as c_int,
+            )
         }
     }
 
-    pub fn join_multicast_v4(&self,
-                             multiaddr: &Ipv4Addr,
-                             interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
         let mreq = libc::ip_mreq {
             imr_multiaddr: libc::in_addr { s_addr: multiaddr },
             imr_interface: libc::in_addr { s_addr: interface },
         };
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IP, libc::IP_ADD_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_ADD_MEMBERSHIP, mreq) }
     }
 
-    pub fn join_multicast_v6(&self,
-                             multiaddr: &Ipv6Addr,
-                             interface: u32) -> io::Result<()> {
+    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
         let mreq = libc::ipv6_mreq {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: to_ipv6mr_interface(interface),
         };
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IP, IPV6_ADD_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, mreq) }
     }
 
-    pub fn leave_multicast_v4(&self,
-                              multiaddr: &Ipv4Addr,
-                              interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
         let mreq = libc::ip_mreq {
             imr_multiaddr: libc::in_addr { s_addr: multiaddr },
             imr_interface: libc::in_addr { s_addr: interface },
         };
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IP, libc::IP_DROP_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_DROP_MEMBERSHIP, mreq) }
     }
 
-    pub fn leave_multicast_v6(&self,
-                              multiaddr: &Ipv6Addr,
-                              interface: u32) -> io::Result<()> {
+    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
         let mreq = libc::ipv6_mreq {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: to_ipv6mr_interface(interface),
         };
-        unsafe {
-            self.setsockopt(libc::IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, mreq) }
     }
 
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(linger2dur(self.getsockopt(libc::SOL_SOCKET, libc::SO_LINGER)?))
+            Ok(linger2dur(self.getsockopt(
+                libc::SOL_SOCKET,
+                libc::SO_LINGER,
+            )?))
         }
     }
 
     pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::SOL_SOCKET, libc::SO_LINGER, dur2linger(dur))
-        }
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_LINGER, dur2linger(dur)) }
     }
 
     pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEADDR, reuse as c_int)
-        }
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEADDR, reuse as c_int) }
     }
 
     pub fn reuse_address(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET,
-                                             libc::SO_REUSEADDR)?;
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEADDR)?;
             Ok(raw != 0)
         }
     }
@@ -716,27 +709,29 @@ impl Socket {
 
     pub fn keepalive(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET,
-                                             libc::SO_KEEPALIVE)?;
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_KEEPALIVE)?;
             if raw == 0 {
-                return Ok(None)
+                return Ok(None);
             }
-            let secs: c_int = self.getsockopt(libc::IPPROTO_TCP,
-                                              KEEPALIVE_OPTION)?;
+            let secs: c_int = self.getsockopt(libc::IPPROTO_TCP, KEEPALIVE_OPTION)?;
             Ok(Some(Duration::new(secs as u64, 0)))
         }
     }
 
     pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
         unsafe {
-            self.setsockopt(libc::SOL_SOCKET,
-                            libc::SO_KEEPALIVE,
-                            keepalive.is_some() as c_int)?;
+            self.setsockopt(
+                libc::SOL_SOCKET,
+                libc::SO_KEEPALIVE,
+                keepalive.is_some() as c_int,
+            )?;
             if let Some(dur) = keepalive {
                 // TODO: checked cast here
-                self.setsockopt(libc::IPPROTO_TCP,
-                                KEEPALIVE_OPTION,
-                                (dur.as_secs() / 1000) as c_int)?;
+                self.setsockopt(
+                    libc::IPPROTO_TCP,
+                    KEEPALIVE_OPTION,
+                    (dur.as_secs() / 1000) as c_int,
+                )?;
             }
             Ok(())
         }
@@ -745,42 +740,41 @@ impl Socket {
     #[cfg(all(unix, feature = "reuseport"))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET,
-                                             libc::SO_REUSEPORT)?;
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT)?;
             Ok(raw != 0)
         }
     }
 
     #[cfg(all(unix, feature = "reuseport"))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int)
-        }
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
-    unsafe fn setsockopt<T>(&self,
-                            opt: c_int,
-                            val: c_int,
-                            payload: T) -> io::Result<()>
-        where T: Copy,
+    unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
+    where
+        T: Copy,
     {
         let payload = &payload as *const T as *const c_void;
-        cvt(libc::setsockopt(self.fd,
-                             opt,
-                             val,
-                             payload,
-                             mem::size_of::<T>() as libc::socklen_t))?;
+        cvt(libc::setsockopt(
+            self.fd,
+            opt,
+            val,
+            payload,
+            mem::size_of::<T>() as libc::socklen_t,
+        ))?;
         Ok(())
     }
 
     unsafe fn getsockopt<T: Copy>(&self, opt: c_int, val: c_int) -> io::Result<T> {
         let mut slot: T = mem::zeroed();
         let mut len = mem::size_of::<T>() as libc::socklen_t;
-        cvt(libc::getsockopt(self.fd,
-                             opt,
-                             val,
-                             &mut slot as *mut _ as *mut _,
-                             &mut len))?;
+        cvt(libc::getsockopt(
+            self.fd,
+            opt,
+            val,
+            &mut slot as *mut _ as *mut _,
+            &mut len,
+        ))?;
         assert_eq!(len as usize, mem::size_of::<T>());
         Ok(slot)
     }
@@ -796,9 +790,11 @@ impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = cvt({
-                libc::read(self.fd,
-                           buf.as_mut_ptr() as *mut c_void,
-                           cmp::min(buf.len(), max_len()))
+                libc::read(
+                    self.fd,
+                    buf.as_mut_ptr() as *mut c_void,
+                    cmp::min(buf.len(), max_len()),
+                )
             })?;
             Ok(n as usize)
         }
@@ -849,7 +845,7 @@ impl IntoRawFd for Socket {
     fn into_raw_fd(self) -> c_int {
         let fd = self.fd;
         mem::forget(self);
-        return fd
+        return fd;
     }
 }
 
@@ -873,7 +869,9 @@ impl IntoRawFd for ::Socket {
 
 impl FromRawFd for ::Socket {
     unsafe fn from_raw_fd(fd: c_int) -> ::Socket {
-        ::Socket { inner: Socket::from_raw_fd(fd) }
+        ::Socket {
+            inner: Socket::from_raw_fd(fd),
+        }
     }
 }
 
@@ -979,7 +977,7 @@ fn max_len() -> usize {
     }
 }
 
-fn cvt<T: One + PartialEq + Neg<Output=T>>(t: T) -> io::Result<T> {
+fn cvt<T: One + PartialEq + Neg<Output = T>>(t: T) -> io::Result<T> {
     let one: T = T::one();
     if t == -one {
         Err(io::Error::last_os_error())
@@ -989,8 +987,9 @@ fn cvt<T: One + PartialEq + Neg<Output=T>>(t: T) -> io::Result<T> {
 }
 
 fn cvt_r<F, T>(mut f: F) -> io::Result<T>
-    where F: FnMut() -> T,
-          T: One + PartialEq + Neg<Output=T>
+where
+    F: FnMut() -> T,
+    T: One + PartialEq + Neg<Output = T>,
 {
     loop {
         match cvt(f()) {
@@ -1015,8 +1014,10 @@ fn dur2timeval(dur: Option<Duration>) -> io::Result<libc::timeval> {
     match dur {
         Some(dur) => {
             if dur.as_secs() == 0 && dur.subsec_nanos() == 0 {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                          "cannot set a 0 duration timeout"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "cannot set a 0 duration timeout",
+                ));
             }
 
             let secs = if dur.as_secs() > libc::time_t::max_value() as u64 {
@@ -1033,12 +1034,10 @@ fn dur2timeval(dur: Option<Duration>) -> io::Result<libc::timeval> {
             }
             Ok(timeout)
         }
-        None => {
-            Ok(libc::timeval {
-                tv_sec: 0,
-                tv_usec: 0,
-            })
-        }
+        None => Ok(libc::timeval {
+            tv_sec: 0,
+            tv_usec: 0,
+        }),
     }
 }
 
@@ -1054,27 +1053,27 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    ::hton(((octets[0] as libc::in_addr_t) << 24) |
-           ((octets[1] as libc::in_addr_t) << 16) |
-           ((octets[2] as libc::in_addr_t) <<  8) |
-           ((octets[3] as libc::in_addr_t) <<  0))
+    ::hton(
+        ((octets[0] as libc::in_addr_t) << 24) | ((octets[1] as libc::in_addr_t) << 16)
+            | ((octets[2] as libc::in_addr_t) << 8) | ((octets[3] as libc::in_addr_t) << 0),
+    )
 }
 
 fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
     let h_addr = ::ntoh(in_addr);
-    
+
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;
     let c: u8 = (h_addr >> 8) as u8;
     let d: u8 = (h_addr >> 0) as u8;
 
-    Ipv4Addr::new(a,b,c,d)
+    Ipv4Addr::new(a, b, c, d)
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
     let mut ret: libc::in6_addr = unsafe { mem::zeroed() };
     ret.s6_addr = addr.octets();
-    return ret
+    return ret;
 }
 
 #[cfg(target_os = "android")]
@@ -1097,18 +1096,19 @@ fn linger2dur(linger_opt: libc::linger) -> Option<Duration> {
 
 fn dur2linger(dur: Option<Duration>) -> libc::linger {
     match dur {
-        Some(d) => {
-            libc::linger {
-                l_onoff: 1,
-                l_linger: d.as_secs() as c_int,
-            }
-        }
-        None => libc::linger { l_onoff: 0, l_linger: 0 },
+        Some(d) => libc::linger {
+            l_onoff: 1,
+            l_linger: d.as_secs() as c_int,
+        },
+        None => libc::linger {
+            l_onoff: 0,
+            l_linger: 0,
+        },
     }
 }
 
 #[test]
 fn test_ip() {
-    let ip = Ipv4Addr::new(127,0,0,1);
+    let ip = Ipv4Addr::new(127, 0, 0, 1);
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
 }
