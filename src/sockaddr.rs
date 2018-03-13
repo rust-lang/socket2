@@ -1,21 +1,19 @@
 use std::fmt;
 use std::mem;
-use std::net::{SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ptr;
 
 #[cfg(unix)]
-use libc::{sockaddr, sockaddr_storage, sockaddr_in, sockaddr_in6, sa_family_t, socklen_t, AF_INET,
-           AF_INET6};
+use libc::{sa_family_t, sockaddr, sockaddr_in, sockaddr_storage, socklen_t, AF_INET6,
+           sockaddr_in6, AF_INET};
 #[cfg(windows)]
-use winapi::shared::ws2def::{
-    SOCKADDR as sockaddr, SOCKADDR_STORAGE as sockaddr_storage,
-    SOCKADDR_IN as sockaddr_in,
-    ADDRESS_FAMILY as sa_family_t, AF_INET, AF_INET6
-};
+use winapi::shared::ws2def::{ADDRESS_FAMILY as sa_family_t, AF_INET6, SOCKADDR as sockaddr,
+                             SOCKADDR_IN as sockaddr_in, SOCKADDR_STORAGE as sockaddr_storage,
+                             AF_INET};
 #[cfg(windows)]
 use winapi::um::ws2tcpip::socklen_t;
 #[cfg(windows)]
-use winapi::shared::ws2ipdef::{SOCKADDR_IN6_LH as sockaddr_in6};
+use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 
 use SockAddr;
 
@@ -36,9 +34,11 @@ impl SockAddr {
     /// Constructs a `SockAddr` from its raw components.
     pub unsafe fn from_raw_parts(addr: *const sockaddr, len: socklen_t) -> SockAddr {
         let mut storage = mem::uninitialized::<sockaddr_storage>();
-        ptr::copy_nonoverlapping(addr as *const _ as *const u8,
-                                 &mut storage as *mut _ as *mut u8,
-                                 len as usize);
+        ptr::copy_nonoverlapping(
+            addr as *const _ as *const u8,
+            &mut storage as *mut _ as *mut u8,
+            len as usize,
+        );
 
         SockAddr {
             storage: storage,
@@ -56,12 +56,13 @@ impl SockAddr {
     /// Returns an error if the path is longer than `SUN_LEN`.
     #[cfg(all(unix, feature = "unix"))]
     pub fn unix<P>(path: P) -> ::std::io::Result<SockAddr>
-        where P: AsRef<::std::path::Path>
+    where
+        P: AsRef<::std::path::Path>,
     {
         use std::cmp::Ordering;
         use std::io;
         use std::os::unix::ffi::OsStrExt;
-        use libc::{sockaddr_un, AF_UNIX, c_char};
+        use libc::{c_char, sockaddr_un, AF_UNIX};
 
         unsafe {
             let mut addr = mem::zeroed::<sockaddr_un>();
@@ -72,13 +73,17 @@ impl SockAddr {
             match (bytes.get(0), bytes.len().cmp(&addr.sun_path.len())) {
                 // Abstract paths don't need a null terminator
                 (Some(&0), Ordering::Greater) => {
-                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                            "path must be no longer than SUN_LEN"));
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "path must be no longer than SUN_LEN",
+                    ));
                 }
                 (Some(&0), _) => {}
                 (_, Ordering::Greater) | (_, Ordering::Equal) => {
-                    return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                            "path must be shorter than SUN_LEN"));
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "path must be shorter than SUN_LEN",
+                    ));
                 }
                 _ => {}
             }
@@ -97,7 +102,10 @@ impl SockAddr {
                 Some(&0) | None => {}
                 Some(_) => len += 1,
             }
-            Ok(SockAddr::from_raw_parts(&addr as *const _ as *const _, len as socklen_t))
+            Ok(SockAddr::from_raw_parts(
+                &addr as *const _ as *const _,
+                len as socklen_t,
+            ))
         }
     }
 
@@ -150,8 +158,10 @@ fn _size_checks(v4: SocketAddrV4, v6: SocketAddrV6) {
 impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
         unsafe {
-            SockAddr::from_raw_parts(&addr as *const _ as *const _,
-                                     mem::size_of::<SocketAddrV4>() as socklen_t)
+            SockAddr::from_raw_parts(
+                &addr as *const _ as *const _,
+                mem::size_of::<SocketAddrV4>() as socklen_t,
+            )
         }
     }
 }
@@ -159,8 +169,10 @@ impl From<SocketAddrV4> for SockAddr {
 impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
         unsafe {
-            SockAddr::from_raw_parts(&addr as *const _ as *const _,
-                                     mem::size_of::<SocketAddrV6>() as socklen_t)
+            SockAddr::from_raw_parts(
+                &addr as *const _ as *const _,
+                mem::size_of::<SocketAddrV6>() as socklen_t,
+            )
         }
     }
 }

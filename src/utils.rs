@@ -8,7 +8,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-
 #[doc(hidden)]
 pub trait NetInt {
     fn from_be(i: Self) -> Self;
@@ -35,7 +34,6 @@ macro_rules! one {
 
 one! { i8 i16 i32 i64 isize u8 u16 u32 u64 usize }
 
-
 #[doc(hidden)]
 pub trait Zero {
     fn zero() -> Self;
@@ -48,4 +46,3 @@ macro_rules! zero {
 }
 
 zero! { i8 i16 i32 i64 isize u8 u16 u32 u64 usize }
-

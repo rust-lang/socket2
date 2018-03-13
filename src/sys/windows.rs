@@ -78,12 +78,14 @@ impl Socket {
     pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
         init();
         unsafe {
-            let socket = match sock::WSASocketW(family,
-                                                ty,
-                                                protocol,
-                                                ptr::null_mut(),
-                                                0,
-                                                WSA_FLAG_OVERLAPPED) {
+            let socket = match sock::WSASocketW(
+                family,
+                ty,
+                protocol,
+                ptr::null_mut(),
+                0,
+                WSA_FLAG_OVERLAPPED,
+            ) {
                 sock::INVALID_SOCKET => return Err(last_error()),
                 socket => socket,
             };
@@ -135,8 +137,10 @@ impl Socket {
         }
 
         if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                        "cannot set a 0 duration timeout"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "cannot set a 0 duration timeout",
+            ));
         }
 
         let mut timeout = sock::timeval {
@@ -159,7 +163,12 @@ impl Socket {
 
         match unsafe { sock::select(1, ptr::null_mut(), &mut writefds, &mut errorfds, &timeout) } {
             sock::SOCKET_ERROR => return Err(io::Error::last_os_error()),
-            0 => return Err(io::Error::new(io::ErrorKind::TimedOut, "connection timed out")),
+            0 => {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "connection timed out",
+                ))
+            }
             _ => {
                 if writefds.fd_count != 1 {
                     if let Some(e) = self.take_error()? {
@@ -175,12 +184,13 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            if sock::getsockname(self.socket,
-                                 &mut storage as *mut _ as *mut _,
-                                 &mut len) != 0 {
-                return Err(last_error())
+            if sock::getsockname(self.socket, &mut storage as *mut _ as *mut _, &mut len) != 0 {
+                return Err(last_error());
             }
-            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
+            Ok(SockAddr::from_raw_parts(
+                &storage as *const _ as *const _,
+                len,
+            ))
         }
     }
 
@@ -188,30 +198,31 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            if sock::getpeername(self.socket,
-                                 &mut storage as *mut _ as *mut _,
-                                 &mut len) != 0 {
-                return Err(last_error())
+            if sock::getpeername(self.socket, &mut storage as *mut _ as *mut _, &mut len) != 0 {
+                return Err(last_error());
             }
-            Ok(SockAddr::from_raw_parts(&storage as *const _ as *const _, len))
+            Ok(SockAddr::from_raw_parts(
+                &storage as *const _ as *const _,
+                len,
+            ))
         }
     }
 
     pub fn try_clone(&self) -> io::Result<Socket> {
         unsafe {
             let mut info: sock::WSAPROTOCOL_INFOW = mem::zeroed();
-            let r = sock::WSADuplicateSocketW(self.socket,
-                                              GetCurrentProcessId(),
-                                              &mut info);
+            let r = sock::WSADuplicateSocketW(self.socket, GetCurrentProcessId(), &mut info);
             if r != 0 {
-                return Err(io::Error::last_os_error())
+                return Err(io::Error::last_os_error());
             }
-            let socket = sock::WSASocketW(info.iAddressFamily,
-                                          info.iSocketType,
-                                          info.iProtocol,
-                                          &mut info,
-                                          0,
-                                          WSA_FLAG_OVERLAPPED);
+            let socket = sock::WSASocketW(
+                info.iAddressFamily,
+                info.iSocketType,
+                info.iProtocol,
+                &mut info,
+                0,
+                WSA_FLAG_OVERLAPPED,
+            );
             let socket = match socket {
                 sock::INVALID_SOCKET => return Err(last_error()),
                 n => Socket::from_raw_socket(n as RawSocket),
@@ -225,11 +236,7 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            let socket = {
-                sock::accept(self.socket,
-                             &mut storage as *mut _ as *mut _,
-                             &mut len)
-            };
+            let socket = { sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len) };
             let socket = match socket {
                 sock::INVALID_SOCKET => return Err(last_error()),
                 socket => Socket::from_raw_socket(socket as RawSocket),
@@ -254,9 +261,7 @@ impl Socket {
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         unsafe {
             let mut nonblocking = nonblocking as c_ulong;
-            let r = sock::ioctlsocket(self.socket,
-                                      sock::FIONBIO as c_int,
-                                      &mut nonblocking);
+            let r = sock::ioctlsocket(self.socket, sock::FIONBIO as c_int, &mut nonblocking);
             if r == 0 {
                 Ok(())
             } else {
@@ -266,7 +271,6 @@ impl Socket {
     }
 
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-
         let how = match how {
             Shutdown::Write => SD_SEND,
             Shutdown::Read => SD_RECEIVE,
@@ -282,15 +286,17 @@ impl Socket {
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = {
-                sock::recv(self.socket,
-                             buf.as_mut_ptr() as *mut c_char,
-                             clamp(buf.len()),
-                             0)
+                sock::recv(
+                    self.socket,
+                    buf.as_mut_ptr() as *mut c_char,
+                    clamp(buf.len()),
+                    0,
+                )
             };
             match n {
                 sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
                 sock::SOCKET_ERROR => Err(last_error()),
-                n => Ok(n as usize)
+                n => Ok(n as usize),
             }
         }
     }
@@ -298,15 +304,17 @@ impl Socket {
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = {
-                sock::recv(self.socket,
-                             buf.as_mut_ptr() as *mut c_char,
-                             clamp(buf.len()),
-                             MSG_PEEK)
+                sock::recv(
+                    self.socket,
+                    buf.as_mut_ptr() as *mut c_char,
+                    clamp(buf.len()),
+                    MSG_PEEK,
+                )
             };
             match n {
                 sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
                 sock::SOCKET_ERROR => Err(last_error()),
-                n => Ok(n as usize)
+                n => Ok(n as usize),
             }
         }
     }
@@ -319,19 +327,20 @@ impl Socket {
         self.recvfrom(buf, MSG_PEEK)
     }
 
-    fn recvfrom(&self, buf: &mut [u8], flags: c_int)
-                -> io::Result<(usize, SockAddr)> {
+    fn recvfrom(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut addrlen = mem::size_of_val(&storage) as c_int;
 
             let n = {
-                sock::recvfrom(self.socket,
-                               buf.as_mut_ptr() as *mut c_char,
-                               clamp(buf.len()),
-                               flags,
-                               &mut storage as *mut _ as *mut _,
-                               &mut addrlen)
+                sock::recvfrom(
+                    self.socket,
+                    buf.as_mut_ptr() as *mut c_char,
+                    clamp(buf.len()),
+                    flags,
+                    &mut storage as *mut _ as *mut _,
+                    &mut addrlen,
+                )
             };
             let n = match n {
                 sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => 0,
@@ -346,10 +355,12 @@ impl Socket {
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
         unsafe {
             let n = {
-                sock::send(self.socket,
-                           buf.as_ptr() as *const c_char,
-                           clamp(buf.len()),
-                           0)
+                sock::send(
+                    self.socket,
+                    buf.as_ptr() as *const c_char,
+                    clamp(buf.len()),
+                    0,
+                )
             };
             if n == sock::SOCKET_ERROR {
                 Err(last_error())
@@ -362,12 +373,14 @@ impl Socket {
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         unsafe {
             let n = {
-                sock::sendto(self.socket,
-                             buf.as_ptr() as *const c_char,
-                             clamp(buf.len()),
-                             0,
-                             addr.as_ptr(),
-                             addr.len())
+                sock::sendto(
+                    self.socket,
+                    buf.as_ptr() as *const c_char,
+                    clamp(buf.len()),
+                    0,
+                    addr.as_ptr(),
+                    addr.len(),
+                )
             };
             if n == sock::SOCKET_ERROR {
                 Err(last_error())
@@ -387,9 +400,7 @@ impl Socket {
     }
 
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IP, IP_TTL, ttl as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IP_TTL, ttl as c_int) }
     }
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
@@ -400,65 +411,45 @@ impl Socket {
     }
 
     pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS, hops as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS, hops as c_int) }
     }
 
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int,
-                                             IPV6_V6ONLY)?;
+            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IPV6 as c_int,
-                            IPV6_V6ONLY,
-                            only_v6 as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY, only_v6 as c_int) }
     }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_RCVTIMEO)?))
-        }
+        unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_RCVTIMEO)?)) }
     }
 
     pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(SOL_SOCKET, SO_RCVTIMEO, dur2ms(dur)?)
-        }
+        unsafe { self.setsockopt(SOL_SOCKET, SO_RCVTIMEO, dur2ms(dur)?) }
     }
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_SNDTIMEO)?))
-        }
+        unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_SNDTIMEO)?)) }
     }
 
     pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(SOL_SOCKET, SO_SNDTIMEO, dur2ms(dur)?)
-        }
+        unsafe { self.setsockopt(SOL_SOCKET, SO_SNDTIMEO, dur2ms(dur)?) }
     }
 
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_TCP,
-                                             TCP_NODELAY)?;
+            let raw: c_int = self.getsockopt(IPPROTO_TCP, TCP_NODELAY)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_TCP,
-                            TCP_NODELAY,
-                            nodelay as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_TCP, TCP_NODELAY, nodelay as c_int) }
     }
 
     pub fn broadcast(&self) -> io::Result<bool> {
@@ -469,9 +460,7 @@ impl Socket {
     }
 
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(SOL_SOCKET, SO_BROADCAST, broadcast as c_int)
-        }
+        unsafe { self.setsockopt(SOL_SOCKET, SO_BROADCAST, broadcast as c_int) }
     }
 
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
@@ -482,11 +471,7 @@ impl Socket {
     }
 
     pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IP,
-                            IP_MULTICAST_LOOP,
-                            multicast_loop_v4 as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_LOOP, multicast_loop_v4 as c_int) }
     }
 
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
@@ -497,31 +482,22 @@ impl Socket {
     }
 
     pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IP,
-                            IP_MULTICAST_TTL,
-                            multicast_ttl_v4 as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_TTL, multicast_ttl_v4 as c_int) }
     }
 
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int,
-                                             IPV6_MULTICAST_HOPS)?;
+            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_HOPS)?;
             Ok(raw as u32)
         }
     }
 
     pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IPV6 as c_int,
-                            IPV6_MULTICAST_HOPS,
-                            hops as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_HOPS, hops as c_int) }
     }
 
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        unsafe{
+        unsafe {
             let imr_interface: IN_ADDR = self.getsockopt(IPPROTO_IP, IP_MULTICAST_IF)?;
             Ok(from_s_addr(imr_interface.S_un))
         }
@@ -530,114 +506,86 @@ impl Socket {
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
         let interface = to_s_addr(interface);
         let imr_interface = IN_ADDR { S_un: interface };
-        
-        unsafe {
-            self.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, imr_interface)
-        }
+
+        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, imr_interface) }
     }
 
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int,
-                                             IPV6_MULTICAST_IF)?;
+            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF)?;
             Ok(raw as u32)
         }
     }
 
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(IPPROTO_IPV6 as c_int,
-                            IPV6_MULTICAST_IF,
-                            interface as c_int)
-        }
+        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF, interface as c_int) }
     }
 
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int,
-                                             IPV6_MULTICAST_LOOP)?;
+            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_LOOP)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
         unsafe {
-            self.setsockopt(IPPROTO_IPV6 as c_int,
-                            IPV6_MULTICAST_LOOP,
-                            multicast_loop_v6 as c_int)
+            self.setsockopt(
+                IPPROTO_IPV6 as c_int,
+                IPV6_MULTICAST_LOOP,
+                multicast_loop_v6 as c_int,
+            )
         }
     }
 
-    pub fn join_multicast_v4(&self,
-                             multiaddr: &Ipv4Addr,
-                             interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
         let mreq = IP_MREQ {
             imr_multiaddr: IN_ADDR { S_un: multiaddr },
             imr_interface: IN_ADDR { S_un: interface },
         };
-        unsafe {
-            self.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq) }
     }
 
-    pub fn join_multicast_v6(&self,
-                             multiaddr: &Ipv6Addr,
-                             interface: u32) -> io::Result<()> {
+    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
         let mreq = IPV6_MREQ {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: interface,
         };
-        unsafe {
-            self.setsockopt(IPPROTO_IP, IPV6_ADD_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IPV6_ADD_MEMBERSHIP, mreq) }
     }
 
-    pub fn leave_multicast_v4(&self,
-                              multiaddr: &Ipv4Addr,
-                              interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
         let mreq = IP_MREQ {
             imr_multiaddr: IN_ADDR { S_un: multiaddr },
             imr_interface: IN_ADDR { S_un: interface },
         };
-        unsafe {
-            self.setsockopt(IPPROTO_IP, IP_DROP_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IP_DROP_MEMBERSHIP, mreq) }
     }
 
-    pub fn leave_multicast_v6(&self,
-                              multiaddr: &Ipv6Addr,
-                              interface: u32) -> io::Result<()> {
+    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
         let mreq = IPV6_MREQ {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: interface,
         };
-        unsafe {
-            self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq)
-        }
+        unsafe { self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq) }
     }
 
     pub fn linger(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            Ok(linger2dur(self.getsockopt(SOL_SOCKET, SO_LINGER)?))
-        }
+        unsafe { Ok(linger2dur(self.getsockopt(SOL_SOCKET, SO_LINGER)?)) }
     }
 
     pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(SOL_SOCKET, SO_LINGER, dur2linger(dur))
-        }
+        unsafe { self.setsockopt(SOL_SOCKET, SO_LINGER, dur2linger(dur)) }
     }
 
     pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(SOL_SOCKET, SO_REUSEADDR, reuse as c_int)
-        }
+        unsafe { self.setsockopt(SOL_SOCKET, SO_REUSEADDR, reuse as c_int) }
     }
 
     pub fn reuse_address(&self) -> io::Result<bool> {
@@ -682,15 +630,17 @@ impl Socket {
             keepaliveinterval: 0,
         };
         let n = unsafe {
-            sock::WSAIoctl(self.socket,
-                           SIO_KEEPALIVE_VALS,
-                           0 as *mut _,
-                           0,
-                           &mut ka as *mut _ as *mut _,
-                           mem::size_of_val(&ka) as DWORD,
-                           0 as *mut _,
-                           0 as *mut _,
-                           None)
+            sock::WSAIoctl(
+                self.socket,
+                SIO_KEEPALIVE_VALS,
+                0 as *mut _,
+                0,
+                &mut ka as *mut _ as *mut _,
+                mem::size_of_val(&ka) as DWORD,
+                0 as *mut _,
+                0 as *mut _,
+                None,
+            )
         };
         if n == 0 {
             Ok(if ka.onoff == 0 {
@@ -716,15 +666,17 @@ impl Socket {
             keepaliveinterval: ms as c_ulong,
         };
         let n = unsafe {
-            sock::WSAIoctl(self.socket,
-                           SIO_KEEPALIVE_VALS,
-                           &ka as *const _ as *mut _,
-                           mem::size_of_val(&ka) as DWORD,
-                           0 as *mut _,
-                           0,
-                           0 as *mut _,
-                           0 as *mut _,
-                           None)
+            sock::WSAIoctl(
+                self.socket,
+                SIO_KEEPALIVE_VALS,
+                &ka as *const _ as *mut _,
+                mem::size_of_val(&ka) as DWORD,
+                0 as *mut _,
+                0,
+                0 as *mut _,
+                0 as *mut _,
+                None,
+            )
         };
         if n == 0 {
             Ok(())
@@ -733,18 +685,12 @@ impl Socket {
         }
     }
 
-    unsafe fn setsockopt<T>(&self,
-                            opt: c_int,
-                            val: c_int,
-                            payload: T) -> io::Result<()>
-        where T: Copy,
+    unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
+    where
+        T: Copy,
     {
         let payload = &payload as *const T as *const c_char;
-        if sock::setsockopt(self.socket,
-                            opt,
-                            val,
-                            payload,
-                            mem::size_of::<T>() as c_int) == 0 {
+        if sock::setsockopt(self.socket, opt, val, payload, mem::size_of::<T>() as c_int) == 0 {
             Ok(())
         } else {
             Err(last_error())
@@ -754,11 +700,14 @@ impl Socket {
     unsafe fn getsockopt<T: Copy>(&self, opt: c_int, val: c_int) -> io::Result<T> {
         let mut slot: T = mem::zeroed();
         let mut len = mem::size_of::<T>() as c_int;
-        if sock::getsockopt(self.socket,
-                            opt,
-                            val,
-                            &mut slot as *mut _ as *mut _,
-                            &mut len) == 0 {
+        if sock::getsockopt(
+            self.socket,
+            opt,
+            val,
+            &mut slot as *mut _ as *mut _,
+            &mut len,
+        ) == 0
+        {
             assert_eq!(len as usize, mem::size_of::<T>());
             Ok(slot)
         } else {
@@ -768,9 +717,7 @@ impl Socket {
 
     fn set_no_inherit(&self) -> io::Result<()> {
         unsafe {
-            let r = SetHandleInformation(self.socket as HANDLE,
-                                         HANDLE_FLAG_INHERIT,
-                                         0);
+            let r = SetHandleInformation(self.socket as HANDLE, HANDLE_FLAG_INHERIT, 0);
             if r == 0 {
                 Err(io::Error::last_os_error())
             } else {
@@ -842,7 +789,9 @@ impl IntoRawSocket for Socket {
 
 impl FromRawSocket for Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> Socket {
-        Socket { socket: socket as sock::SOCKET }
+        Socket {
+            socket: socket as sock::SOCKET,
+        }
     }
 }
 
@@ -860,7 +809,9 @@ impl IntoRawSocket for ::Socket {
 
 impl FromRawSocket for ::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> ::Socket {
-        ::Socket { inner: Socket::from_raw_socket(socket) }
+        ::Socket {
+            inner: Socket::from_raw_socket(socket),
+        }
     }
 }
 
@@ -922,20 +873,29 @@ fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {
             // * Nanosecond precision is rounded up
             // * Greater than u32::MAX milliseconds (50 days) is rounded up to
             //   INFINITE (never time out).
-            let ms = dur.as_secs().checked_mul(1000).and_then(|ms| {
-                ms.checked_add((dur.subsec_nanos() as u64) / 1_000_000)
-            }).and_then(|ms| {
-                ms.checked_add(if dur.subsec_nanos() % 1_000_000 > 0 {1} else {0})
-            }).map(|ms| {
-                if ms > <DWORD>::max_value() as u64 {
-                    INFINITE
-                } else {
-                    ms as DWORD
-                }
-            }).unwrap_or(INFINITE);
+            let ms = dur.as_secs()
+                .checked_mul(1000)
+                .and_then(|ms| ms.checked_add((dur.subsec_nanos() as u64) / 1_000_000))
+                .and_then(|ms| {
+                    ms.checked_add(if dur.subsec_nanos() % 1_000_000 > 0 {
+                        1
+                    } else {
+                        0
+                    })
+                })
+                .map(|ms| {
+                    if ms > <DWORD>::max_value() as u64 {
+                        INFINITE
+                    } else {
+                        ms as DWORD
+                    }
+                })
+                .unwrap_or(INFINITE);
             if ms == 0 {
-                return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                          "cannot set a 0 duration timeout"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "cannot set a 0 duration timeout",
+                ));
             }
             Ok(ms)
         }
@@ -955,10 +915,10 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
-    let res = ::hton(((octets[0] as ULONG) << 24) |
-                     ((octets[1] as ULONG) << 16) |
-                     ((octets[2] as ULONG) <<  8) |
-                     ((octets[3] as ULONG) <<  0));
+    let res = ::hton(
+        ((octets[0] as ULONG) << 24) | ((octets[1] as ULONG) << 16) | ((octets[2] as ULONG) << 8)
+            | ((octets[3] as ULONG) << 0),
+    );
     let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };
     unsafe { *(new_addr.S_addr_mut()) = res };
     new_addr
@@ -966,13 +926,13 @@ fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
 
 fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
     let h_addr = ::ntoh(unsafe { *in_addr.S_addr() });
-    
+
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;
     let c: u8 = (h_addr >> 8) as u8;
     let d: u8 = (h_addr >> 0) as u8;
 
-    Ipv4Addr::new(a,b,c,d)
+    Ipv4Addr::new(a, b, c, d)
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
@@ -993,18 +953,19 @@ fn linger2dur(linger_opt: sock::linger) -> Option<Duration> {
 
 fn dur2linger(dur: Option<Duration>) -> sock::linger {
     match dur {
-        Some(d) => {
-            sock::linger {
-                l_onoff: 1,
-                l_linger: d.as_secs() as u16,
-            }
-        }
-        None => sock::linger { l_onoff: 0, l_linger: 0 },
+        Some(d) => sock::linger {
+            l_onoff: 1,
+            l_linger: d.as_secs() as u16,
+        },
+        None => sock::linger {
+            l_onoff: 0,
+            l_linger: 0,
+        },
     }
 }
 
 #[test]
 fn test_ip() {
-    let ip = Ipv4Addr::new(127,0,0,1);
+    let ip = Ipv4Addr::new(127, 0, 0, 1);
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
 }

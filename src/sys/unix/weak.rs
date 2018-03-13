@@ -57,4 +57,3 @@ unsafe fn fetch(name: &str) -> usize {
     assert_eq!(name[name.len() - 1], 0);
     libc::dlsym(libc::RTLD_DEFAULT, name.as_ptr() as *const _) as usize
 }
-

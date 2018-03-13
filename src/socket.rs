@@ -21,7 +21,7 @@ use libc as c;
 use winapi::shared::ws2def as c;
 
 use sys;
-use {Socket, Protocol, Domain, Type, SockAddr};
+use {Domain, Protocol, SockAddr, Socket, Type};
 
 impl Socket {
     /// Creates a new socket ready to be configured.
@@ -29,9 +29,7 @@ impl Socket {
     /// This function corresponds to `socket(2)` and simply creates a new
     /// socket, no other configuration is done and further functions must be
     /// invoked to configure this socket.
-    pub fn new(domain: Domain,
-               type_: Type,
-               protocol: Option<Protocol>) -> io::Result<Socket> {
+    pub fn new(domain: Domain, type_: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         Ok(Socket {
             inner: sys::Socket::new(domain.0, type_.0, protocol)?,
@@ -45,9 +43,11 @@ impl Socket {
     /// This function is only available on Unix when the `pair` feature is
     /// enabled.
     #[cfg(all(unix, feature = "pair"))]
-    pub fn pair(domain: Domain,
-                type_: Type,
-                protocol: Option<Protocol>) -> io::Result<(Socket, Socket)> {
+    pub fn pair(
+        domain: Domain,
+        type_: Type,
+        protocol: Option<Protocol>,
+    ) -> io::Result<(Socket, Socket)> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
         Ok((Socket { inner: sockets.0 }, Socket { inner: sockets.1 }))
@@ -155,9 +155,9 @@ impl Socket {
     /// established. When established, the corresponding `Socket` and the
     /// remote peer's address will be returned.
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        self.inner.accept().map(|(socket, addr)| {
-            (Socket { inner: socket }, addr)
-        })
+        self.inner
+            .accept()
+            .map(|(socket, addr)| (Socket { inner: socket }, addr))
     }
 
     /// Returns the socket address of the local half of this TCP connection.
@@ -470,7 +470,7 @@ impl Socket {
     ///
     /// [link]: #method.set_multicast_if_v6
     ///
-    /// Returns the interface to use for routing multicast packets. 
+    /// Returns the interface to use for routing multicast packets.
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         self.inner.multicast_if_v6()
     }
@@ -502,7 +502,6 @@ impl Socket {
         self.inner.set_multicast_loop_v6(multicast_loop_v6)
     }
 
-
     /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
     ///
     /// This function specifies a new multicast group for this socket to join.
@@ -510,9 +509,7 @@ impl Socket {
     /// address of the local interface with which the system should join the
     /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
     /// interface is chosen by the system.
-    pub fn join_multicast_v4(&self,
-                             multiaddr: &Ipv4Addr,
-                             interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         self.inner.join_multicast_v4(multiaddr, interface)
     }
 
@@ -521,9 +518,7 @@ impl Socket {
     /// This function specifies a new multicast group for this socket to join.
     /// The address must be a valid multicast address, and `interface` is the
     /// index of the interface to join/leave (or 0 to indicate any interface).
-    pub fn join_multicast_v6(&self,
-                             multiaddr: &Ipv6Addr,
-                             interface: u32) -> io::Result<()> {
+    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         self.inner.join_multicast_v6(multiaddr, interface)
     }
 
@@ -533,9 +528,7 @@ impl Socket {
     /// [`join_multicast_v4`][link].
     ///
     /// [link]: #method.join_multicast_v4
-    pub fn leave_multicast_v4(&self,
-                              multiaddr: &Ipv4Addr,
-                              interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         self.inner.leave_multicast_v4(multiaddr, interface)
     }
 
@@ -545,9 +538,7 @@ impl Socket {
     /// [`join_multicast_v6`][link].
     ///
     /// [link]: #method.join_multicast_v6
-    pub fn leave_multicast_v6(&self,
-                              multiaddr: &Ipv6Addr,
-                              interface: u32) -> io::Result<()> {
+    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         self.inner.leave_multicast_v6(multiaddr, interface)
     }
 
@@ -700,40 +691,52 @@ impl fmt::Debug for Socket {
 
 impl From<net::TcpStream> for Socket {
     fn from(socket: net::TcpStream) -> Socket {
-        Socket { inner: socket.into() }
+        Socket {
+            inner: socket.into(),
+        }
     }
 }
 
 impl From<net::TcpListener> for Socket {
     fn from(socket: net::TcpListener) -> Socket {
-        Socket { inner: socket.into() }
+        Socket {
+            inner: socket.into(),
+        }
     }
 }
 
 impl From<net::UdpSocket> for Socket {
     fn from(socket: net::UdpSocket) -> Socket {
-        Socket { inner: socket.into() }
+        Socket {
+            inner: socket.into(),
+        }
     }
 }
 
 #[cfg(all(unix, feature = "unix"))]
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
-        Socket { inner: socket.into() }
+        Socket {
+            inner: socket.into(),
+        }
     }
 }
 
 #[cfg(all(unix, feature = "unix"))]
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
-        Socket { inner: socket.into() }
+        Socket {
+            inner: socket.into(),
+        }
     }
 }
 
 #[cfg(all(unix, feature = "unix"))]
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
-        Socket { inner: socket.into() }
+        Socket {
+            inner: socket.into(),
+        }
     }
 }
 
@@ -900,7 +903,7 @@ mod test {
         }
     }
 
-     #[test]
+    #[test]
     fn connect_timeout_unbound() {
         // bind and drop a socket to track down a "probably unassigned" port
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
@@ -912,8 +915,9 @@ mod test {
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
         match socket.connect_timeout(&addr, Duration::from_millis(250)) {
             Ok(_) => panic!("unexpected success"),
-            Err(ref e) if e.kind() == io::ErrorKind::ConnectionRefused ||
-                e.kind() == io::ErrorKind::TimedOut => {},
+            Err(ref e)
+                if e.kind() == io::ErrorKind::ConnectionRefused
+                    || e.kind() == io::ErrorKind::TimedOut => {}
             Err(e) => panic!("unexpected error {}", e),
         }
     }
@@ -921,13 +925,17 @@ mod test {
     #[test]
     fn connect_timeout_valid() {
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
-        socket.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into()).unwrap();
+        socket
+            .bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
+            .unwrap();
         socket.listen(128).unwrap();
 
         let addr = socket.local_addr().unwrap();
 
         let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
-        socket.connect_timeout(&addr, Duration::from_millis(250)).unwrap();
+        socket
+            .connect_timeout(&addr, Duration::from_millis(250))
+            .unwrap();
     }
 
     #[test]

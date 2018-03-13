@@ -37,25 +37,37 @@
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs)]
 
-#[cfg(unix)] extern crate libc;
-#[cfg(unix)] #[macro_use] extern crate cfg_if;
+#[cfg(unix)]
+#[macro_use]
+extern crate cfg_if;
+#[cfg(unix)]
+extern crate libc;
 
-#[cfg(windows)] extern crate winapi;
+#[cfg(windows)]
+extern crate winapi;
 
-#[cfg(test)] extern crate tempdir;
+#[cfg(test)]
+extern crate tempdir;
 
 use utils::NetInt;
 
-#[cfg(unix)] use libc::{sockaddr_storage, socklen_t};
-#[cfg(windows)] use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
-#[cfg(windows)] use winapi::um::ws2tcpip::socklen_t;
+#[cfg(unix)]
+use libc::{sockaddr_storage, socklen_t};
+#[cfg(windows)]
+use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
+#[cfg(windows)]
+use winapi::um::ws2tcpip::socklen_t;
 
 mod sockaddr;
 mod socket;
 mod utils;
 
-#[cfg(unix)] #[path = "sys/unix/mod.rs"] mod sys;
-#[cfg(windows)] #[path = "sys/windows.rs"] mod sys;
+#[cfg(unix)]
+#[path = "sys/unix/mod.rs"]
+mod sys;
+#[cfg(windows)]
+#[path = "sys/windows.rs"]
+mod sys;
 
 /// Newtype, owned, wrapper around a system socket.
 ///
@@ -129,6 +141,10 @@ pub struct Type(i32);
 #[derive(Copy, Clone)]
 pub struct Protocol(i32);
 
-fn hton<I: NetInt>(i: I) -> I { i.to_be() }
+fn hton<I: NetInt>(i: I) -> I {
+    i.to_be()
+}
 
-fn ntoh<I: NetInt>(i: I) -> I { I::from_be(i) }
+fn ntoh<I: NetInt>(i: I) -> I {
+    I::from_be(i)
+}
