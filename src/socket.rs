@@ -808,7 +808,7 @@ impl From<i32> for Domain {
 
 impl From<Domain> for i32 {
     fn from(a: Domain) -> i32 {
-        a.into()
+        a.0
     }
 }
 
@@ -868,7 +868,7 @@ impl From<i32> for Type {
 
 impl From<Type> for i32 {
     fn from(a: Type) -> i32 {
-        a.into()
+        a.0
     }
 }
 
@@ -880,7 +880,7 @@ impl From<i32> for Protocol {
 
 impl From<Protocol> for i32 {
     fn from(a: Protocol) -> i32 {
-        a.into()
+        a.0
     }
 }
 
