@@ -970,4 +970,13 @@ mod test {
         b.read_exact(&mut buf).unwrap();
         assert_eq!(buf, &b"hello world"[..]);
     }
+
+    #[test]
+    fn keepalive() {
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        socket.set_keepalive(Some(Duration::from_secs(7))).unwrap();
+        assert_eq!(socket.keepalive().unwrap(), Some(Duration::from_secs(7)));
+        socket.set_keepalive(None).unwrap();
+        assert_eq!(socket.keepalive().unwrap(), None);
+    }
 }
