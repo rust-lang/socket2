@@ -665,6 +665,7 @@ impl Socket {
             keepalivetime: ms as c_ulong,
             keepaliveinterval: ms as c_ulong,
         };
+        let mut out = 0;
         let n = unsafe {
             sock::WSAIoctl(
                 self.socket,
@@ -673,7 +674,7 @@ impl Socket {
                 mem::size_of_val(&ka) as DWORD,
                 0 as *mut _,
                 0,
-                0 as *mut _,
+                &mut out,
                 0 as *mut _,
                 None,
             )

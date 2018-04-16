@@ -730,7 +730,7 @@ impl Socket {
                 self.setsockopt(
                     libc::IPPROTO_TCP,
                     KEEPALIVE_OPTION,
-                    (dur.as_secs() / 1000) as c_int,
+                    dur.as_secs() as c_int,
                 )?;
             }
             Ok(())
