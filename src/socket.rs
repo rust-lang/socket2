@@ -841,11 +841,13 @@ impl Type {
 }
 
 impl ::Protocol {
+    #[cfg(not(target_os = "redox"))]
     /// Protocol corresponding to `ICMPv4`
     pub fn icmpv4() -> Self {
         ::Protocol(sys::IPPROTO_ICMP)
     }
 
+    #[cfg(not(target_os = "redox"))]
     /// Protocol corresponding to `ICMPv6`
     pub fn icmpv6() -> Self {
         ::Protocol(sys::IPPROTO_ICMPV6)
@@ -856,6 +858,7 @@ impl ::Protocol {
         ::Protocol(sys::IPPROTO_TCP)
     }
 
+    #[cfg(not(target_os = "redox"))]
     /// Protocol corresponding to `UDP`
     pub fn udp() -> Self {
         ::Protocol(sys::IPPROTO_UDP)
