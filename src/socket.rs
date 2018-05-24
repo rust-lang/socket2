@@ -15,7 +15,7 @@ use std::time::Duration;
 #[cfg(all(unix, feature = "unix"))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 use libc as c;
 #[cfg(windows)]
 use winapi::shared::ws2def as c;
@@ -827,11 +827,13 @@ impl Type {
         Type(c::SOCK_DGRAM)
     }
 
+    #[cfg(not(target_os = "redox"))]
     /// Type corresponding to `SOCK_SEQPACKET`
     pub fn seqpacket() -> Type {
         Type(c::SOCK_SEQPACKET)
     }
 
+    #[cfg(not(target_os = "redox"))]
     /// Type corresponding to `SOCK_RAW`
     pub fn raw() -> Type {
         Type(c::SOCK_RAW)

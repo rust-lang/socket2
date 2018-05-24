@@ -3,7 +3,7 @@ use std::mem;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ptr;
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 use libc::{sa_family_t, sockaddr, sockaddr_in, sockaddr_storage, socklen_t, AF_INET6,
            sockaddr_in6, AF_INET};
 #[cfg(windows)]

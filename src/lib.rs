@@ -37,11 +37,13 @@
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs)]
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 #[macro_use]
 extern crate cfg_if;
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 extern crate libc;
+#[cfg(target_os = "redox")]
+extern crate syscall;
 
 #[cfg(windows)]
 extern crate winapi;
@@ -51,7 +53,7 @@ extern crate tempdir;
 
 use utils::NetInt;
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 use libc::{sockaddr_storage, socklen_t};
 #[cfg(windows)]
 use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
@@ -62,7 +64,7 @@ mod sockaddr;
 mod socket;
 mod utils;
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 #[path = "sys/unix/mod.rs"]
 mod sys;
 #[cfg(windows)]
@@ -145,6 +147,7 @@ fn hton<I: NetInt>(i: I) -> I {
     i.to_be()
 }
 
+#[cfg(not(target_os = "redox"))]
 fn ntoh<I: NetInt>(i: I) -> I {
     I::from_be(i)
 }

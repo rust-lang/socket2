@@ -18,11 +18,17 @@ use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 #[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
+#[cfg(not(target_os = "redox"))]
+use std::time::Instant;
+#[cfg(target_os = "redox")]
+use syscall;
+#[cfg(target_os = "redox")]
+use std::fs::File;
 
-use libc::{self, c_int, c_void, socklen_t, ssize_t};
+use libc::{self, c_uint, c_int, c_void, socklen_t, ssize_t};
 
 cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -92,8 +98,8 @@ impl Socket {
             }
 
             let fd = cvt(libc::socket(family, ty, protocol))?;
-            let fd = Socket::from_raw_fd(fd);
-            set_cloexec(fd.as_raw_fd())?;
+            let fd = Socket::from_raw_fd(fd as RawFd);
+            set_cloexec(fd.as_raw_fd() as c_int)?;
             #[cfg(target_os = "macos")]
             {
                 fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
@@ -106,9 +112,9 @@ impl Socket {
         unsafe {
             let mut fds = [0, 0];
             cvt(libc::socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
-            let fds = (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1]));
-            set_cloexec(fds.0.as_raw_fd())?;
-            set_cloexec(fds.1.as_raw_fd())?;
+            let fds = (Socket::from_raw_fd(fds[0] as RawFd), Socket::from_raw_fd(fds[1] as RawFd));
+            set_cloexec(fds.0.as_raw_fd() as c_int)?;
+            set_cloexec(fds.1.as_raw_fd() as c_int)?;
             #[cfg(target_os = "macos")]
             {
                 fds.0
@@ -132,6 +138,57 @@ impl Socket {
         unsafe { cvt(libc::connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ()) }
     }
 
+    #[cfg(target_os = "redox")]
+    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
+        if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "cannot set a 0 duration timeout",
+            ));
+        }
+        if timeout.as_secs() > ::std::i64::MAX as u64 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "too large duration",
+            ));
+        }
+
+        self.connect(addr)?;
+
+        let mut event = File::open("event:")?;
+        let mut time  = File::open("time:")?;
+
+        event.write(&syscall::Event {
+            id: self.fd as usize,
+            flags: syscall::EVENT_WRITE,
+            data: 0
+        })?;
+
+        event.write(&syscall::Event {
+            id: time.as_raw_fd(),
+            flags: syscall::EVENT_WRITE,
+            data: 1
+        })?;
+
+        let mut current = syscall::TimeSpec::default();
+        time.read(&mut current)?;
+        current.tv_sec += timeout.as_secs() as i64;
+        current.tv_nsec += timeout.subsec_nanos() as i32;
+        time.write(&current)?;
+
+        let mut out = syscall::Event::default();
+        event.read(&mut out)?;
+
+        if out.data == 1 { // the timeout we registered
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "connection timed out",
+            ));
+        }
+
+        Ok(())
+    }
+    #[cfg(not(target_os = "redox"))]
     pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = self.connect(addr);
@@ -226,24 +283,27 @@ impl Socket {
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
+            #[cfg(not(target_os = "redox"))]
             let mut len = mem::size_of_val(&storage) as libc::socklen_t;
+            #[cfg(target_os = "redox")]
+            let mut len = mem::size_of_val(&storage) as usize;
             cvt(libc::getpeername(
                 self.fd,
                 &mut storage as *mut _ as *mut _,
-                &mut len,
+                &mut len
             ))?;
             Ok(SockAddr::from_raw_parts(
                 &storage as *const _ as *const _,
-                len,
+                len as c_uint,
             ))
         }
     }
 
     pub fn try_clone(&self) -> io::Result<Socket> {
         // implementation lifted from libstd
-        #[cfg(any(target_os = "android", target_os = "haiku"))]
+        #[cfg(any(target_os = "android", target_os = "haiku", target_os = "redox"))]
         use libc::F_DUPFD as F_DUPFD_CLOEXEC;
-        #[cfg(not(any(target_os = "android", target_os = "haiku")))]
+        #[cfg(not(any(target_os = "android", target_os = "haiku", target_os = "redox")))]
         use libc::F_DUPFD_CLOEXEC;
 
         static CLOEXEC_FAILED: AtomicBool = ATOMIC_BOOL_INIT;
@@ -251,9 +311,9 @@ impl Socket {
             if !CLOEXEC_FAILED.load(Ordering::Relaxed) {
                 match cvt(libc::fcntl(self.fd, F_DUPFD_CLOEXEC, 0)) {
                     Ok(fd) => {
-                        let fd = Socket::from_raw_fd(fd);
+                        let fd = Socket::from_raw_fd(fd as RawFd);
                         if cfg!(target_os = "linux") {
-                            set_cloexec(fd.as_raw_fd())?;
+                            set_cloexec(fd.as_raw_fd() as c_int)?;
                         }
                         return Ok(fd);
                     }
@@ -264,8 +324,8 @@ impl Socket {
                 }
             }
             let fd = cvt(libc::fcntl(self.fd, libc::F_DUPFD, 0))?;
-            let fd = Socket::from_raw_fd(fd);
-            set_cloexec(fd.as_raw_fd())?;
+            let fd = Socket::from_raw_fd(fd as RawFd);
+            set_cloexec(fd.as_raw_fd() as c_int)?;
             Ok(fd)
         }
     }
@@ -303,8 +363,8 @@ impl Socket {
             None => unsafe {
                 let fd =
                     cvt_r(|| libc::accept(self.fd, &mut storage as *mut _ as *mut _, &mut len))?;
-                let fd = Socket::from_raw_fd(fd);
-                set_cloexec(fd.as_raw_fd())?;
+                let fd = Socket::from_raw_fd(fd as RawFd);
+                set_cloexec(fd.as_raw_fd() as c_int)?;
                 fd
             },
         };
@@ -362,13 +422,16 @@ impl Socket {
         }
     }
 
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+    pub fn peek(&self, _buf: &mut [u8]) -> io::Result<usize> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             let n = cvt({
                 libc::recv(
                     self.fd,
-                    buf.as_mut_ptr() as *mut c_void,
-                    cmp::min(buf.len(), max_len()),
+                    _buf.as_mut_ptr() as *mut c_void,
+                    cmp::min(_buf.len(), max_len()),
                     libc::MSG_PEEK,
                 )
             })?;
@@ -380,8 +443,11 @@ impl Socket {
         self.recvfrom(buf, 0)
     }
 
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.recvfrom(buf, libc::MSG_PEEK)
+    pub fn peek_from(&self, _buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
+        self.recvfrom(_buf, libc::MSG_PEEK)
     }
 
     fn recvfrom(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
@@ -448,18 +514,24 @@ impl Socket {
     }
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
             Ok(raw as u32)
         }
     }
 
-    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+    pub fn set_unicast_hops_v6(&self, _hops: u32) -> io::Result<()> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             self.setsockopt(
                 libc::IPPROTO_IPV6 as c_int,
                 libc::IPV6_UNICAST_HOPS,
-                hops as c_int,
+                _hops as c_int,
             )
         }
     }
@@ -558,17 +630,26 @@ impl Socket {
     }
 
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS)?;
             Ok(raw as u32)
         }
     }
 
-    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS, hops as c_int) }
+    pub fn set_multicast_hops_v6(&self, _hops: u32) -> io::Result<()> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
+        unsafe { self.setsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS, _hops as c_int) }
     }
 
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             let imr_interface: libc::in_addr =
                 self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF)?;
@@ -576,26 +657,37 @@ impl Socket {
         }
     }
 
-    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        let interface = to_s_addr(interface);
-        let imr_interface = libc::in_addr { s_addr: interface };
+    pub fn set_multicast_if_v4(&self, _interface: &Ipv4Addr) -> io::Result<()> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
+        {
+            let interface = to_s_addr(_interface);
+            let imr_interface = libc::in_addr { s_addr: interface };
 
-        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface) }
+            unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface) }
+        }
     }
 
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_IF)?;
             Ok(raw as u32)
         }
     }
 
-    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
+    pub fn set_multicast_if_v6(&self, _interface: u32) -> io::Result<()> {
+        #[cfg(target_os = "redox")]
+        return Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"));
+        #[cfg(not(target_os = "redox"))]
         unsafe {
             self.setsockopt(
                 libc::IPPROTO_IPV6,
                 libc::IPV6_MULTICAST_IF,
-                interface as c_int,
+                _interface as c_int,
             )
         }
     }
@@ -836,39 +928,39 @@ impl fmt::Debug for Socket {
 }
 
 impl AsRawFd for Socket {
-    fn as_raw_fd(&self) -> c_int {
-        self.fd
+    fn as_raw_fd(&self) -> RawFd {
+        self.fd as RawFd
     }
 }
 
 impl IntoRawFd for Socket {
-    fn into_raw_fd(self) -> c_int {
-        let fd = self.fd;
+    fn into_raw_fd(self) -> RawFd {
+        let fd = self.fd as RawFd;
         mem::forget(self);
         return fd;
     }
 }
 
 impl FromRawFd for Socket {
-    unsafe fn from_raw_fd(fd: c_int) -> Socket {
-        Socket { fd: fd }
+    unsafe fn from_raw_fd(fd: RawFd) -> Socket {
+        Socket { fd: fd as c_int }
     }
 }
 
 impl AsRawFd for ::Socket {
-    fn as_raw_fd(&self) -> c_int {
+    fn as_raw_fd(&self) -> RawFd {
         self.inner.as_raw_fd()
     }
 }
 
 impl IntoRawFd for ::Socket {
-    fn into_raw_fd(self) -> c_int {
+    fn into_raw_fd(self) -> RawFd {
         self.inner.into_raw_fd()
     }
 }
 
 impl FromRawFd for ::Socket {
-    unsafe fn from_raw_fd(fd: c_int) -> ::Socket {
+    unsafe fn from_raw_fd(fd: RawFd) -> ::Socket {
         ::Socket {
             inner: Socket::from_raw_fd(fd),
         }
@@ -1002,7 +1094,10 @@ where
 fn set_cloexec(fd: c_int) -> io::Result<()> {
     unsafe {
         let previous = cvt(libc::fcntl(fd, libc::F_GETFD))?;
+        #[cfg(not(target_os = "redox"))]
         let new = previous | libc::FD_CLOEXEC;
+        #[cfg(target_os = "redox")]
+        let new = previous | syscall::O_CLOEXEC as i32;
         if new != previous {
             cvt(libc::fcntl(fd, libc::F_SETFD, new))?;
         }
@@ -1059,6 +1154,7 @@ fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     )
 }
 
+#[cfg(not(target_os = "redox"))]
 fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
     let h_addr = ::ntoh(in_addr);
 
