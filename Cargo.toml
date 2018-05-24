@@ -20,7 +20,7 @@ features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip", "minwindef"]
 
 [target."cfg(any(unix, target_os = \"redox\"))".dependencies]
 cfg-if = "0.1"
-libc = { git = "https://github.com/jD91mZM2/libc" }
+libc = { git = "https://github.com/redox-os/liblibc" }
 
 [target."cfg(target_os = \"redox\")".dependencies]
 redox_syscall = "0.1.38"
