@@ -15,7 +15,7 @@ use std::time::Duration;
 #[cfg(all(unix, feature = "unix"))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 use libc as c;
 #[cfg(windows)]
 use winapi::shared::ws2def as c;

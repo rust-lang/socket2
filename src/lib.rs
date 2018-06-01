@@ -40,8 +40,12 @@
 #[cfg(unix)]
 #[macro_use]
 extern crate cfg_if;
-#[cfg(unix)]
+#[cfg(target_os = "redox")]
+extern crate cfg_if;
+#[cfg(any(unix, target_os = "redox"))]
 extern crate libc;
+#[cfg(target_os = "redox")]
+extern crate syscall;
 
 #[cfg(windows)]
 extern crate winapi;
@@ -51,7 +55,7 @@ extern crate tempdir;
 
 use utils::NetInt;
 
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "redox"))]
 use libc::{sockaddr_storage, socklen_t};
 #[cfg(windows)]
 use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
@@ -62,11 +66,9 @@ mod sockaddr;
 mod socket;
 mod utils;
 
-#[cfg(unix)]
-#[path = "sys/unix/mod.rs"]
-mod sys;
-#[cfg(windows)]
-#[path = "sys/windows.rs"]
+#[cfg_attr(unix, path = "sys/unix/mod.rs")]
+#[cfg_attr(target_os = "redox", path = "sys/redox/mod.rs")]
+#[cfg_attr(windows, path = "sys/windows.rs")]
 mod sys;
 
 /// Newtype, owned, wrapper around a system socket.
@@ -145,6 +147,7 @@ fn hton<I: NetInt>(i: I) -> I {
     i.to_be()
 }
 
+#[cfg(not(target_os = "redox"))]
 fn ntoh<I: NetInt>(i: I) -> I {
     I::from_be(i)
 }
