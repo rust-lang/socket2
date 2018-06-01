@@ -829,17 +829,11 @@ impl Type {
 
     /// Type corresponding to `SOCK_SEQPACKET`
     pub fn seqpacket() -> Type {
-        #[cfg(target_os = "redox")]
-        unimplemented!();
-        #[cfg(not(target_os = "redox"))]
         Type(c::SOCK_SEQPACKET)
     }
 
     /// Type corresponding to `SOCK_RAW`
     pub fn raw() -> Type {
-        #[cfg(target_os = "redox")]
-        unimplemented!();
-        #[cfg(not(target_os = "redox"))]
         Type(c::SOCK_RAW)
     }
 }
@@ -847,17 +841,11 @@ impl Type {
 impl ::Protocol {
     /// Protocol corresponding to `ICMPv4`
     pub fn icmpv4() -> Self {
-        #[cfg(target_os = "redox")]
-        unimplemented!();
-        #[cfg(not(target_os = "redox"))]
         ::Protocol(sys::IPPROTO_ICMP)
     }
 
     /// Protocol corresponding to `ICMPv6`
     pub fn icmpv6() -> Self {
-        #[cfg(target_os = "redox")]
-        unimplemented!();
-        #[cfg(not(target_os = "redox"))]
         ::Protocol(sys::IPPROTO_ICMPV6)
     }
 
@@ -868,9 +856,6 @@ impl ::Protocol {
 
     /// Protocol corresponding to `UDP`
     pub fn udp() -> Self {
-        #[cfg(target_os = "redox")]
-        unimplemented!();
-        #[cfg(not(target_os = "redox"))]
         ::Protocol(sys::IPPROTO_UDP)
     }
 }
