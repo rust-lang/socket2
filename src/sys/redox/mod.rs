@@ -35,11 +35,11 @@ use utils::One;
 
 pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 
-pub const IPPROTO_ICMP = -1;
-pub const IPPROTO_ICMPV6 = -1;
-pub const IPPROTO_UDP = -1;
-pub const SOCK_RAW = -1;
-pub const SOCK_SEQPACKET = -1;
+pub const IPPROTO_ICMP: i32 = -1;
+pub const IPPROTO_ICMPV6: i32 = -1;
+pub const IPPROTO_UDP: i32 = -1;
+pub const SOCK_RAW: i32 = -1;
+pub const SOCK_SEQPACKET: i32 = -1;
 
 pub struct Socket {
     fd: c_int,
