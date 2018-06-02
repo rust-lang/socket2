@@ -20,7 +20,7 @@ features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip", "minwindef"]
 
 [target."cfg(any(unix, target_os = \"redox\"))".dependencies]
 cfg-if = "0.1"
-libc = { git = "https://github.com/rust-lang/libc", rev = "ad4d492" }
+libc = "0.2.42"
 
 [target."cfg(target_os = \"redox\")".dependencies]
 redox_syscall = "0.1.38"

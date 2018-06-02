@@ -829,12 +829,12 @@ impl Type {
 
     /// Type corresponding to `SOCK_SEQPACKET`
     pub fn seqpacket() -> Type {
-        Type(c::SOCK_SEQPACKET)
+        Type(sys::SOCK_SEQPACKET)
     }
 
     /// Type corresponding to `SOCK_RAW`
     pub fn raw() -> Type {
-        Type(c::SOCK_RAW)
+        Type(sys::SOCK_RAW)
     }
 }
 
