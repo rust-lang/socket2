@@ -1,5 +1,6 @@
 language: rust
 sudo: false
+cache: cargo
 
 matrix:
   include:
@@ -16,6 +17,12 @@ matrix:
         - cargo doc --no-deps --all-features
       after_success:
         - travis-cargo --only nightly doc-upload
+
+    - rust: nightly
+      before_script:
+        - rustup target add x86_64-unknown-redox --toolchain nightly
+      script:
+        - cargo check --target x86_64-unknown-redox
 
 script:
   - cargo test
