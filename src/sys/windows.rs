@@ -47,6 +47,8 @@ pub const IPPROTO_ICMP: i32 = ws2def::IPPROTO_ICMP as i32;
 pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6 as i32;
 pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP as i32;
 pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP as i32;
+pub const SOCK_SEQPACKET: i32 = ws2def::SOCK_SEQPACKET as i32;
+pub const SOCK_RAW: i32 = ws2def::SOCK_RAW as i32;
 
 #[repr(C)]
 struct tcp_keepalive {
