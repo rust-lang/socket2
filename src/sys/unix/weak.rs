@@ -43,7 +43,7 @@ impl<F> Weak<F> {
                 };
                 self.addr.store(ptr, Ordering::SeqCst);
             }
-            if self.addr.load(Ordering::SeqCst) == 1 {
+            if self.addr.load(Ordering::SeqCst) == 0 {
                 None
             } else {
                 mem::transmute::<&AtomicUsize, Option<&F>>(&self.addr)
