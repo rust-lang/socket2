@@ -1,6 +1,6 @@
 # socket2-rs
 
-[![Build Status](https://travis-ci.org/alexcrichton/socket2-rs.svg?branch=master)](https://travis-ci.org/alexcrichton/socket2-rs)
+[![Build Status](https://travis-ci.com/alexcrichton/socket2-rs.svg?branch=master)](https://travis-ci.com/alexcrichton/socket2-rs)
 [![Build status](https://ci.appveyor.com/api/projects/status/hovebj1gr4bgm3d9?svg=true)](https://ci.appveyor.com/project/alexcrichton/socket2-rs)
 
 [Documentation](https://docs.rs/socket2)
