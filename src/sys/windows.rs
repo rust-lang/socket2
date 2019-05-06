@@ -445,13 +445,13 @@ impl Socket {
 
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_TCP, TCP_NODELAY)?;
+            let raw: c_char = self.getsockopt(IPPROTO_TCP, TCP_NODELAY)?;
             Ok(raw != 0)
         }
     }
 
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_TCP, TCP_NODELAY, nodelay as c_int) }
+        unsafe { self.setsockopt(IPPROTO_TCP, TCP_NODELAY, nodelay as c_char) }
     }
 
     pub fn broadcast(&self) -> io::Result<bool> {

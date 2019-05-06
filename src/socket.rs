@@ -982,4 +982,16 @@ mod test {
         #[cfg(unix)]
         assert_eq!(socket.keepalive().unwrap(), None);
     }
+
+    #[test]
+    fn nodelay() {
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+
+        assert!(socket.set_nodelay(true).is_ok());
+
+        let result = socket.nodelay();
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
 }
