@@ -123,7 +123,7 @@ impl SockAddr {
         unsafe { self.as_(AF_INET as sa_family_t) }
     }
 
-    /// Returns this address as a `SocketAddrV4` if it is in the `AF_INET6`
+    /// Returns this address as a `SocketAddrV6` if it is in the `AF_INET6`
     /// family.
     pub fn as_inet6(&self) -> Option<SocketAddrV6> {
         unsafe { self.as_(AF_INET6 as sa_family_t) }
