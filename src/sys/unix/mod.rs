@@ -17,7 +17,7 @@ use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
 use std::os::unix::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 #[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
@@ -248,7 +248,7 @@ impl Socket {
         #[cfg(not(any(target_os = "android", target_os = "haiku")))]
         use libc::F_DUPFD_CLOEXEC;
 
-        static CLOEXEC_FAILED: AtomicBool = ATOMIC_BOOL_INIT;
+        static CLOEXEC_FAILED: AtomicBool = AtomicBool::new(false);
         unsafe {
             if !CLOEXEC_FAILED.load(Ordering::Relaxed) {
                 match cvt(libc::fcntl(self.fd, F_DUPFD_CLOEXEC, 0)) {

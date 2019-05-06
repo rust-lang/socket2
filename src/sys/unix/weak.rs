@@ -20,7 +20,7 @@ macro_rules! weak {
         static $name: ::sys::weak::Weak<unsafe extern fn($($t),*) -> $ret> =
             ::sys::weak::Weak {
                 name: concat!(stringify!($name), "\0"),
-                addr: ::std::sync::atomic::ATOMIC_USIZE_INIT,
+                addr: ::std::sync::atomic::AtomicUsize::new(0),
                 _marker: ::std::marker::PhantomData,
             };
     )
