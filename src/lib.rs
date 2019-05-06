@@ -66,7 +66,7 @@ mod sockaddr;
 mod socket;
 mod utils;
 
-#[cfg_attr(unix, path = "sys/unix/mod.rs")]
+#[cfg_attr(unix, path = "sys/unix.rs")]
 #[cfg_attr(target_os = "redox", path = "sys/redox/mod.rs")]
 #[cfg_attr(windows, path = "sys/windows.rs")]
 mod sys;

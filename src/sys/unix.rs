@@ -68,10 +68,6 @@ pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
 pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
 pub const SOCK_RAW: i32 = libc::SOCK_RAW;
 
-#[macro_use]
-#[cfg(target_os = "linux")]
-mod weak;
-
 pub struct Socket {
     fd: c_int,
 }
@@ -280,23 +276,19 @@ impl Socket {
         let mut socket = None;
         #[cfg(target_os = "linux")]
         {
-            weak! {
-                fn accept4(c_int, *mut libc::sockaddr, *mut socklen_t, c_int) -> c_int
-            }
-            if let Some(f) = accept4.get() {
-                let res = cvt_r(|| unsafe {
-                    f(
-                        self.fd,
-                        &mut storage as *mut _ as *mut _,
-                        &mut len,
-                        libc::SOCK_CLOEXEC,
-                    )
-                });
-                match res {
-                    Ok(fd) => socket = Some(Socket { fd: fd }),
-                    Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
-                    Err(e) => return Err(e),
-                }
+            let res = cvt_r(|| unsafe {
+                libc::syscall(
+                    libc::SYS_accept4,
+                    self.fd as libc::c_long,
+                    &mut storage as *mut _ as libc::c_long,
+                    len as libc::c_long,
+                    libc::SOCK_CLOEXEC as libc::c_long,
+                ) as libc::c_int
+            });
+            match res {
+                Ok(fd) => socket = Some(Socket { fd: fd }),
+                Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
+                Err(e) => return Err(e),
             }
         }
 
