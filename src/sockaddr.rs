@@ -18,7 +18,7 @@ use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 #[cfg(windows)]
 use winapi::um::ws2tcpip::socklen_t;
 
-use SockAddr;
+use crate::SockAddr;
 
 impl fmt::Debug for SockAddr {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {

@@ -10,6 +10,7 @@ description = """
 Utilities for handling networking sockets with a maximal amount of configuration
 possible intended.
 """
+edition = "2018"
 
 [package.metadata.docs.rs]
 all-features = true

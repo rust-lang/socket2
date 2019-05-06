@@ -24,7 +24,7 @@ use std::time::{Duration, Instant};
 
 use libc::{self, c_int, c_void, socklen_t, ssize_t};
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
                  target_os = "ios", target_os = "macos",
                  target_os = "openbsd", target_os = "netbsd",
@@ -37,7 +37,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(target_os = "linux", target_os = "android",
                  target_os = "dragonfly", target_os = "freebsd",
                  target_os = "openbsd", target_os = "netbsd",
@@ -48,7 +48,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
         use libc::TCP_KEEPALIVE as KEEPALIVE_OPTION;
     } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd", target_os = "haiku"))] {
@@ -58,8 +58,8 @@ cfg_if! {
     }
 }
 
-use utils::One;
-use SockAddr;
+use crate::utils::One;
+use crate::SockAddr;
 
 pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
 pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
@@ -842,21 +842,21 @@ impl FromRawFd for Socket {
     }
 }
 
-impl AsRawFd for ::Socket {
+impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
         self.inner.as_raw_fd()
     }
 }
 
-impl IntoRawFd for ::Socket {
+impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> c_int {
         self.inner.into_raw_fd()
     }
 }
 
-impl FromRawFd for ::Socket {
-    unsafe fn from_raw_fd(fd: c_int) -> ::Socket {
-        ::Socket {
+impl FromRawFd for crate::Socket {
+    unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
+        crate::Socket {
             inner: Socket::from_raw_fd(fd),
         }
     }
@@ -1040,7 +1040,7 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    ::hton(
+    crate::hton(
         ((octets[0] as libc::in_addr_t) << 24)
             | ((octets[1] as libc::in_addr_t) << 16)
             | ((octets[2] as libc::in_addr_t) << 8)
@@ -1049,7 +1049,7 @@ fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
 }
 
 fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
-    let h_addr = ::ntoh(in_addr);
+    let h_addr = crate::ntoh(in_addr);
 
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;

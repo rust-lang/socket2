@@ -30,8 +30,8 @@ const MSG_NOSIGNAL: c_int = 0x0;
 
 use libc::TCP_KEEPIDLE as KEEPALIVE_OPTION;
 
-use utils::One;
-use SockAddr;
+use crate::utils::One;
+use crate::SockAddr;
 
 pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 
@@ -648,21 +648,21 @@ impl FromRawFd for Socket {
     }
 }
 
-impl AsRawFd for ::Socket {
+impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> RawFd {
         self.inner.as_raw_fd()
     }
 }
 
-impl IntoRawFd for ::Socket {
+impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> RawFd {
         self.inner.into_raw_fd()
     }
 }
 
-impl FromRawFd for ::Socket {
-    unsafe fn from_raw_fd(fd: RawFd) -> ::Socket {
-        ::Socket {
+impl FromRawFd for crate::Socket {
+    unsafe fn from_raw_fd(fd: RawFd) -> crate::Socket {
+        crate::Socket {
             inner: Socket::from_raw_fd(fd),
         }
     }
@@ -782,7 +782,7 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    ::hton(
+    crate::hton(
         ((octets[0] as libc::in_addr_t) << 24)
             | ((octets[1] as libc::in_addr_t) << 16)
             | ((octets[2] as libc::in_addr_t) << 8)

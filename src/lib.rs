@@ -37,23 +37,7 @@
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs)]
 
-#[cfg(unix)]
-#[macro_use]
-extern crate cfg_if;
-#[cfg(target_os = "redox")]
-extern crate cfg_if;
-#[cfg(any(unix, target_os = "redox"))]
-extern crate libc;
-#[cfg(target_os = "redox")]
-extern crate syscall;
-
-#[cfg(windows)]
-extern crate winapi;
-
-#[cfg(test)]
-extern crate tempdir;
-
-use utils::NetInt;
+use crate::utils::NetInt;
 
 #[cfg(any(unix, target_os = "redox"))]
 use libc::{sockaddr_storage, socklen_t};
@@ -72,7 +56,7 @@ mod sys;
 #[cfg(windows)]
 #[path = "sys/windows.rs"]
 mod sys;
-#[cfg(redox)]
+#[cfg(target_os = "redox")]
 #[path = "sys/redox/mod.rs"]
 mod sys;
 

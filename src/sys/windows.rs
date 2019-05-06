@@ -33,7 +33,7 @@ use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::INFINITE;
 use winapi::um::winsock2 as sock;
 
-use SockAddr;
+use crate::SockAddr;
 
 const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
 const MSG_PEEK: c_int = 0x2;
@@ -798,21 +798,21 @@ impl FromRawSocket for Socket {
     }
 }
 
-impl AsRawSocket for ::Socket {
+impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
         self.inner.as_raw_socket()
     }
 }
 
-impl IntoRawSocket for ::Socket {
+impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
         self.inner.into_raw_socket()
     }
 }
 
-impl FromRawSocket for ::Socket {
-    unsafe fn from_raw_socket(socket: RawSocket) -> ::Socket {
-        ::Socket {
+impl FromRawSocket for crate::Socket {
+    unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
+        crate::Socket {
             inner: Socket::from_raw_socket(socket),
         }
     }
@@ -919,7 +919,7 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
-    let res = ::hton(
+    let res = crate::hton(
         ((octets[0] as ULONG) << 24)
             | ((octets[1] as ULONG) << 16)
             | ((octets[2] as ULONG) << 8)
@@ -931,7 +931,7 @@ fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
 }
 
 fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    let h_addr = ::ntoh(unsafe { *in_addr.S_addr() });
+    let h_addr = crate::ntoh(unsafe { *in_addr.S_addr() });
 
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;
