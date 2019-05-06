@@ -10,17 +10,17 @@
 
 use std::cmp;
 use std::fmt;
-use std::io::{ErrorKind, Read, Write};
 use std::io;
+use std::io::{ErrorKind, Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
+#[cfg(feature = "unix")]
+use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-#[cfg(feature = "unix")]
-use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 
 use libc::{self, c_int, c_void, socklen_t, ssize_t};
 
@@ -58,8 +58,8 @@ cfg_if! {
     }
 }
 
-use SockAddr;
 use utils::One;
+use SockAddr;
 
 pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
 pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
@@ -471,10 +471,9 @@ impl Socket {
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_RCVTIMEO,
-            )?))
+            Ok(timeval2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO)?,
+            ))
         }
     }
 
@@ -484,10 +483,9 @@ impl Socket {
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_SNDTIMEO,
-            )?))
+            Ok(timeval2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO)?,
+            ))
         }
     }
 
@@ -651,10 +649,9 @@ impl Socket {
 
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(linger2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_LINGER,
-            )?))
+            Ok(linger2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_LINGER)?,
+            ))
         }
     }
 
@@ -721,11 +718,7 @@ impl Socket {
             )?;
             if let Some(dur) = keepalive {
                 // TODO: checked cast here
-                self.setsockopt(
-                    libc::IPPROTO_TCP,
-                    KEEPALIVE_OPTION,
-                    dur.as_secs() as c_int,
-                )?;
+                self.setsockopt(libc::IPPROTO_TCP, KEEPALIVE_OPTION, dur.as_secs() as c_int)?;
             }
             Ok(())
         }
@@ -1048,8 +1041,10 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
     ::hton(
-        ((octets[0] as libc::in_addr_t) << 24) | ((octets[1] as libc::in_addr_t) << 16)
-            | ((octets[2] as libc::in_addr_t) << 8) | ((octets[3] as libc::in_addr_t) << 0),
+        ((octets[0] as libc::in_addr_t) << 24)
+            | ((octets[1] as libc::in_addr_t) << 16)
+            | ((octets[2] as libc::in_addr_t) << 8)
+            | ((octets[3] as libc::in_addr_t) << 0),
     )
 }
 

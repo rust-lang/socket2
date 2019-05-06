@@ -10,8 +10,8 @@
 
 use std::cmp;
 use std::fmt;
-use std::io::{Read, Write};
 use std::io;
+use std::io::{Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -21,12 +21,12 @@ use std::sync::{Once, ONCE_INIT};
 use std::time::Duration;
 
 use winapi::ctypes::{c_char, c_int, c_long, c_ulong};
-use winapi::shared::inaddr::*;
 use winapi::shared::in6addr::*;
+use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::{HANDLE, ULONG};
-use winapi::shared::ws2def::*;
 use winapi::shared::ws2def;
+use winapi::shared::ws2def::*;
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
@@ -876,7 +876,8 @@ fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {
             // * Nanosecond precision is rounded up
             // * Greater than u32::MAX milliseconds (50 days) is rounded up to
             //   INFINITE (never time out).
-            let ms = dur.as_secs()
+            let ms = dur
+                .as_secs()
                 .checked_mul(1000)
                 .and_then(|ms| ms.checked_add((dur.subsec_nanos() as u64) / 1_000_000))
                 .and_then(|ms| {
@@ -919,7 +920,9 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
     let res = ::hton(
-        ((octets[0] as ULONG) << 24) | ((octets[1] as ULONG) << 16) | ((octets[2] as ULONG) << 8)
+        ((octets[0] as ULONG) << 24)
+            | ((octets[1] as ULONG) << 16)
+            | ((octets[2] as ULONG) << 8)
             | ((octets[3] as ULONG) << 0),
     );
     let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };

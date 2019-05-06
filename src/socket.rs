@@ -11,9 +11,9 @@
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-use std::time::Duration;
 #[cfg(all(unix, feature = "unix"))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
+use std::time::Duration;
 
 #[cfg(any(unix, target_os = "redox"))]
 use libc as c;
