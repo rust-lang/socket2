@@ -739,24 +739,17 @@ impl Socket {
         }
     }
 
-    #[cfg(all(unix, feature = "reuseport"))]
+    #[cfg(all(unix, not(target_os = "solaris"), feature = "reuseport"))]
     pub fn reuse_port(&self) -> io::Result<bool> {
-        #[cfg(not(target_os = "solaris"))]
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT)?;
             Ok(raw != 0)
         }
-        #[cfg(target_os = "solaris")]
-        Ok(false)
     }
 
-    #[cfg(all(unix, feature = "reuseport"))]
+    #[cfg(all(unix, not(target_os = "solaris"), feature = "reuseport"))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
-        #[cfg(not(target_os = "solaris"))]
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
-        
-        #[cfg(target_os = "solaris")]
-        Ok(())
     }
 
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
