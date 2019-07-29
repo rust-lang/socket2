@@ -37,23 +37,7 @@
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs)]
 
-#[cfg(unix)]
-#[macro_use]
-extern crate cfg_if;
-#[cfg(target_os = "redox")]
-extern crate cfg_if;
-#[cfg(any(unix, target_os = "redox"))]
-extern crate libc;
-#[cfg(target_os = "redox")]
-extern crate syscall;
-
-#[cfg(windows)]
-extern crate winapi;
-
-#[cfg(test)]
-extern crate tempdir;
-
-use utils::NetInt;
+use crate::utils::NetInt;
 
 #[cfg(any(unix, target_os = "redox"))]
 use libc::{sockaddr_storage, socklen_t};
@@ -66,9 +50,14 @@ mod sockaddr;
 mod socket;
 mod utils;
 
-#[cfg_attr(unix, path = "sys/unix/mod.rs")]
-#[cfg_attr(target_os = "redox", path = "sys/redox/mod.rs")]
-#[cfg_attr(windows, path = "sys/windows.rs")]
+#[cfg(unix)]
+#[path = "sys/unix.rs"]
+mod sys;
+#[cfg(windows)]
+#[path = "sys/windows.rs"]
+mod sys;
+#[cfg(target_os = "redox")]
+#[path = "sys/redox/mod.rs"]
 mod sys;
 
 /// Newtype, owned, wrapper around a system socket.

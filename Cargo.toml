@@ -1,6 +1,6 @@
 [package]
 name = "socket2"
-version = "0.3.9"
+version = "0.3.10"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
@@ -10,6 +10,7 @@ description = """
 Utilities for handling networking sockets with a maximal amount of configuration
 possible intended.
 """
+edition = "2018"
 
 [package.metadata.docs.rs]
 all-features = true

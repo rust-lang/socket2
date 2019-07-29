@@ -10,8 +10,8 @@
 
 use std::cmp;
 use std::fmt;
-use std::io::{Read, Write};
 use std::io;
+use std::io::{Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -21,19 +21,19 @@ use std::sync::{Once, ONCE_INIT};
 use std::time::Duration;
 
 use winapi::ctypes::{c_char, c_int, c_long, c_ulong};
-use winapi::shared::inaddr::*;
 use winapi::shared::in6addr::*;
+use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::{HANDLE, ULONG};
-use winapi::shared::ws2def::*;
 use winapi::shared::ws2def;
+use winapi::shared::ws2def::*;
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::INFINITE;
 use winapi::um::winsock2 as sock;
 
-use SockAddr;
+use crate::SockAddr;
 
 const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
 const MSG_PEEK: c_int = 0x2;
@@ -798,21 +798,21 @@ impl FromRawSocket for Socket {
     }
 }
 
-impl AsRawSocket for ::Socket {
+impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
         self.inner.as_raw_socket()
     }
 }
 
-impl IntoRawSocket for ::Socket {
+impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
         self.inner.into_raw_socket()
     }
 }
 
-impl FromRawSocket for ::Socket {
-    unsafe fn from_raw_socket(socket: RawSocket) -> ::Socket {
-        ::Socket {
+impl FromRawSocket for crate::Socket {
+    unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
+        crate::Socket {
             inner: Socket::from_raw_socket(socket),
         }
     }
@@ -876,7 +876,8 @@ fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {
             // * Nanosecond precision is rounded up
             // * Greater than u32::MAX milliseconds (50 days) is rounded up to
             //   INFINITE (never time out).
-            let ms = dur.as_secs()
+            let ms = dur
+                .as_secs()
                 .checked_mul(1000)
                 .and_then(|ms| ms.checked_add((dur.subsec_nanos() as u64) / 1_000_000))
                 .and_then(|ms| {
@@ -918,8 +919,10 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
-    let res = ::hton(
-        ((octets[0] as ULONG) << 24) | ((octets[1] as ULONG) << 16) | ((octets[2] as ULONG) << 8)
+    let res = crate::hton(
+        ((octets[0] as ULONG) << 24)
+            | ((octets[1] as ULONG) << 16)
+            | ((octets[2] as ULONG) << 8)
             | ((octets[3] as ULONG) << 0),
     );
     let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };
@@ -928,7 +931,7 @@ fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
 }
 
 fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    let h_addr = ::ntoh(unsafe { *in_addr.S_addr() });
+    let h_addr = crate::ntoh(unsafe { *in_addr.S_addr() });
 
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;

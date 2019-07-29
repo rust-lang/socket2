@@ -10,21 +10,21 @@
 
 use std::cmp;
 use std::fmt;
-use std::io::{ErrorKind, Read, Write};
 use std::io;
+use std::io::{ErrorKind, Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
-use std::os::unix::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
-use std::time::{Duration, Instant};
 #[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
+use std::os::unix::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use libc::{self, c_int, c_void, socklen_t, ssize_t};
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
                  target_os = "ios", target_os = "macos",
                  target_os = "openbsd", target_os = "netbsd",
@@ -37,7 +37,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(target_os = "linux", target_os = "android",
                  target_os = "dragonfly", target_os = "freebsd",
                  target_os = "openbsd", target_os = "netbsd",
@@ -48,7 +48,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
         use libc::TCP_KEEPALIVE as KEEPALIVE_OPTION;
     } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd", target_os = "haiku"))] {
@@ -58,8 +58,8 @@ cfg_if! {
     }
 }
 
-use SockAddr;
-use utils::One;
+use crate::utils::One;
+use crate::SockAddr;
 
 pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
 pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
@@ -67,10 +67,6 @@ pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
 pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
 pub const SOCK_RAW: i32 = libc::SOCK_RAW;
-
-#[macro_use]
-#[cfg(target_os = "linux")]
-mod weak;
 
 pub struct Socket {
     fd: c_int,
@@ -248,7 +244,7 @@ impl Socket {
         #[cfg(not(any(target_os = "android", target_os = "haiku")))]
         use libc::F_DUPFD_CLOEXEC;
 
-        static CLOEXEC_FAILED: AtomicBool = ATOMIC_BOOL_INIT;
+        static CLOEXEC_FAILED: AtomicBool = AtomicBool::new(false);
         unsafe {
             if !CLOEXEC_FAILED.load(Ordering::Relaxed) {
                 match cvt(libc::fcntl(self.fd, F_DUPFD_CLOEXEC, 0)) {
@@ -280,23 +276,19 @@ impl Socket {
         let mut socket = None;
         #[cfg(target_os = "linux")]
         {
-            weak! {
-                fn accept4(c_int, *mut libc::sockaddr, *mut socklen_t, c_int) -> c_int
-            }
-            if let Some(f) = accept4.get() {
-                let res = cvt_r(|| unsafe {
-                    f(
-                        self.fd,
-                        &mut storage as *mut _ as *mut _,
-                        &mut len,
-                        libc::SOCK_CLOEXEC,
-                    )
-                });
-                match res {
-                    Ok(fd) => socket = Some(Socket { fd: fd }),
-                    Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
-                    Err(e) => return Err(e),
-                }
+            let res = cvt_r(|| unsafe {
+                libc::syscall(
+                    libc::SYS_accept4,
+                    self.fd as libc::c_long,
+                    &mut storage as *mut _ as libc::c_long,
+                    len as libc::c_long,
+                    libc::SOCK_CLOEXEC as libc::c_long,
+                ) as libc::c_int
+            });
+            match res {
+                Ok(fd) => socket = Some(Socket { fd: fd }),
+                Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
+                Err(e) => return Err(e),
             }
         }
 
@@ -479,10 +471,9 @@ impl Socket {
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_RCVTIMEO,
-            )?))
+            Ok(timeval2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO)?,
+            ))
         }
     }
 
@@ -492,10 +483,9 @@ impl Socket {
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_SNDTIMEO,
-            )?))
+            Ok(timeval2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO)?,
+            ))
         }
     }
 
@@ -659,10 +649,9 @@ impl Socket {
 
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(linger2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_LINGER,
-            )?))
+            Ok(linger2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_LINGER)?,
+            ))
         }
     }
 
@@ -729,11 +718,7 @@ impl Socket {
             )?;
             if let Some(dur) = keepalive {
                 // TODO: checked cast here
-                self.setsockopt(
-                    libc::IPPROTO_TCP,
-                    KEEPALIVE_OPTION,
-                    dur.as_secs() as c_int,
-                )?;
+                self.setsockopt(libc::IPPROTO_TCP, KEEPALIVE_OPTION, dur.as_secs() as c_int)?;
             }
             Ok(())
         }
@@ -857,21 +842,21 @@ impl FromRawFd for Socket {
     }
 }
 
-impl AsRawFd for ::Socket {
+impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
         self.inner.as_raw_fd()
     }
 }
 
-impl IntoRawFd for ::Socket {
+impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> c_int {
         self.inner.into_raw_fd()
     }
 }
 
-impl FromRawFd for ::Socket {
-    unsafe fn from_raw_fd(fd: c_int) -> ::Socket {
-        ::Socket {
+impl FromRawFd for crate::Socket {
+    unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
+        crate::Socket {
             inner: Socket::from_raw_fd(fd),
         }
     }
@@ -1055,14 +1040,16 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    ::hton(
-        ((octets[0] as libc::in_addr_t) << 24) | ((octets[1] as libc::in_addr_t) << 16)
-            | ((octets[2] as libc::in_addr_t) << 8) | ((octets[3] as libc::in_addr_t) << 0),
+    crate::hton(
+        ((octets[0] as libc::in_addr_t) << 24)
+            | ((octets[1] as libc::in_addr_t) << 16)
+            | ((octets[2] as libc::in_addr_t) << 8)
+            | ((octets[3] as libc::in_addr_t) << 0),
     )
 }
 
 fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
-    let h_addr = ::ntoh(in_addr);
+    let h_addr = crate::ntoh(in_addr);
 
     let a: u8 = (h_addr >> 24) as u8;
     let b: u8 = (h_addr >> 16) as u8;

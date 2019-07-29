@@ -10,8 +10,9 @@
 
 use std::cmp;
 use std::fmt;
-use std::io::{ErrorKind, Read, Write};
+use std::fs::File;
 use std::io;
+use std::io::{ErrorKind, Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -19,9 +20,8 @@ use std::ops::Neg;
 use std::os::unix::prelude::*;
 use std::time::Duration;
 use syscall;
-use std::fs::File;
 
-use libc::{self, c_uint, c_int, c_void, socklen_t, ssize_t};
+use libc::{self, c_int, c_uint, c_void, socklen_t, ssize_t};
 
 use libc::IPV6_ADD_MEMBERSHIP;
 use libc::IPV6_DROP_MEMBERSHIP;
@@ -30,8 +30,8 @@ const MSG_NOSIGNAL: c_int = 0x0;
 
 use libc::TCP_KEEPIDLE as KEEPALIVE_OPTION;
 
-use SockAddr;
-use utils::One;
+use crate::utils::One;
+use crate::SockAddr;
 
 pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 
@@ -51,7 +51,10 @@ impl Socket {
             return Err(io::Error::new(ErrorKind::Other, "Type not implemented yet"));
         }
         if protocol == -1 {
-            return Err(io::Error::new(ErrorKind::Other, "Protocol not implemented yet"));
+            return Err(io::Error::new(
+                ErrorKind::Other,
+                "Protocol not implemented yet",
+            ));
         }
         unsafe {
             let fd = cvt(libc::socket(family, ty, protocol))?;
@@ -94,18 +97,18 @@ impl Socket {
         self.connect(addr)?;
 
         let mut event = File::open("event:")?;
-        let mut time  = File::open("time:")?;
+        let mut time = File::open("time:")?;
 
         event.write(&syscall::Event {
             id: self.fd as usize,
             flags: syscall::EVENT_WRITE,
-            data: 0
+            data: 0,
         })?;
 
         event.write(&syscall::Event {
             id: time.as_raw_fd(),
             flags: syscall::EVENT_WRITE,
-            data: 1
+            data: 1,
         })?;
 
         let mut current = syscall::TimeSpec::default();
@@ -117,11 +120,9 @@ impl Socket {
         let mut out = syscall::Event::default();
         event.read(&mut out)?;
 
-        if out.data == 1 { // the timeout we registered
-            return Err(io::Error::new(
-                ErrorKind::TimedOut,
-                "connection timed out",
-            ));
+        if out.data == 1 {
+            // the timeout we registered
+            return Err(io::Error::new(ErrorKind::TimedOut, "connection timed out"));
         }
 
         Ok(())
@@ -150,7 +151,7 @@ impl Socket {
             cvt(libc::getpeername(
                 self.fd,
                 &mut storage as *mut _ as *mut _,
-                &mut len
+                &mut len,
             ))?;
             Ok(SockAddr::from_raw_parts(
                 &storage as *const _ as *const _,
@@ -308,10 +309,9 @@ impl Socket {
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_RCVTIMEO,
-            )?))
+            Ok(timeval2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO)?,
+            ))
         }
     }
 
@@ -321,10 +321,9 @@ impl Socket {
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(timeval2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_SNDTIMEO,
-            )?))
+            Ok(timeval2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO)?,
+            ))
         }
     }
 
@@ -469,10 +468,9 @@ impl Socket {
 
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            Ok(linger2dur(self.getsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_LINGER,
-            )?))
+            Ok(linger2dur(
+                self.getsockopt(libc::SOL_SOCKET, libc::SO_LINGER)?,
+            ))
         }
     }
 
@@ -539,11 +537,7 @@ impl Socket {
             )?;
             if let Some(dur) = keepalive {
                 // TODO: checked cast here
-                self.setsockopt(
-                    libc::IPPROTO_TCP,
-                    KEEPALIVE_OPTION,
-                    dur.as_secs() as c_int,
-                )?;
+                self.setsockopt(libc::IPPROTO_TCP, KEEPALIVE_OPTION, dur.as_secs() as c_int)?;
             }
             Ok(())
         }
@@ -654,21 +648,21 @@ impl FromRawFd for Socket {
     }
 }
 
-impl AsRawFd for ::Socket {
+impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> RawFd {
         self.inner.as_raw_fd()
     }
 }
 
-impl IntoRawFd for ::Socket {
+impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> RawFd {
         self.inner.into_raw_fd()
     }
 }
 
-impl FromRawFd for ::Socket {
-    unsafe fn from_raw_fd(fd: RawFd) -> ::Socket {
-        ::Socket {
+impl FromRawFd for crate::Socket {
+    unsafe fn from_raw_fd(fd: RawFd) -> crate::Socket {
+        crate::Socket {
             inner: Socket::from_raw_fd(fd),
         }
     }
@@ -788,9 +782,11 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    ::hton(
-        ((octets[0] as libc::in_addr_t) << 24) | ((octets[1] as libc::in_addr_t) << 16)
-            | ((octets[2] as libc::in_addr_t) << 8) | ((octets[3] as libc::in_addr_t) << 0),
+    crate::hton(
+        ((octets[0] as libc::in_addr_t) << 24)
+            | ((octets[1] as libc::in_addr_t) << 16)
+            | ((octets[2] as libc::in_addr_t) << 8)
+            | ((octets[3] as libc::in_addr_t) << 0),
     )
 }
 

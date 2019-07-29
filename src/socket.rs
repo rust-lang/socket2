@@ -11,17 +11,17 @@
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-use std::time::Duration;
 #[cfg(all(unix, feature = "unix"))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
+use std::time::Duration;
 
 #[cfg(any(unix, target_os = "redox"))]
 use libc as c;
 #[cfg(windows)]
 use winapi::shared::ws2def as c;
 
-use sys;
-use {Domain, Protocol, SockAddr, Socket, Type};
+use crate::sys;
+use crate::{Domain, Protocol, SockAddr, Socket, Type};
 
 impl Socket {
     /// Creates a new socket ready to be configured.
@@ -838,25 +838,25 @@ impl Type {
     }
 }
 
-impl ::Protocol {
+impl crate::Protocol {
     /// Protocol corresponding to `ICMPv4`
     pub fn icmpv4() -> Self {
-        ::Protocol(sys::IPPROTO_ICMP)
+        crate::Protocol(sys::IPPROTO_ICMP)
     }
 
     /// Protocol corresponding to `ICMPv6`
     pub fn icmpv6() -> Self {
-        ::Protocol(sys::IPPROTO_ICMPV6)
+        crate::Protocol(sys::IPPROTO_ICMPV6)
     }
 
     /// Protocol corresponding to `TCP`
     pub fn tcp() -> Self {
-        ::Protocol(sys::IPPROTO_TCP)
+        crate::Protocol(sys::IPPROTO_TCP)
     }
 
     /// Protocol corresponding to `UDP`
     pub fn udp() -> Self {
-        ::Protocol(sys::IPPROTO_UDP)
+        crate::Protocol(sys::IPPROTO_UDP)
     }
 }
 
