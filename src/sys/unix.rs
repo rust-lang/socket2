@@ -281,7 +281,7 @@ impl Socket {
                     libc::SYS_accept4,
                     self.fd as libc::c_long,
                     &mut storage as *mut _ as libc::c_long,
-                    len as libc::c_long,
+                    &mut len,
                     libc::SOCK_CLOEXEC as libc::c_long,
                 ) as libc::c_int
             });
