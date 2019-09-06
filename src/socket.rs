@@ -798,6 +798,15 @@ impl Domain {
     pub fn unix() -> Domain {
         Domain(c::AF_UNIX)
     }
+
+    /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// activated.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn packet() -> Domain {
+        Domain(c::AF_PACKET)
+    }
 }
 
 impl From<i32> for Domain {
