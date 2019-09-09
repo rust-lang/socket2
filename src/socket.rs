@@ -801,9 +801,9 @@ impl Domain {
 
     /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
+    /// This function is only available on Linux when the `unix` feature is
     /// activated.
-    #[cfg(all(unix, feature = "unix"))]
+    #[cfg(all(unix, feature = "unix", target_os = "linux"))]
     pub fn packet() -> Domain {
         Domain(c::AF_PACKET)
     }
