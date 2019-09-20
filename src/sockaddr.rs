@@ -132,6 +132,18 @@ impl SockAddr {
         unsafe { self.as_(AF_INET6 as sa_family_t) }
     }
 
+    /// Returns this address as a `SocketAddr` if it is in the `AF_INET`
+    /// or `AF_INET6` family, otherwise returns `None`.
+    pub fn as_std(&self) -> Option<SocketAddr> {
+        if let Some(addr) = self.as_inet() {
+            Some(SocketAddr::V4(addr))
+        } else if let Some(addr) = self.as_inet6() {
+            Some(SocketAddr::V6(addr))
+        } else {
+            None
+        }
+    }
+
     /// Returns this address's family.
     pub fn family(&self) -> sa_family_t {
         self.storage.ss_family
