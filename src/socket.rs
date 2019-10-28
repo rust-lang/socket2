@@ -513,6 +513,17 @@ impl Socket {
         self.inner.join_multicast_v4(multiaddr, interface)
     }
 
+    /// Executes an operation of the `IP_ADD_MEMBERSHIP_SOURCE` type.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// address of the local interface with which the system should join the
+    /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
+    /// interface is chosen by the system.
+    pub fn join_multicast_source_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr, source: &Ipv4Addr) -> io::Result<()> {
+        self.inner.join_multicast_source_v4(multiaddr, interface, source)
+    }
+
     /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
     ///
     /// This function specifies a new multicast group for this socket to join.

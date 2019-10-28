@@ -67,6 +67,15 @@ pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
 pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
 pub const SOCK_RAW: i32 = libc::SOCK_RAW;
+pub const IP_ADD_SOURCE_MEMBERSHIP: libc::c_int = 39;
+
+#[repr(C, packed)]
+#[derive(Copy, Clone)]
+pub struct IpMreqSource {
+    imr_multiaddr: libc::in_addr,
+    imr_interface: libc::in_addr,
+    imr_sourceaddr: libc::in_addr,
+}
 
 pub struct Socket {
     fd: c_int,
@@ -607,6 +616,19 @@ impl Socket {
                 multicast_loop_v6 as c_int,
             )
         }
+    }
+
+    pub fn join_multicast_source_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr, source: &Ipv4Addr) -> io::Result<()> {
+        let multiaddr = to_s_addr(multiaddr);
+        let interface = to_s_addr(interface);
+        let source = to_s_addr(source);
+
+        let mreq = IpMreqSource {
+            imr_multiaddr: libc::in_addr { s_addr: multiaddr },
+            imr_interface: libc::in_addr { s_addr: interface },
+            imr_sourceaddr: libc::in_addr { s_addr: source },
+        };
+        unsafe { self.setsockopt(libc::IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, mreq) }
     }
 
     pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
