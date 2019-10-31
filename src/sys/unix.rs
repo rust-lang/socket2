@@ -618,7 +618,12 @@ impl Socket {
         }
     }
 
-    pub fn join_multicast_source_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr, source: &Ipv4Addr) -> io::Result<()> {
+    pub fn join_multicast_source_v4(
+        &self,
+        multiaddr: &Ipv4Addr,
+        interface: &Ipv4Addr,
+        source: &Ipv4Addr,
+    ) -> io::Result<()> {
         let multiaddr = to_s_addr(multiaddr);
         let interface = to_s_addr(interface);
         let source = to_s_addr(source);
