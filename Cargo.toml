@@ -21,7 +21,7 @@ features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip", "minwindef"]
 
 [target."cfg(any(unix, target_os = \"redox\"))".dependencies]
 cfg-if = "0.1.6"
-libc = "0.2.42"
+libc = "0.2"
 
 [target."cfg(target_os = \"redox\")".dependencies]
 redox_syscall = "0.1.38"

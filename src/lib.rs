@@ -56,9 +56,6 @@ mod sys;
 #[cfg(windows)]
 #[path = "sys/windows.rs"]
 mod sys;
-#[cfg(target_os = "redox")]
-#[path = "sys/redox/mod.rs"]
-mod sys;
 
 /// Newtype, owned, wrapper around a system socket.
 ///
@@ -136,7 +133,6 @@ fn hton<I: NetInt>(i: I) -> I {
     i.to_be()
 }
 
-#[cfg(not(target_os = "redox"))]
 fn ntoh<I: NetInt>(i: I) -> I {
     I::from_be(i)
 }
