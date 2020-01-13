@@ -65,8 +65,15 @@ pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
 pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
 pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
-pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
-pub const SOCK_RAW: i32 = libc::SOCK_RAW;
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "redox")] {
+        pub const SOCK_RAW: i32 = -1;
+        pub const SOCK_SEQPACKET: i32 = -1;
+    } else {
+        pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
+        pub const SOCK_RAW: i32 = libc::SOCK_RAW;
+    }
+}
 
 pub struct Socket {
     fd: c_int,
