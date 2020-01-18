@@ -54,7 +54,7 @@ pub(crate) type c_int = winapi::ctypes::c_int;
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use winapi::shared::ws2def::{SOCK_RAW, SOCK_SEQPACKET};
+pub(crate) use winapi::shared::ws2def::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
 
 #[repr(C)]
 struct tcp_keepalive {

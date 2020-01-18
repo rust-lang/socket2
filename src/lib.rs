@@ -145,6 +145,45 @@ impl From<Domain> for c_int {
 #[derive(Copy, Clone)]
 pub struct Type(i32);
 
+impl Type {
+    /// Type corresponding to `SOCK_STREAM`.
+    ///
+    /// Used for protocols such as TCP.
+    pub fn stream() -> Type {
+        Type(sys::SOCK_STREAM)
+    }
+
+    /// Type corresponding to `SOCK_DGRAM`.
+    ///
+    /// Used for protocols such as UDP.
+    pub fn dgram() -> Type {
+        Type(sys::SOCK_DGRAM)
+    }
+
+    /// Type corresponding to `SOCK_SEQPACKET`.
+    pub fn seqpacket() -> Type {
+        Type(sys::SOCK_SEQPACKET)
+    }
+
+    /// Type corresponding to `SOCK_RAW`.
+    #[cfg(not(target_os = "redox"))]
+    pub fn raw() -> Type {
+        Type(sys::SOCK_RAW)
+    }
+}
+
+impl From<c_int> for Type {
+    fn from(t: c_int) -> Type {
+        Type(t)
+    }
+}
+
+impl From<Type> for c_int {
+    fn from(t: Type) -> c_int {
+        t.0
+    }
+}
+
 /// Protocol specification used for creating sockets via `Socket::new`.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
