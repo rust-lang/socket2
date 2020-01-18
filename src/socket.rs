@@ -1035,7 +1035,8 @@ mod test {
     #[cfg(all(unix, feature = "pair"))]
     fn tcp() {
         let s1 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
-        s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into()).unwrap();
+        s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
+            .unwrap();
         let s1_addr = s1.local_addr().unwrap();
         s1.listen(1).unwrap();
 
@@ -1048,5 +1049,4 @@ mod test {
         assert_eq!(s2.send(b"hello world", 0).unwrap(), 11);
         assert_eq!(s3.recv(&mut buf, 0).unwrap(), 11);
     }
-
 }
