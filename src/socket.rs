@@ -212,8 +212,8 @@ impl Socket {
     /// method will fail if the socket is not connected.
     ///
     /// [`connect`]: #method.connect
-    pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.recv(buf)
+    pub fn recv(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
+        self.inner.recv(buf, flags)
     }
 
     /// Receives data on the socket from the remote adress to which it is
@@ -228,8 +228,8 @@ impl Socket {
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
-    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.inner.recv_from(buf)
+    pub fn recv_from(&self, buf: &mut [u8], flags: i32) -> io::Result<(usize, SockAddr)> {
+        self.inner.recv_from(buf, flags)
     }
 
     /// Receives data from the socket, without removing it from the queue.
@@ -249,8 +249,8 @@ impl Socket {
     /// been connected.
     ///
     /// On success returns the number of bytes that were sent.
-    pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.send(buf)
+    pub fn send(&self, buf: &[u8], flags: i32) -> io::Result<usize> {
+        self.inner.send(buf, flags)
     }
 
     /// Sends data on the socket to the given address. On success, returns the
@@ -258,8 +258,8 @@ impl Socket {
     ///
     /// This is typically used on UDP or datagram-oriented sockets. On success
     /// returns the number of bytes that were sent.
-    pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
-        self.inner.send_to(buf, addr)
+    pub fn send_to(&self, buf: &[u8], flags: i32, addr: &SockAddr) -> io::Result<usize> {
+        self.inner.send_to(buf, flags, addr)
     }
 
     // ================================================
@@ -626,6 +626,24 @@ impl Socket {
     /// specifications may be omitted.
     pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
         self.inner.set_keepalive(keepalive)
+    }
+
+    /// Returns the value of the `SO_OOBINLINE` flag of the underlying socket.
+    /// For more information about this option, see [`set_out_of_band_inline`][link].
+    ///
+    /// [link]: #method.set_out_of_band_inline
+    pub fn out_of_band_inline(&self) -> io::Result<bool> {
+        self.inner.out_of_band_inline()
+    }
+
+    /// Sets the `SO_OOBINLINE` flag of the underlying socket.
+    /// as per RFC6093, TCP sockets using the Urgent mechanism
+    /// are encouraged to set this flag.
+    ///
+    /// If this flag is not set, the `MSG_OOB` flag is needed
+    /// while `recv`ing to aquire the out-of-band data.
+    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
+        self.inner.set_out_of_band_inline(oob_inline)
     }
 
     /// Check the value of the `SO_REUSEPORT` option on this socket.
@@ -1003,4 +1021,32 @@ mod test {
         assert!(result.is_ok());
         assert!(result.unwrap());
     }
+
+    #[test]
+    fn out_of_band_inline() {
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+
+        assert_eq!(socket.out_of_band_inline().unwrap(), false);
+
+        socket.set_out_of_band_inline(true).unwrap();
+        assert_eq!(socket.out_of_band_inline().unwrap(), true);
+    }
+    #[test]
+    #[cfg(all(unix, feature = "pair"))]
+    fn tcp() {
+        let s1 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into()).unwrap();
+        let s1_addr = s1.local_addr().unwrap();
+        s1.listen(1).unwrap();
+
+        let s2 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        s2.connect(&s1_addr).unwrap();
+
+        let (s3, _) = s1.accept().unwrap();
+
+        let mut buf = [0; 11];
+        assert_eq!(s2.send(b"hello world", 0).unwrap(), 11);
+        assert_eq!(s3.recv(&mut buf, 0).unwrap(), 11);
+    }
+
 }
