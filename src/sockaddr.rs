@@ -1,5 +1,5 @@
 use std::fmt;
-use std::mem;
+use std::mem::{self, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ptr;
 
@@ -36,7 +36,7 @@ impl fmt::Debug for SockAddr {
 impl SockAddr {
     /// Constructs a `SockAddr` from its raw components.
     pub unsafe fn from_raw_parts(addr: *const sockaddr, len: socklen_t) -> SockAddr {
-        let mut storage = mem::uninitialized::<sockaddr_storage>();
+        let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
         ptr::copy_nonoverlapping(
             addr as *const _ as *const u8,
             &mut storage as *mut _ as *mut u8,
@@ -44,7 +44,8 @@ impl SockAddr {
         );
 
         SockAddr {
-            storage: storage,
+            // This is safe as we written the address to `storage` above.
+            storage: storage.assume_init(),
             len: len,
         }
     }
