@@ -18,7 +18,14 @@ use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 #[cfg(windows)]
 use winapi::um::ws2tcpip::socklen_t;
 
-use crate::SockAddr;
+/// The address of a socket.
+///
+/// `SockAddr`s may be constructed directly to and from the standard library
+/// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
+pub struct SockAddr {
+    storage: sockaddr_storage,
+    len: socklen_t,
+}
 
 impl fmt::Debug for SockAddr {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {

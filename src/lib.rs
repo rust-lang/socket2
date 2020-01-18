@@ -39,13 +39,6 @@
 
 use crate::utils::NetInt;
 
-#[cfg(any(unix, target_os = "redox"))]
-use libc::{sockaddr_storage, socklen_t};
-#[cfg(windows)]
-use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
-#[cfg(windows)]
-use winapi::um::ws2tcpip::socklen_t;
-
 mod sockaddr;
 mod socket;
 mod utils;
@@ -59,16 +52,8 @@ mod sys;
 
 use sys::c_int;
 
+pub use sockaddr::SockAddr;
 pub use socket::Socket;
-
-/// The address of a socket.
-///
-/// `SockAddr`s may be constructed directly to and from the standard library
-/// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
-pub struct SockAddr {
-    storage: sockaddr_storage,
-    len: socklen_t,
-}
 
 /// Specification of the communication domain for a socket.
 ///
