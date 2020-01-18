@@ -744,6 +744,17 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
+    pub fn out_of_band_inline(&self) -> io::Result<bool> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE)?;
+            Ok(raw != 0)
+        }
+    }
+
+    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE, oob_inline as c_int) }
+    }
+
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
@@ -1107,4 +1118,13 @@ fn dur2linger(dur: Option<Duration>) -> libc::linger {
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
+}
+
+#[test]
+fn test_out_of_band_inline() {
+    let tcp = Socket::new(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
+    assert_eq!(tcp.out_of_band_inline().unwrap(), false);
+
+    tcp.set_out_of_band_inline(true).unwrap();
+    assert_eq!(tcp.out_of_band_inline().unwrap(), true);
 }
