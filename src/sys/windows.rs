@@ -17,7 +17,7 @@ use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::windows::prelude::*;
 use std::ptr;
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 use std::time::Duration;
 
 use winapi::ctypes::{c_char, c_int, c_long, c_ulong};
@@ -58,7 +58,7 @@ struct tcp_keepalive {
 }
 
 fn init() {
-    static INIT: Once = ONCE_INIT;
+    static INIT: Once = Once::new();
 
     INIT.call_once(|| {
         // Initialize winsock through the standard library by just creating a
