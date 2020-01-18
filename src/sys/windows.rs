@@ -745,7 +745,7 @@ impl Read for Socket {
 
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.recv(buf)
+        self.recv(buf, 0)
     }
 }
 
@@ -761,7 +761,7 @@ impl Write for Socket {
 
 impl<'a> Write for &'a Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.send(buf)
+        self.send(buf, 0)
     }
 
     fn flush(&mut self) -> io::Result<()> {
