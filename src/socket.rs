@@ -864,48 +864,6 @@ impl From<Socket> for UnixDatagram {
     }
 }
 
-impl Domain {
-    /// Domain for IPv4 communication, corresponding to `AF_INET`.
-    pub fn ipv4() -> Domain {
-        Domain(c::AF_INET)
-    }
-
-    /// Domain for IPv6 communication, corresponding to `AF_INET6`.
-    pub fn ipv6() -> Domain {
-        Domain(c::AF_INET6)
-    }
-
-    /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
-    ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// activated.
-    #[cfg(all(unix, feature = "unix"))]
-    pub fn unix() -> Domain {
-        Domain(c::AF_UNIX)
-    }
-
-    /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
-    ///
-    /// This function is only available on Linux when the `unix` feature is
-    /// activated.
-    #[cfg(all(unix, feature = "unix", target_os = "linux"))]
-    pub fn packet() -> Domain {
-        Domain(c::AF_PACKET)
-    }
-}
-
-impl From<i32> for Domain {
-    fn from(a: i32) -> Domain {
-        Domain(a)
-    }
-}
-
-impl From<Domain> for i32 {
-    fn from(a: Domain) -> i32 {
-        a.0
-    }
-}
-
 impl Type {
     /// Type corresponding to `SOCK_STREAM`
     ///

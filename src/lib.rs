@@ -107,6 +107,48 @@ pub struct SockAddr {
 #[derive(Copy, Clone)]
 pub struct Domain(i32);
 
+impl Domain {
+    /// Domain for IPv4 communication, corresponding to `AF_INET`.
+    pub fn ipv4() -> Domain {
+        Domain(libc::AF_INET)
+    }
+
+    /// Domain for IPv6 communication, corresponding to `AF_INET6`.
+    pub fn ipv6() -> Domain {
+        Domain(libc::AF_INET6)
+    }
+
+    /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
+    ///
+    /// This function is only available on Unix when the `unix` feature is
+    /// activated.
+    #[cfg(all(unix, feature = "unix"))]
+    pub fn unix() -> Domain {
+        Domain(libc::AF_UNIX)
+    }
+
+    /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
+    ///
+    /// This function is only available on Linux when the `unix` feature is
+    /// activated.
+    #[cfg(all(unix, feature = "unix", target_os = "linux"))]
+    pub fn packet() -> Domain {
+        Domain(libc::AF_PACKET)
+    }
+}
+
+impl From<libc::c_int> for Domain {
+    fn from(a: libc::c_int) -> Domain {
+        Domain(a)
+    }
+}
+
+impl From<Domain> for libc::c_int {
+    fn from(a: Domain) -> libc::c_int {
+        a.0
+    }
+}
+
 /// Specification of communication semantics on a socket.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
