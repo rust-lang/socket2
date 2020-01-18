@@ -117,24 +117,6 @@ impl Domain {
     pub fn ipv6() -> Domain {
         Domain(libc::AF_INET6)
     }
-
-    /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
-    ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// activated.
-    #[cfg(all(unix, feature = "unix"))]
-    pub fn unix() -> Domain {
-        Domain(libc::AF_UNIX)
-    }
-
-    /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
-    ///
-    /// This function is only available on Linux when the `unix` feature is
-    /// activated.
-    #[cfg(all(unix, feature = "unix", target_os = "linux"))]
-    pub fn packet() -> Domain {
-        Domain(libc::AF_PACKET)
-    }
 }
 
 impl From<libc::c_int> for Domain {

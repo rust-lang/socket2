@@ -24,6 +24,8 @@ use std::time::{Duration, Instant};
 
 use libc::{self, c_int, c_void, socklen_t, ssize_t};
 
+use crate::Domain;
+
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
                  target_os = "ios", target_os = "macos",
@@ -73,6 +75,24 @@ cfg_if::cfg_if! {
     } else {
         pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
         pub const SOCK_RAW: i32 = libc::SOCK_RAW;
+    }
+}
+
+/// Unix only API.
+impl Domain {
+    /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
+    pub fn unix() -> Domain {
+        Domain(libc::AF_UNIX)
+    }
+
+    /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
+    ///
+    /// # Notes
+    ///
+    /// This function is only available on Linux.
+    #[cfg(target_os = "linux")]
+    pub fn packet() -> Domain {
+        Domain(libc::AF_PACKET)
     }
 }
 
