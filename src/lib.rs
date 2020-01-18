@@ -57,6 +57,8 @@ mod sys;
 #[path = "sys/windows.rs"]
 mod sys;
 
+use sys::c_int;
+
 /// Newtype, owned, wrapper around a system socket.
 ///
 /// This type simply wraps an instance of a file descriptor (`c_int`) on Unix
@@ -110,24 +112,24 @@ pub struct Domain(i32);
 impl Domain {
     /// Domain for IPv4 communication, corresponding to `AF_INET`.
     pub fn ipv4() -> Domain {
-        Domain(libc::AF_INET)
+        Domain(sys::AF_INET)
     }
 
     /// Domain for IPv6 communication, corresponding to `AF_INET6`.
     pub fn ipv6() -> Domain {
-        Domain(libc::AF_INET6)
+        Domain(sys::AF_INET6)
     }
 }
 
-impl From<libc::c_int> for Domain {
-    fn from(a: libc::c_int) -> Domain {
-        Domain(a)
+impl From<c_int> for Domain {
+    fn from(d: c_int) -> Domain {
+        Domain(d)
     }
 }
 
-impl From<Domain> for libc::c_int {
-    fn from(a: Domain) -> libc::c_int {
-        a.0
+impl From<Domain> for c_int {
+    fn from(d: Domain) -> c_int {
+        d.0
     }
 }
 

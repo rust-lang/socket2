@@ -22,10 +22,15 @@ use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use libc::{self, c_int, c_void, socklen_t, ssize_t};
+use libc::{self, c_void, socklen_t, ssize_t};
 
 use crate::Domain;
 
+#[allow(non_camel_case_types)]
+pub(crate) type c_int = libc::c_int;
+
+// Used in `Domain`.
+pub(crate) use libc::{AF_INET, AF_INET6};
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
                  target_os = "ios", target_os = "macos",
@@ -39,6 +44,8 @@ cfg_if::cfg_if! {
         use libc::IPV6_DROP_MEMBERSHIP;
     }
 }
+// Used in `Type`.
+pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "linux", target_os = "android",
@@ -68,15 +75,6 @@ pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
 pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
 pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
 pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "redox")] {
-        pub const SOCK_RAW: i32 = -1;
-        pub const SOCK_SEQPACKET: i32 = -1;
-    } else {
-        pub const SOCK_SEQPACKET: i32 = libc::SOCK_SEQPACKET;
-        pub const SOCK_RAW: i32 = libc::SOCK_RAW;
-    }
-}
 
 /// Unix only API.
 impl Domain {
