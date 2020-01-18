@@ -25,7 +25,6 @@ use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::{HANDLE, ULONG};
-use winapi::shared::ws2def;
 use winapi::shared::ws2def::*;
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
@@ -43,17 +42,17 @@ const SD_SEND: c_int = 1;
 const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
 const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 
-pub const IPPROTO_ICMP: i32 = ws2def::IPPROTO_ICMP as i32;
-pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6 as i32;
-pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP as i32;
-pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP as i32;
-
 pub use winapi::ctypes::c_int;
 
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
 pub(crate) use winapi::shared::ws2def::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+// Used in `Protocol`.
+pub(crate) const IPPROTO_ICMP: c_int = winapi::shared::ws2def::IPPROTO_ICMP as c_int;
+pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 as c_int;
+pub(crate) const IPPROTO_TCP: c_int = winapi::shared::ws2def::IPPROTO_TCP as c_int;
+pub(crate) const IPPROTO_UDP: c_int = winapi::shared::ws2def::IPPROTO_UDP as c_int;
 
 #[repr(C)]
 struct tcp_keepalive {

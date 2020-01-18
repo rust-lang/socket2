@@ -889,40 +889,6 @@ impl From<Socket> for UnixDatagram {
     }
 }
 
-impl crate::Protocol {
-    /// Protocol corresponding to `ICMPv4`
-    pub fn icmpv4() -> Self {
-        crate::Protocol(sys::IPPROTO_ICMP)
-    }
-
-    /// Protocol corresponding to `ICMPv6`
-    pub fn icmpv6() -> Self {
-        crate::Protocol(sys::IPPROTO_ICMPV6)
-    }
-
-    /// Protocol corresponding to `TCP`
-    pub fn tcp() -> Self {
-        crate::Protocol(sys::IPPROTO_TCP)
-    }
-
-    /// Protocol corresponding to `UDP`
-    pub fn udp() -> Self {
-        crate::Protocol(sys::IPPROTO_UDP)
-    }
-}
-
-impl From<i32> for Protocol {
-    fn from(a: i32) -> Protocol {
-        Protocol(a)
-    }
-}
-
-impl From<Protocol> for i32 {
-    fn from(a: Protocol) -> i32 {
-        a.0
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::net::SocketAddr;

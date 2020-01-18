@@ -32,6 +32,8 @@ pub use libc::c_int;
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
 pub(crate) use libc::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+// Used in `Protocol`.
+pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -59,11 +61,6 @@ cfg_if::cfg_if! {
 
 use crate::utils::One;
 use crate::SockAddr;
-
-pub const IPPROTO_ICMP: i32 = libc::IPPROTO_ICMP;
-pub const IPPROTO_ICMPV6: i32 = libc::IPPROTO_ICMPV6;
-pub const IPPROTO_TCP: i32 = libc::IPPROTO_TCP;
-pub const IPPROTO_UDP: i32 = libc::IPPROTO_UDP;
 
 /// Unix only API.
 impl Domain {
