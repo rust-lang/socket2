@@ -20,6 +20,11 @@ use libc as c;
 #[cfg(windows)]
 use winapi::shared::ws2def as c;
 
+#[cfg(any(unix, target_os = "redox"))]
+use libc::MSG_OOB;
+#[cfg(windows)]
+use winapi::um::winsock2::MSG_OOB;
+
 use crate::sys;
 use crate::{Domain, Protocol, SockAddr, Socket, Type};
 
@@ -213,7 +218,26 @@ impl Socket {
     ///
     /// [`connect`]: #method.connect
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.recv(buf)
+        self.inner.recv(buf, 0)
+    }
+
+    /// Identical to [`recv`] but allows for specification of arbitrary flags to the underlying
+    /// `recv` call.
+    ///
+    /// [`recv`]: #method.recv
+    pub fn recv_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
+        self.inner.recv(buf, flags)
+    }
+
+    /// Receives out-of-band (OOB) data on the socket from the remote address to
+    /// which it is connected by setting the `MSG_OOB` flag for this call.
+    ///
+    /// For more information, see [`recv`], [`out_of_band_inline`].
+    ///
+    /// [`recv`]: #method.recv
+    /// [`out_of_band_inline`]: #method.out_of_band_inline
+    pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.recv(buf, MSG_OOB)
     }
 
     /// Receives data on the socket from the remote adress to which it is
@@ -229,7 +253,15 @@ impl Socket {
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
     pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.inner.recv_from(buf)
+        self.inner.recv_from(buf, 0)
+    }
+
+    /// Identical to [`recv_from`] but allows for specification of arbitrary flags to the underlying
+    /// `recvfrom` call.
+    ///
+    /// [`recv_from`]: #method.recv_from
+    pub fn recv_from_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
+        self.inner.recv(buf, flags)
     }
 
     /// Receives data from the socket, without removing it from the queue.
@@ -250,7 +282,26 @@ impl Socket {
     ///
     /// On success returns the number of bytes that were sent.
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.send(buf)
+        self.inner.send(buf, 0)
+    }
+
+    /// Identical to [`send`] but allows for specification of arbitrary flags to the underlying
+    /// `send` call.
+    ///
+    /// [`send`]: #method.send
+    pub fn send_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
+        self.inner.send(buf, flags)
+    }
+
+    /// Sends out-of-band (OOB) data on the socket to connected peer
+    /// by setting the `MSG_OOB` flag for this call.
+    ///
+    /// For more information, see [`send`], [`out_of_band_inline`].
+    ///
+    /// [`send`]: #method.send
+    /// [`out_of_band_inline`]: #method.out_of_band_inline
+    pub fn send_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.send(buf, MSG_OOB)
     }
 
     /// Sends data on the socket to the given address. On success, returns the
@@ -259,7 +310,15 @@ impl Socket {
     /// This is typically used on UDP or datagram-oriented sockets. On success
     /// returns the number of bytes that were sent.
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
-        self.inner.send_to(buf, addr)
+        self.inner.send_to(buf, 0, addr)
+    }
+
+    /// Identical to [`send_to`] but allows for specification of arbitrary flags to the underlying
+    /// `sendto` call.
+    ///
+    /// [`send_to`]: #method.send_to
+    pub fn send_to_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
+        self.inner.recv(buf, flags)
     }
 
     // ================================================
@@ -626,6 +685,24 @@ impl Socket {
     /// specifications may be omitted.
     pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
         self.inner.set_keepalive(keepalive)
+    }
+
+    /// Returns the value of the `SO_OOBINLINE` flag of the underlying socket.
+    /// For more information about this option, see [`set_out_of_band_inline`][link].
+    ///
+    /// [link]: #method.set_out_of_band_inline
+    pub fn out_of_band_inline(&self) -> io::Result<bool> {
+        self.inner.out_of_band_inline()
+    }
+
+    /// Sets the `SO_OOBINLINE` flag of the underlying socket.
+    /// as per RFC6093, TCP sockets using the Urgent mechanism
+    /// are encouraged to set this flag.
+    ///
+    /// If this flag is not set, the `MSG_OOB` flag is needed
+    /// while `recv`ing to aquire the out-of-band data.
+    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
+        self.inner.set_out_of_band_inline(oob_inline)
     }
 
     /// Check the value of the `SO_REUSEPORT` option on this socket.
@@ -1002,5 +1079,58 @@ mod test {
 
         assert!(result.is_ok());
         assert!(result.unwrap());
+    }
+
+    #[test]
+    fn out_of_band_inline() {
+        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+
+        assert_eq!(socket.out_of_band_inline().unwrap(), false);
+
+        socket.set_out_of_band_inline(true).unwrap();
+        assert_eq!(socket.out_of_band_inline().unwrap(), true);
+    }
+
+    #[test]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    fn out_of_band_send_recv() {
+        let s1 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
+            .unwrap();
+        let s1_addr = s1.local_addr().unwrap();
+        s1.listen(1).unwrap();
+
+        let s2 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        s2.connect(&s1_addr).unwrap();
+
+        let (s3, _) = s1.accept().unwrap();
+
+        let mut buf = [0; 10];
+        // send some plain inband data
+        s2.send(&mut buf).unwrap();
+        // send a single out of band byte
+        assert_eq!(s2.send_out_of_band(&mut [b"!"[0]]).unwrap(), 1);
+        // recv the OOB data first
+        assert_eq!(s3.recv_out_of_band(&mut buf).unwrap(), 1);
+        assert_eq!(buf[0], b"!"[0]);
+        assert_eq!(s3.recv(&mut buf).unwrap(), 10);
+    }
+
+    #[test]
+    fn tcp() {
+        let s1 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
+            .unwrap();
+        let s1_addr = s1.local_addr().unwrap();
+        s1.listen(1).unwrap();
+
+        let s2 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        s2.connect(&s1_addr).unwrap();
+
+        let (s3, _) = s1.accept().unwrap();
+
+        let mut buf = [0; 11];
+        assert_eq!(s2.send(&mut buf).unwrap(), 11);
+        assert_eq!(s3.recv(&mut buf).unwrap(), 11);
     }
 }

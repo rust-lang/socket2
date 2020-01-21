@@ -349,14 +349,14 @@ impl Socket {
         Ok(())
     }
 
-    pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
+    pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
         unsafe {
             let n = cvt({
                 libc::recv(
                     self.fd,
                     buf.as_mut_ptr() as *mut c_void,
                     cmp::min(buf.len(), max_len()),
-                    0,
+                    flags,
                 )
             })?;
             Ok(n as usize)
@@ -377,15 +377,11 @@ impl Socket {
         }
     }
 
-    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.recvfrom(buf, 0)
-    }
-
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.recvfrom(buf, libc::MSG_PEEK)
+        self.recv_from(buf, libc::MSG_PEEK)
     }
 
-    fn recvfrom(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
+    pub fn recv_from(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
         unsafe {
             let mut storage: libc::sockaddr_storage = mem::zeroed();
             let mut addrlen = mem::size_of_val(&storage) as socklen_t;
@@ -405,28 +401,28 @@ impl Socket {
         }
     }
 
-    pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
+    pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         unsafe {
             let n = cvt({
                 libc::send(
                     self.fd,
                     buf.as_ptr() as *const c_void,
                     cmp::min(buf.len(), max_len()),
-                    MSG_NOSIGNAL,
+                    flags,
                 )
             })?;
             Ok(n as usize)
         }
     }
 
-    pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
+    pub fn send_to(&self, buf: &[u8], flags: c_int, addr: &SockAddr) -> io::Result<usize> {
         unsafe {
             let n = cvt({
                 libc::sendto(
                     self.fd,
                     buf.as_ptr() as *const c_void,
                     cmp::min(buf.len(), max_len()),
-                    MSG_NOSIGNAL,
+                    flags,
                     addr.as_ptr(),
                     addr.len(),
                 )
@@ -744,6 +740,17 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
+    pub fn out_of_band_inline(&self) -> io::Result<bool> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE)?;
+            Ok(raw != 0)
+        }
+    }
+
+    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE, oob_inline as c_int) }
+    }
+
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
@@ -807,7 +814,7 @@ impl Write for Socket {
 
 impl<'a> Write for &'a Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.send(buf)
+        self.send(buf, 0)
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -1107,4 +1114,13 @@ fn dur2linger(dur: Option<Duration>) -> libc::linger {
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
+}
+
+#[test]
+fn test_out_of_band_inline() {
+    let tcp = Socket::new(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
+    assert_eq!(tcp.out_of_band_inline().unwrap(), false);
+
+    tcp.set_out_of_band_inline(true).unwrap();
+    assert_eq!(tcp.out_of_band_inline().unwrap(), true);
 }
