@@ -28,7 +28,8 @@ cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
                  target_os = "ios", target_os = "macos",
                  target_os = "openbsd", target_os = "netbsd",
-                 target_os = "solaris", target_os = "haiku"))] {
+                 target_os = "solaris", target_os = "illumos",
+                 target_os = "haiku"))] {
         use libc::IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP;
         use libc::IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP;
     } else {
@@ -727,7 +728,11 @@ impl Socket {
         }
     }
 
-    #[cfg(all(unix, not(target_os = "solaris"), feature = "reuseport"))]
+    #[cfg(all(
+        unix,
+        not(any(target_os = "solaris", target_os = "illumos")),
+        feature = "reuseport"
+    ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT)?;
@@ -735,7 +740,11 @@ impl Socket {
         }
     }
 
-    #[cfg(all(unix, not(target_os = "solaris"), feature = "reuseport"))]
+    #[cfg(all(
+        unix,
+        not(any(target_os = "solaris", target_os = "illumos")),
+        feature = "reuseport"
+    ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
