@@ -709,7 +709,11 @@ impl Socket {
     ///
     /// This function is only available on Unix when the `reuseport` feature is
     /// enabled.
-    #[cfg(all(unix, not(target_os = "solaris"), feature = "reuseport"))]
+    #[cfg(all(
+        unix,
+        not(any(target_os = "solaris", target_os = "illumos")),
+        feature = "reuseport"
+    ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         self.inner.reuse_port()
     }
@@ -722,7 +726,11 @@ impl Socket {
     ///
     /// This function is only available on Unix when the `reuseport` feature is
     /// enabled.
-    #[cfg(all(unix, not(target_os = "solaris"), feature = "reuseport"))]
+    #[cfg(all(
+        unix,
+        not(any(target_os = "solaris", target_os = "illumos")),
+        feature = "reuseport"
+    ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         self.inner.set_reuse_port(reuse)
     }
