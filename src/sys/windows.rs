@@ -20,7 +20,7 @@ use std::ptr;
 use std::sync::Once;
 use std::time::Duration;
 
-use winapi::ctypes::{c_char, c_int, c_long, c_ulong};
+use winapi::ctypes::{c_char, c_long, c_ulong};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
@@ -47,8 +47,14 @@ pub const IPPROTO_ICMP: i32 = ws2def::IPPROTO_ICMP as i32;
 pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6 as i32;
 pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP as i32;
 pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP as i32;
-pub const SOCK_SEQPACKET: i32 = ws2def::SOCK_SEQPACKET as i32;
-pub const SOCK_RAW: i32 = ws2def::SOCK_RAW as i32;
+
+#[allow(non_camel_case_types)]
+pub(crate) type c_int = winapi::ctypes::c_int;
+
+// Used in `Domain`.
+pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
+// Used in `Type`.
+pub(crate) use winapi::shared::ws2def::{SOCK_RAW, SOCK_SEQPACKET};
 
 #[repr(C)]
 struct tcp_keepalive {
