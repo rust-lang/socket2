@@ -128,6 +128,35 @@ impl Type {
 }
 
 impl_debug!(
+    crate::Type,
+    libc::SOCK_STREAM,
+    libc::SOCK_DGRAM,
+    libc::SOCK_RAW,
+    libc::SOCK_RDM,
+    libc::SOCK_SEQPACKET,
+    /* TODO: add these optional bit OR-ed flags:
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    libc::SOCK_NONBLOCK,
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    libc::SOCK_CLOEXEC,
+    */
+);
+
+impl_debug!(
     crate::Protocol,
     libc::IPPROTO_ICMP,
     libc::IPPROTO_ICMPV6,

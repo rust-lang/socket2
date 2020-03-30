@@ -63,6 +63,15 @@ impl_debug!(
 );
 
 impl_debug!(
+    crate::Type,
+    ws2def::SOCK_STREAM,
+    ws2def::SOCK_DGRAM,
+    ws2def::SOCK_RAW,
+    ws2def::SOCK_RDM,
+    ws2def::SOCK_SEQPACKET,
+);
+
+impl_debug!(
     crate::Protocol,
     self::IPPROTO_ICMP,
     self::IPPROTO_ICMPV6,

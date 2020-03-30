@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::str;
 
-use crate::{Domain, Protocol};
+use crate::{Domain, Protocol, Type};
 
 #[test]
 fn domain_fmt_debug() {
@@ -11,6 +11,25 @@ fn domain_fmt_debug() {
         #[cfg(unix)]
         (Domain::unix(), "AF_UNIX"),
         (0.into(), "AF_UNSPEC"),
+        (500.into(), "500"),
+    ];
+
+    let mut buf = Vec::new();
+    for (input, want) in tests {
+        buf.clear();
+        write!(buf, "{:?}", input).unwrap();
+        let got = str::from_utf8(&buf).unwrap();
+        assert_eq!(got, *want);
+    }
+}
+
+#[test]
+fn type_fmt_debug() {
+    let tests = &[
+        (Type::stream(), "SOCK_STREAM"),
+        (Type::dgram(), "SOCK_DGRAM"),
+        (Type::seqpacket(), "SOCK_SEQPACKET"),
+        (Type::raw(), "SOCK_RAW"),
         (500.into(), "500"),
     ];
 
