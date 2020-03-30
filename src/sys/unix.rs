@@ -80,6 +80,14 @@ impl Domain {
     }
 }
 
+impl_debug!(
+    Domain,
+    libc::AF_INET,
+    libc::AF_INET6,
+    libc::AF_UNIX,
+    libc::AF_UNSPEC, // = 0.
+);
+
 /// Unix only API.
 impl Type {
     /// Set `SOCK_NONBLOCK` on the `Type`.

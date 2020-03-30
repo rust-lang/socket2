@@ -54,6 +54,14 @@ pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 
 pub(crate) const IPPROTO_TCP: c_int = winapi::shared::ws2def::IPPROTO_TCP as c_int;
 pub(crate) const IPPROTO_UDP: c_int = winapi::shared::ws2def::IPPROTO_UDP as c_int;
 
+impl_debug!(
+    crate::Domain,
+    ws2def::AF_INET,
+    ws2def::AF_INET6,
+    ws2def::AF_UNIX,
+    ws2def::AF_UNSPEC, // = 0.
+);
+
 #[repr(C)]
 struct tcp_keepalive {
     onoff: c_ulong,
