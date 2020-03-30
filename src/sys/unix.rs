@@ -127,6 +127,14 @@ impl Type {
     }
 }
 
+impl_debug!(
+    crate::Protocol,
+    libc::IPPROTO_ICMP,
+    libc::IPPROTO_ICMPV6,
+    libc::IPPROTO_TCP,
+    libc::IPPROTO_UDP,
+);
+
 pub struct Socket {
     fd: c_int,
 }

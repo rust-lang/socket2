@@ -62,6 +62,14 @@ impl_debug!(
     ws2def::AF_UNSPEC, // = 0.
 );
 
+impl_debug!(
+    crate::Protocol,
+    self::IPPROTO_ICMP,
+    self::IPPROTO_ICMPV6,
+    self::IPPROTO_TCP,
+    self::IPPROTO_UDP,
+);
+
 #[repr(C)]
 struct tcp_keepalive {
     onoff: c_ulong,

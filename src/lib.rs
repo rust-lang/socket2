@@ -46,7 +46,7 @@ use crate::utils::NetInt;
 /// defining the modules.
 macro_rules! impl_debug {
     (
-        // Type for which to implement `fmt::Debug`.
+        // Type name for which to implement `fmt::Debug`.
         $type: path,
         $(
             $(#[$target: meta])*
