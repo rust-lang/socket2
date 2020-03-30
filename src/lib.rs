@@ -104,10 +104,10 @@ pub struct SockAddr {
 /// such as `Domain::ipv4`, `Domain::ipv6`, etc, are provided to avoid reaching
 /// into libc for various constants.
 ///
-/// This type is freely interconvertible with the `i32` type, however, if a raw
+/// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
 #[derive(Copy, Clone)]
-pub struct Domain(i32);
+pub struct Domain(c_int);
 
 impl Domain {
     /// Domain for IPv4 communication, corresponding to `AF_INET`.
@@ -140,20 +140,20 @@ impl From<Domain> for c_int {
 /// such as `Type::stream`, `Type::dgram`, etc, are provided to avoid reaching
 /// into libc for various constants.
 ///
-/// This type is freely interconvertible with the `i32` type, however, if a raw
+/// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
 #[derive(Copy, Clone)]
-pub struct Type(i32);
+pub struct Type(c_int);
 
 /// Protocol specification used for creating sockets via `Socket::new`.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
 /// addition to an injection point for documentation.
 ///
-/// This type is freely interconvertible with the `i32` type, however, if a raw
+/// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
 #[derive(Copy, Clone)]
-pub struct Protocol(i32);
+pub struct Protocol(c_int);
 
 fn hton<I: NetInt>(i: I) -> I {
     i.to_be()

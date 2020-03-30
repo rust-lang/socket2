@@ -26,8 +26,7 @@ use libc::{self, c_void, socklen_t, ssize_t};
 
 use crate::Domain;
 
-#[allow(non_camel_case_types)]
-pub(crate) type c_int = libc::c_int;
+pub use libc::c_int;
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};

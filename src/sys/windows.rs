@@ -48,8 +48,7 @@ pub const IPPROTO_ICMPV6: i32 = ws2def::IPPROTO_ICMPV6 as i32;
 pub const IPPROTO_TCP: i32 = ws2def::IPPROTO_TCP as i32;
 pub const IPPROTO_UDP: i32 = ws2def::IPPROTO_UDP as i32;
 
-#[allow(non_camel_case_types)]
-pub(crate) type c_int = winapi::ctypes::c_int;
+pub use winapi::ctypes::c_int;
 
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
