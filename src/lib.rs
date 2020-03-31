@@ -37,6 +37,8 @@
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs)]
 
+use std::net::SocketAddr;
+
 use crate::utils::NetInt;
 
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
@@ -111,6 +113,14 @@ impl Domain {
     /// Domain for IPv6 communication, corresponding to `AF_INET6`.
     pub fn ipv6() -> Domain {
         Domain(sys::AF_INET6)
+    }
+
+    /// Returns the correct domain for `address`.
+    pub fn for_address(address: SocketAddr) -> Domain {
+        match address {
+            SocketAddr::V4(_) => Domain::ipv4(),
+            SocketAddr::V6(_) => Domain::ipv6(),
+        }
     }
 }
 
