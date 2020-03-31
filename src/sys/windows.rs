@@ -25,7 +25,7 @@ use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::{HANDLE, ULONG};
-use winapi::shared::ws2def::*;
+use winapi::shared::ws2def::{self, *};
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
