@@ -99,7 +99,7 @@ pub use socket::Socket;
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Domain(c_int);
 
 impl Domain {
@@ -135,7 +135,7 @@ impl From<Domain> for c_int {
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Type(c_int);
 
 impl Type {
@@ -184,7 +184,7 @@ impl From<Type> for c_int {
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Protocol(c_int);
 
 impl Protocol {
