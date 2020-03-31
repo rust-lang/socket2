@@ -1151,23 +1151,11 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    crate::hton(
-        ((octets[0] as libc::in_addr_t) << 24)
-            | ((octets[1] as libc::in_addr_t) << 16)
-            | ((octets[2] as libc::in_addr_t) << 8)
-            | ((octets[3] as libc::in_addr_t) << 0),
-    )
+    u32::from_ne_bytes(octets).to_be()
 }
 
 fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
-    let h_addr = crate::ntoh(in_addr);
-
-    let a: u8 = (h_addr >> 24) as u8;
-    let b: u8 = (h_addr >> 16) as u8;
-    let c: u8 = (h_addr >> 8) as u8;
-    let d: u8 = (h_addr >> 0) as u8;
-
-    Ipv4Addr::new(a, b, c, d)
+    in_addr.into()
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
@@ -1211,6 +1199,11 @@ fn dur2linger(dur: Option<Duration>) -> libc::linger {
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
+
+    let ip = Ipv4Addr::new(127, 34, 4, 12);
+    let want = 127 << 24 | 34 << 16 | 4 << 8 | 12 << 0;
+    assert_eq!(to_s_addr(&ip), want);
+    assert_eq!(from_s_addr(want), ip);
 }
 
 #[test]

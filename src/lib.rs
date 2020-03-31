@@ -39,8 +39,6 @@
 
 use std::net::SocketAddr;
 
-use crate::utils::NetInt;
-
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
 /// rather than a number.
 ///
@@ -229,12 +227,4 @@ impl From<Protocol> for c_int {
     fn from(p: Protocol) -> c_int {
         p.0
     }
-}
-
-fn hton<I: NetInt>(i: I) -> I {
-    i.to_be()
-}
-
-fn ntoh<I: NetInt>(i: I) -> I {
-    I::from_be(i)
 }
