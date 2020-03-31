@@ -25,7 +25,7 @@ use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::{HANDLE, ULONG};
-use winapi::shared::ws2def::*;
+use winapi::shared::ws2def::{self, *};
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
@@ -53,6 +53,31 @@ pub(crate) const IPPROTO_ICMP: c_int = winapi::shared::ws2def::IPPROTO_ICMP as c
 pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 as c_int;
 pub(crate) const IPPROTO_TCP: c_int = winapi::shared::ws2def::IPPROTO_TCP as c_int;
 pub(crate) const IPPROTO_UDP: c_int = winapi::shared::ws2def::IPPROTO_UDP as c_int;
+
+impl_debug!(
+    crate::Domain,
+    ws2def::AF_INET,
+    ws2def::AF_INET6,
+    ws2def::AF_UNIX,
+    ws2def::AF_UNSPEC, // = 0.
+);
+
+impl_debug!(
+    crate::Type,
+    ws2def::SOCK_STREAM,
+    ws2def::SOCK_DGRAM,
+    ws2def::SOCK_RAW,
+    ws2def::SOCK_RDM,
+    ws2def::SOCK_SEQPACKET,
+);
+
+impl_debug!(
+    crate::Protocol,
+    self::IPPROTO_ICMP,
+    self::IPPROTO_ICMPV6,
+    self::IPPROTO_TCP,
+    self::IPPROTO_UDP,
+);
 
 #[repr(C)]
 struct tcp_keepalive {

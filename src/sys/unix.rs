@@ -80,6 +80,14 @@ impl Domain {
     }
 }
 
+impl_debug!(
+    Domain,
+    libc::AF_INET,
+    libc::AF_INET6,
+    libc::AF_UNIX,
+    libc::AF_UNSPEC, // = 0.
+);
+
 /// Unix only API.
 impl Type {
     /// Set `SOCK_NONBLOCK` on the `Type`.
@@ -118,6 +126,43 @@ impl Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
     }
 }
+
+impl_debug!(
+    crate::Type,
+    libc::SOCK_STREAM,
+    libc::SOCK_DGRAM,
+    libc::SOCK_RAW,
+    libc::SOCK_RDM,
+    libc::SOCK_SEQPACKET,
+    /* TODO: add these optional bit OR-ed flags:
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    libc::SOCK_NONBLOCK,
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    libc::SOCK_CLOEXEC,
+    */
+);
+
+impl_debug!(
+    crate::Protocol,
+    libc::IPPROTO_ICMP,
+    libc::IPPROTO_ICMPV6,
+    libc::IPPROTO_TCP,
+    libc::IPPROTO_UDP,
+);
 
 pub struct Socket {
     fd: c_int,

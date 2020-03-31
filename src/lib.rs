@@ -39,9 +39,44 @@
 
 use crate::utils::NetInt;
 
+/// Macro to implement `fmt::Debug` for a type, printing the constant names
+/// rather than a number.
+///
+/// Note this is used in the `sys` module and thus must be defined before
+/// defining the modules.
+macro_rules! impl_debug {
+    (
+        // Type name for which to implement `fmt::Debug`.
+        $type: path,
+        $(
+            $(#[$target: meta])*
+            // The flag(s) to check.
+            // Need to specific the libc crate because Windows doesn't use
+            // `libc` but `winapi`.
+            $libc: ident :: $flag: ident
+        ),+ $(,)*
+    ) => {
+        impl std::fmt::Debug for $type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let string = match self.0 {
+                    $(
+                        $(#[$target])*
+                        $libc :: $flag => stringify!($flag),
+                    )+
+                    n => return write!(f, "{}", n),
+                };
+                f.write_str(string)
+            }
+        }
+    };
+}
+
 mod sockaddr;
 mod socket;
 mod utils;
+
+#[cfg(test)]
+mod tests;
 
 #[cfg(unix)]
 #[path = "sys/unix.rs"]
