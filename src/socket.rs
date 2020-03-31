@@ -21,7 +21,37 @@ use libc::MSG_OOB;
 use winapi::um::winsock2::MSG_OOB;
 
 use crate::sys;
-use crate::{Domain, Protocol, SockAddr, Socket, Type};
+use crate::{Domain, Protocol, SockAddr, Type};
+
+/// Newtype, owned, wrapper around a system socket.
+///
+/// This type simply wraps an instance of a file descriptor (`c_int`) on Unix
+/// and an instance of `SOCKET` on Windows. This is the main type exported by
+/// this crate and is intended to mirror the raw semantics of sockets on
+/// platforms as closely as possible. Almost all methods correspond to
+/// precisely one libc or OS API call which is essentially just a "Rustic
+/// translation" of what's below.
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::net::SocketAddr;
+/// use socket2::{Socket, Domain, Type, SockAddr};
+///
+/// // create a TCP listener bound to two addresses
+/// let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+///
+/// socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
+/// socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
+/// socket.listen(128).unwrap();
+///
+/// let listener = socket.into_tcp_listener();
+/// // ...
+/// ```
+pub struct Socket {
+    // The `sys` module most have access to the socket.
+    pub(crate) inner: sys::Socket,
+}
 
 impl Socket {
     /// Creates a new socket ready to be configured.

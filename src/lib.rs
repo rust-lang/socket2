@@ -39,13 +39,6 @@
 
 use crate::utils::NetInt;
 
-#[cfg(any(unix, target_os = "redox"))]
-use libc::{sockaddr_storage, socklen_t};
-#[cfg(windows)]
-use winapi::shared::ws2def::SOCKADDR_STORAGE as sockaddr_storage;
-#[cfg(windows)]
-use winapi::um::ws2tcpip::socklen_t;
-
 mod sockaddr;
 mod socket;
 mod utils;
@@ -59,43 +52,8 @@ mod sys;
 
 use sys::c_int;
 
-/// Newtype, owned, wrapper around a system socket.
-///
-/// This type simply wraps an instance of a file descriptor (`c_int`) on Unix
-/// and an instance of `SOCKET` on Windows. This is the main type exported by
-/// this crate and is intended to mirror the raw semantics of sockets on
-/// platforms as closely as possible. Almost all methods correspond to
-/// precisely one libc or OS API call which is essentially just a "Rustic
-/// translation" of what's below.
-///
-/// # Examples
-///
-/// ```no_run
-/// use std::net::SocketAddr;
-/// use socket2::{Socket, Domain, Type, SockAddr};
-///
-/// // create a TCP listener bound to two addresses
-/// let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
-///
-/// socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
-/// socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
-/// socket.listen(128).unwrap();
-///
-/// let listener = socket.into_tcp_listener();
-/// // ...
-/// ```
-pub struct Socket {
-    inner: sys::Socket,
-}
-
-/// The address of a socket.
-///
-/// `SockAddr`s may be constructed directly to and from the standard library
-/// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
-pub struct SockAddr {
-    storage: sockaddr_storage,
-    len: socklen_t,
-}
+pub use sockaddr::SockAddr;
+pub use socket::Socket;
 
 /// Specification of the communication domain for a socket.
 ///
