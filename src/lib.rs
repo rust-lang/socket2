@@ -88,7 +88,6 @@ macro_rules! impl_debug {
 
 mod sockaddr;
 mod socket;
-mod utils;
 
 #[cfg(test)]
 mod tests;

@@ -11,11 +11,10 @@
 use std::cmp;
 use std::fmt;
 use std::io;
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
-use std::ops::Neg;
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -60,8 +59,20 @@ cfg_if::cfg_if! {
     }
 }
 
-use crate::utils::One;
 use crate::SockAddr;
+
+/// Helper macro to execute a system call that returns an `io::Result`.
+macro_rules! syscall {
+    ($fn: ident ( $($arg: expr),* $(,)* ) ) => {{
+        #[allow(unused_unsafe)]
+        let res = unsafe { libc::$fn($($arg, )*) };
+        if res == -1 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(res)
+        }
+    }};
+}
 
 /// Unix only API.
 impl Domain {
@@ -179,60 +190,56 @@ pub struct Socket {
 
 impl Socket {
     pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
-        unsafe {
-            // On linux we first attempt to pass the SOCK_CLOEXEC flag to
-            // atomically create the socket and set it as CLOEXEC. Support for
-            // this option, however, was added in 2.6.27, and we still support
-            // 2.6.18 as a kernel, so if the returned error is EINVAL we
-            // fallthrough to the fallback.
-            #[cfg(target_os = "linux")]
-            {
-                match cvt(libc::socket(family, ty | libc::SOCK_CLOEXEC, protocol)) {
-                    Ok(fd) => return Ok(Socket::from_raw_fd(fd)),
-                    Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
-                    Err(e) => return Err(e),
-                }
+        // On linux we first attempt to pass the SOCK_CLOEXEC flag to atomically
+        // create the socket and set it as CLOEXEC. Support for this option,
+        // however, was added in 2.6.27, and we still support 2.6.18 as a
+        // kernel, so if the returned error is EINVAL we fallthrough to the
+        // fallback.
+        #[cfg(target_os = "linux")]
+        {
+            match syscall!(socket(family, ty | libc::SOCK_CLOEXEC, protocol)) {
+                Ok(fd) => return unsafe { Ok(Socket::from_raw_fd(fd)) },
+                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
+                Err(e) => return Err(e),
             }
-
-            let fd = cvt(libc::socket(family, ty, protocol))?;
-            let fd = Socket::from_raw_fd(fd);
-            set_cloexec(fd.as_raw_fd())?;
-            #[cfg(target_os = "macos")]
-            {
-                fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-            }
-            Ok(fd)
         }
+
+        let fd = syscall!(socket(family, ty, protocol))?;
+        let fd = unsafe { Socket::from_raw_fd(fd) };
+        set_cloexec(fd.as_raw_fd())?;
+        #[cfg(target_os = "macos")]
+        unsafe {
+            fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
+        }
+        Ok(fd)
     }
 
     pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
+        let mut fds = [0, 0];
+        syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
+        let fds = unsafe { (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1])) };
+        set_cloexec(fds.0.as_raw_fd())?;
+        set_cloexec(fds.1.as_raw_fd())?;
+        #[cfg(target_os = "macos")]
         unsafe {
-            let mut fds = [0, 0];
-            cvt(libc::socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
-            let fds = (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1]));
-            set_cloexec(fds.0.as_raw_fd())?;
-            set_cloexec(fds.1.as_raw_fd())?;
-            #[cfg(target_os = "macos")]
-            {
-                fds.0
-                    .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-                fds.1
-                    .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-            }
-            Ok(fds)
+            fds.0
+                .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
+            fds.1
+                .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
         }
+        Ok(fds)
     }
 
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe { cvt(libc::bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ()) }
+        syscall!(bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
     }
 
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        unsafe { cvt(libc::listen(self.fd, backlog)).map(|_| ()) }
+        syscall!(listen(self.fd, backlog)).map(|_| ())
     }
 
     pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe { cvt(libc::connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ()) }
+        syscall!(connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ())
     }
 
     pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
@@ -311,35 +318,25 @@ impl Socket {
     }
 
     pub fn local_addr(&self) -> io::Result<SockAddr> {
-        unsafe {
-            let mut storage: libc::sockaddr_storage = mem::zeroed();
-            let mut len = mem::size_of_val(&storage) as libc::socklen_t;
-            cvt(libc::getsockname(
-                self.fd,
-                &mut storage as *mut _ as *mut _,
-                &mut len,
-            ))?;
-            Ok(SockAddr::from_raw_parts(
-                &storage as *const _ as *const _,
-                len,
-            ))
-        }
+        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+        let mut len = mem::size_of_val(&storage) as libc::socklen_t;
+        syscall!(getsockname(
+            self.fd,
+            &mut storage as *mut _ as *mut _,
+            &mut len,
+        ))?;
+        Ok(unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
     }
 
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
-        unsafe {
-            let mut storage: libc::sockaddr_storage = mem::zeroed();
-            let mut len = mem::size_of_val(&storage) as libc::socklen_t;
-            cvt(libc::getpeername(
-                self.fd,
-                &mut storage as *mut _ as *mut _,
-                &mut len,
-            ))?;
-            Ok(SockAddr::from_raw_parts(
-                &storage as *const _ as *const _,
-                len,
-            ))
-        }
+        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+        let mut len = mem::size_of_val(&storage) as libc::socklen_t;
+        syscall!(getpeername(
+            self.fd,
+            &mut storage as *mut _ as *mut _,
+            &mut len,
+        ))?;
+        Ok(unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
     }
 
     pub fn try_clone(&self) -> io::Result<Socket> {
@@ -350,27 +347,25 @@ impl Socket {
         use libc::F_DUPFD_CLOEXEC;
 
         static CLOEXEC_FAILED: AtomicBool = AtomicBool::new(false);
-        unsafe {
-            if !CLOEXEC_FAILED.load(Ordering::Relaxed) {
-                match cvt(libc::fcntl(self.fd, F_DUPFD_CLOEXEC, 0)) {
-                    Ok(fd) => {
-                        let fd = Socket::from_raw_fd(fd);
-                        if cfg!(target_os = "linux") {
-                            set_cloexec(fd.as_raw_fd())?;
-                        }
-                        return Ok(fd);
+        if !CLOEXEC_FAILED.load(Ordering::Relaxed) {
+            match syscall!(fcntl(self.fd, F_DUPFD_CLOEXEC, 0)) {
+                Ok(fd) => {
+                    let fd = unsafe { Socket::from_raw_fd(fd) };
+                    if cfg!(target_os = "linux") {
+                        set_cloexec(fd.as_raw_fd())?;
                     }
-                    Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {
-                        CLOEXEC_FAILED.store(true, Ordering::Relaxed);
-                    }
-                    Err(e) => return Err(e),
+                    return Ok(fd);
                 }
+                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {
+                    CLOEXEC_FAILED.store(true, Ordering::Relaxed);
+                }
+                Err(e) => return Err(e),
             }
-            let fd = cvt(libc::fcntl(self.fd, libc::F_DUPFD, 0))?;
-            let fd = Socket::from_raw_fd(fd);
-            set_cloexec(fd.as_raw_fd())?;
-            Ok(fd)
         }
+        let fd = syscall!(fcntl(self.fd, libc::F_DUPFD, 0))?;
+        let fd = unsafe { Socket::from_raw_fd(fd) };
+        set_cloexec(fd.as_raw_fd())?;
+        Ok(fd)
     }
 
     #[allow(unused_mut)]
@@ -381,15 +376,12 @@ impl Socket {
         let mut socket = None;
         #[cfg(target_os = "linux")]
         {
-            let res = cvt_r(|| unsafe {
-                libc::syscall(
-                    libc::SYS_accept4,
-                    self.fd as libc::c_long,
-                    &mut storage as *mut _ as libc::c_long,
-                    &mut len,
-                    libc::SOCK_CLOEXEC as libc::c_long,
-                ) as libc::c_int
-            });
+            let res = syscall!(accept4(
+                self.fd,
+                &mut storage as *mut _ as *mut _,
+                &mut len,
+                libc::SOCK_CLOEXEC,
+            ));
             match res {
                 Ok(fd) => socket = Some(Socket { fd: fd }),
                 Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
@@ -399,13 +391,12 @@ impl Socket {
 
         let socket = match socket {
             Some(socket) => socket,
-            None => unsafe {
-                let fd =
-                    cvt_r(|| libc::accept(self.fd, &mut storage as *mut _ as *mut _, &mut len))?;
-                let fd = Socket::from_raw_fd(fd);
+            None => {
+                let fd = syscall!(accept(self.fd, &mut storage as *mut _ as *mut _, &mut len))?;
+                let fd = unsafe { Socket::from_raw_fd(fd) };
                 set_cloexec(fd.as_raw_fd())?;
                 fd
-            },
+            }
         };
         let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
         Ok((socket, addr))
@@ -423,18 +414,16 @@ impl Socket {
     }
 
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        unsafe {
-            let previous = cvt(libc::fcntl(self.fd, libc::F_GETFL))?;
-            let new = if nonblocking {
-                previous | libc::O_NONBLOCK
-            } else {
-                previous & !libc::O_NONBLOCK
-            };
-            if new != previous {
-                cvt(libc::fcntl(self.fd, libc::F_SETFL, new))?;
-            }
-            Ok(())
+        let previous = syscall!(fcntl(self.fd, libc::F_GETFL))?;
+        let new = if nonblocking {
+            previous | libc::O_NONBLOCK
+        } else {
+            previous & !libc::O_NONBLOCK
+        };
+        if new != previous {
+            syscall!(fcntl(self.fd, libc::F_SETFL, new))?;
         }
+        Ok(())
     }
 
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
@@ -443,36 +432,28 @@ impl Socket {
             Shutdown::Read => libc::SHUT_RD,
             Shutdown::Both => libc::SHUT_RDWR,
         };
-        cvt(unsafe { libc::shutdown(self.fd, how) })?;
+        syscall!(shutdown(self.fd, how))?;
         Ok(())
     }
 
     pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
-        unsafe {
-            let n = cvt({
-                libc::recv(
-                    self.fd,
-                    buf.as_mut_ptr() as *mut c_void,
-                    cmp::min(buf.len(), max_len()),
-                    flags,
-                )
-            })?;
-            Ok(n as usize)
-        }
+        let n = syscall!(recv(
+            self.fd,
+            buf.as_mut_ptr() as *mut c_void,
+            cmp::min(buf.len(), max_len()),
+            flags,
+        ))?;
+        Ok(n as usize)
     }
 
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        unsafe {
-            let n = cvt({
-                libc::recv(
-                    self.fd,
-                    buf.as_mut_ptr() as *mut c_void,
-                    cmp::min(buf.len(), max_len()),
-                    libc::MSG_PEEK,
-                )
-            })?;
-            Ok(n as usize)
-        }
+        let n = syscall!(recv(
+            self.fd,
+            buf.as_mut_ptr() as *mut c_void,
+            cmp::min(buf.len(), max_len()),
+            libc::MSG_PEEK,
+        ))?;
+        Ok(n as usize)
     }
 
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
@@ -480,56 +461,42 @@ impl Socket {
     }
 
     pub fn recv_from(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
-        unsafe {
-            let mut storage: libc::sockaddr_storage = mem::zeroed();
-            let mut addrlen = mem::size_of_val(&storage) as socklen_t;
+        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+        let mut addrlen = mem::size_of_val(&storage) as socklen_t;
 
-            let n = cvt({
-                libc::recvfrom(
-                    self.fd,
-                    buf.as_mut_ptr() as *mut c_void,
-                    cmp::min(buf.len(), max_len()),
-                    flags,
-                    &mut storage as *mut _ as *mut _,
-                    &mut addrlen,
-                )
-            })?;
-            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
-            Ok((n as usize, addr))
-        }
+        let n = syscall!(recvfrom(
+            self.fd,
+            buf.as_mut_ptr() as *mut c_void,
+            cmp::min(buf.len(), max_len()),
+            flags,
+            &mut storage as *mut _ as *mut _,
+            &mut addrlen,
+        ))?;
+        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen) };
+        Ok((n as usize, addr))
     }
 
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
-        unsafe {
-            let n = cvt({
-                libc::send(
-                    self.fd,
-                    buf.as_ptr() as *const c_void,
-                    cmp::min(buf.len(), max_len()),
-                    flags,
-                )
-            })?;
-            Ok(n as usize)
-        }
+        let n = syscall!(send(
+            self.fd,
+            buf.as_ptr() as *const c_void,
+            cmp::min(buf.len(), max_len()),
+            flags,
+        ))?;
+        Ok(n as usize)
     }
 
     pub fn send_to(&self, buf: &[u8], flags: c_int, addr: &SockAddr) -> io::Result<usize> {
-        unsafe {
-            let n = cvt({
-                libc::sendto(
-                    self.fd,
-                    buf.as_ptr() as *const c_void,
-                    cmp::min(buf.len(), max_len()),
-                    flags,
-                    addr.as_ptr(),
-                    addr.len(),
-                )
-            })?;
-            Ok(n as usize)
-        }
+        let n = syscall!(sendto(
+            self.fd,
+            buf.as_ptr() as *const c_void,
+            cmp::min(buf.len(), max_len()),
+            flags,
+            addr.as_ptr(),
+            addr.len(),
+        ))?;
+        Ok(n as usize)
     }
-
-    // ================================================
 
     pub fn ttl(&self) -> io::Result<u32> {
         unsafe {
@@ -856,7 +823,7 @@ impl Socket {
         T: Copy,
     {
         let payload = &payload as *const T as *const c_void;
-        cvt(libc::setsockopt(
+        syscall!(setsockopt(
             self.fd,
             opt,
             val,
@@ -869,7 +836,7 @@ impl Socket {
     unsafe fn getsockopt<T: Copy>(&self, opt: c_int, val: c_int) -> io::Result<T> {
         let mut slot: T = mem::zeroed();
         let mut len = mem::size_of::<T>() as libc::socklen_t;
-        cvt(libc::getsockopt(
+        syscall!(getsockopt(
             self.fd,
             opt,
             val,
@@ -889,16 +856,12 @@ impl Read for Socket {
 
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        unsafe {
-            let n = cvt({
-                libc::read(
-                    self.fd,
-                    buf.as_mut_ptr() as *mut c_void,
-                    cmp::min(buf.len(), max_len()),
-                )
-            })?;
-            Ok(n as usize)
-        }
+        let n = syscall!(read(
+            self.fd,
+            buf.as_mut_ptr() as *mut c_void,
+            cmp::min(buf.len(), max_len()),
+        ))?;
+        Ok(n as usize)
     }
 }
 
@@ -1072,37 +1035,13 @@ fn max_len() -> usize {
     }
 }
 
-fn cvt<T: One + PartialEq + Neg<Output = T>>(t: T) -> io::Result<T> {
-    let one: T = T::one();
-    if t == -one {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(t)
-    }
-}
-
-fn cvt_r<F, T>(mut f: F) -> io::Result<T>
-where
-    F: FnMut() -> T,
-    T: One + PartialEq + Neg<Output = T>,
-{
-    loop {
-        match cvt(f()) {
-            Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
-            other => return other,
-        }
-    }
-}
-
 fn set_cloexec(fd: c_int) -> io::Result<()> {
-    unsafe {
-        let previous = cvt(libc::fcntl(fd, libc::F_GETFD))?;
-        let new = previous | libc::FD_CLOEXEC;
-        if new != previous {
-            cvt(libc::fcntl(fd, libc::F_SETFD, new))?;
-        }
-        Ok(())
+    let previous = syscall!(fcntl(fd, libc::F_GETFD))?;
+    let new = previous | libc::FD_CLOEXEC;
+    if new != previous {
+        syscall!(fcntl(fd, libc::F_SETFD, new))?;
     }
+    Ok(())
 }
 
 fn dur2timeval(dur: Option<Duration>) -> io::Result<libc::timeval> {
