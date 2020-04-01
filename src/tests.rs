@@ -1,7 +1,19 @@
 use std::io::Write;
+use std::net::SocketAddr;
 use std::str;
 
 use crate::{Domain, Protocol, Type};
+
+#[test]
+fn domain_for_address() {
+    let ipv4: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+    assert!(ipv4.is_ipv4());
+    let ipv6: SocketAddr = "[::1]:8080".parse().unwrap();
+    assert!(ipv6.is_ipv6());
+
+    assert_eq!(Domain::for_address(ipv4), Domain::ipv4());
+    assert_eq!(Domain::for_address(ipv6), Domain::ipv6());
+}
 
 #[test]
 fn domain_fmt_debug() {

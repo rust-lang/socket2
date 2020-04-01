@@ -37,6 +37,8 @@
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs)]
 
+use std::net::SocketAddr;
+
 use crate::utils::NetInt;
 
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
@@ -99,7 +101,7 @@ pub use socket::Socket;
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Domain(c_int);
 
 impl Domain {
@@ -111,6 +113,14 @@ impl Domain {
     /// Domain for IPv6 communication, corresponding to `AF_INET6`.
     pub fn ipv6() -> Domain {
         Domain(sys::AF_INET6)
+    }
+
+    /// Returns the correct domain for `address`.
+    pub fn for_address(address: SocketAddr) -> Domain {
+        match address {
+            SocketAddr::V4(_) => Domain::ipv4(),
+            SocketAddr::V6(_) => Domain::ipv6(),
+        }
     }
 }
 
@@ -135,7 +145,7 @@ impl From<Domain> for c_int {
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Type(c_int);
 
 impl Type {
@@ -184,7 +194,7 @@ impl From<Type> for c_int {
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
 /// value needs to be provided.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Protocol(c_int);
 
 impl Protocol {
