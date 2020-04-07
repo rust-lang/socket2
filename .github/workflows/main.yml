@@ -30,10 +30,6 @@ jobs:
       run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
       shell: bash
     - run: cargo test
-    - run: cargo test --features reuseport
-    - run: cargo test --features unix
-    - run: cargo test --features pair
-    - run: cargo test --features "reuseport unix pair"
 
   rustfmt:
     name: Rustfmt
