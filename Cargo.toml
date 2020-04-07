@@ -30,5 +30,4 @@ redox_syscall = "0.1.38"
 tempdir = "0.3"
 
 [features]
-pair = []
 unix = []

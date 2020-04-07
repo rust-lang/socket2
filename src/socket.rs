@@ -75,9 +75,8 @@ impl Socket {
     ///
     /// This function corresponds to `socketpair(2)`.
     ///
-    /// This function is only available on Unix when the `pair` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "pair"))]
+    /// This function is only available on Unix.
+    #[cfg(unix)]
     pub fn pair(
         domain: Domain,
         type_: Type,
@@ -939,7 +938,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(unix, feature = "pair", feature = "unix"))]
+    #[cfg(unix)]
     fn pair() {
         let (mut a, mut b) = Socket::pair(Domain::UNIX, Type::STREAM, None).unwrap();
         a.write_all(b"hello world").unwrap();
