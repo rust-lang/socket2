@@ -24,7 +24,7 @@
 //! use socket2::{Socket, Domain, Type};
 //!
 //! // create a TCP listener bound to two addresses
-//! let socket = Socket::new(Domain::ipv6(), Type::stream(), None).unwrap();
+//! let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
 //!
 //! socket.bind(&"[::1]:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
 //! socket.set_only_v6(false);
@@ -104,20 +104,16 @@ pub struct Domain(c_int);
 
 impl Domain {
     /// Domain for IPv4 communication, corresponding to `AF_INET`.
-    pub fn ipv4() -> Domain {
-        Domain(sys::AF_INET)
-    }
+    pub const IPV4: Domain = Domain(sys::AF_INET);
 
     /// Domain for IPv6 communication, corresponding to `AF_INET6`.
-    pub fn ipv6() -> Domain {
-        Domain(sys::AF_INET6)
-    }
+    pub const IPV6: Domain = Domain(sys::AF_INET6);
 
     /// Returns the correct domain for `address`.
     pub fn for_address(address: SocketAddr) -> Domain {
         match address {
-            SocketAddr::V4(_) => Domain::ipv4(),
-            SocketAddr::V6(_) => Domain::ipv6(),
+            SocketAddr::V4(_) => Domain::IPV4,
+            SocketAddr::V6(_) => Domain::IPV6,
         }
     }
 }
@@ -150,27 +146,19 @@ impl Type {
     /// Type corresponding to `SOCK_STREAM`.
     ///
     /// Used for protocols such as TCP.
-    pub fn stream() -> Type {
-        Type(sys::SOCK_STREAM)
-    }
+    pub const STREAM: Type = Type(sys::SOCK_STREAM);
 
     /// Type corresponding to `SOCK_DGRAM`.
     ///
     /// Used for protocols such as UDP.
-    pub fn dgram() -> Type {
-        Type(sys::SOCK_DGRAM)
-    }
+    pub const DGRAM: Type = Type(sys::SOCK_DGRAM);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
-    pub fn seqpacket() -> Type {
-        Type(sys::SOCK_SEQPACKET)
-    }
+    pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
     #[cfg(not(target_os = "redox"))]
-    pub fn raw() -> Type {
-        Type(sys::SOCK_RAW)
-    }
+    pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
 impl From<c_int> for Type {
@@ -197,24 +185,16 @@ pub struct Protocol(c_int);
 
 impl Protocol {
     /// Protocol corresponding to `ICMPv4`.
-    pub fn icmpv4() -> Self {
-        Protocol(sys::IPPROTO_ICMP)
-    }
+    pub const ICMPV4: Protocol = Protocol(sys::IPPROTO_ICMP);
 
     /// Protocol corresponding to `ICMPv6`.
-    pub fn icmpv6() -> Self {
-        Protocol(sys::IPPROTO_ICMPV6)
-    }
+    pub const ICMPV6: Protocol = Protocol(sys::IPPROTO_ICMPV6);
 
     /// Protocol corresponding to `TCP`.
-    pub fn tcp() -> Self {
-        Protocol(sys::IPPROTO_TCP)
-    }
+    pub const TCP: Protocol = Protocol(sys::IPPROTO_TCP);
 
     /// Protocol corresponding to `UDP`.
-    pub fn udp() -> Self {
-        Protocol(sys::IPPROTO_UDP)
-    }
+    pub const UDP: Protocol = Protocol(sys::IPPROTO_UDP);
 }
 
 impl From<c_int> for Protocol {

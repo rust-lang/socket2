@@ -11,17 +11,19 @@ fn domain_for_address() {
     let ipv6: SocketAddr = "[::1]:8080".parse().unwrap();
     assert!(ipv6.is_ipv6());
 
-    assert_eq!(Domain::for_address(ipv4), Domain::ipv4());
-    assert_eq!(Domain::for_address(ipv6), Domain::ipv6());
+    assert_eq!(Domain::for_address(ipv4), Domain::IPV4);
+    assert_eq!(Domain::for_address(ipv6), Domain::IPV6);
 }
 
 #[test]
 fn domain_fmt_debug() {
     let tests = &[
-        (Domain::ipv4(), "AF_INET"),
-        (Domain::ipv6(), "AF_INET6"),
+        (Domain::IPV4, "AF_INET"),
+        (Domain::IPV6, "AF_INET6"),
         #[cfg(unix)]
-        (Domain::unix(), "AF_UNIX"),
+        (Domain::UNIX, "AF_UNIX"),
+        #[cfg(target_os = "linux")]
+        (Domain::PACKET, "AF_PACKET"),
         (0.into(), "AF_UNSPEC"),
         (500.into(), "500"),
     ];
@@ -38,10 +40,11 @@ fn domain_fmt_debug() {
 #[test]
 fn type_fmt_debug() {
     let tests = &[
-        (Type::stream(), "SOCK_STREAM"),
-        (Type::dgram(), "SOCK_DGRAM"),
-        (Type::seqpacket(), "SOCK_SEQPACKET"),
-        (Type::raw(), "SOCK_RAW"),
+        (Type::STREAM, "SOCK_STREAM"),
+        (Type::DGRAM, "SOCK_DGRAM"),
+        (Type::SEQPACKET, "SOCK_SEQPACKET"),
+        #[cfg(not(target_os = "redox"))]
+        (Type::RAW, "SOCK_RAW"),
         (500.into(), "500"),
     ];
 
@@ -57,10 +60,10 @@ fn type_fmt_debug() {
 #[test]
 fn protocol_fmt_debug() {
     let tests = &[
-        (Protocol::icmpv4(), "IPPROTO_ICMP"),
-        (Protocol::icmpv6(), "IPPROTO_ICMPV6"),
-        (Protocol::tcp(), "IPPROTO_TCP"),
-        (Protocol::udp(), "IPPROTO_UDP"),
+        (Protocol::ICMPV4, "IPPROTO_ICMP"),
+        (Protocol::ICMPV6, "IPPROTO_ICMPV6"),
+        (Protocol::TCP, "IPPROTO_TCP"),
+        (Protocol::UDP, "IPPROTO_UDP"),
         (500.into(), "500"),
     ];
 

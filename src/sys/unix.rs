@@ -65,9 +65,7 @@ use crate::SockAddr;
 /// Unix only API.
 impl Domain {
     /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
-    pub fn unix() -> Domain {
-        Domain(libc::AF_UNIX)
-    }
+    pub const UNIX: Domain = Domain(libc::AF_UNIX);
 
     /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
     ///
@@ -75,9 +73,7 @@ impl Domain {
     ///
     /// This function is only available on Linux.
     #[cfg(target_os = "linux")]
-    pub fn packet() -> Domain {
-        Domain(libc::AF_PACKET)
-    }
+    pub const PACKET: Domain = Domain(libc::AF_PACKET);
 }
 
 impl_debug!(
@@ -85,6 +81,8 @@ impl_debug!(
     libc::AF_INET,
     libc::AF_INET6,
     libc::AF_UNIX,
+    #[cfg(target_os = "linux")]
+    libc::AF_PACKET,
     libc::AF_UNSPEC, // = 0.
 );
 
@@ -104,7 +102,7 @@ impl Type {
         target_os = "netbsd",
         target_os = "openbsd"
     ))]
-    pub fn non_blocking(self) -> Type {
+    pub const fn non_blocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
     }
 
@@ -122,7 +120,7 @@ impl Type {
         target_os = "netbsd",
         target_os = "openbsd"
     ))]
-    pub fn cloexec(self) -> Type {
+    pub const fn cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
     }
 }
