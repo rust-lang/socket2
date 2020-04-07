@@ -60,10 +60,10 @@ fn type_fmt_debug() {
 #[test]
 fn protocol_fmt_debug() {
     let tests = &[
-        (Protocol::icmpv4(), "IPPROTO_ICMP"),
-        (Protocol::icmpv6(), "IPPROTO_ICMPV6"),
-        (Protocol::tcp(), "IPPROTO_TCP"),
-        (Protocol::udp(), "IPPROTO_UDP"),
+        (Protocol::ICMPV4, "IPPROTO_ICMP"),
+        (Protocol::ICMPV6, "IPPROTO_ICMPV6"),
+        (Protocol::TCP, "IPPROTO_TCP"),
+        (Protocol::UDP, "IPPROTO_UDP"),
         (500.into(), "500"),
     ];
 

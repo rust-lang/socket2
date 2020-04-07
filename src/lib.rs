@@ -185,24 +185,16 @@ pub struct Protocol(c_int);
 
 impl Protocol {
     /// Protocol corresponding to `ICMPv4`.
-    pub fn icmpv4() -> Self {
-        Protocol(sys::IPPROTO_ICMP)
-    }
+    pub const ICMPV4: Protocol = Protocol(sys::IPPROTO_ICMP);
 
     /// Protocol corresponding to `ICMPv6`.
-    pub fn icmpv6() -> Self {
-        Protocol(sys::IPPROTO_ICMPV6)
-    }
+    pub const ICMPV6: Protocol = Protocol(sys::IPPROTO_ICMPV6);
 
     /// Protocol corresponding to `TCP`.
-    pub fn tcp() -> Self {
-        Protocol(sys::IPPROTO_TCP)
-    }
+    pub const TCP: Protocol = Protocol(sys::IPPROTO_TCP);
 
     /// Protocol corresponding to `UDP`.
-    pub fn udp() -> Self {
-        Protocol(sys::IPPROTO_UDP)
-    }
+    pub const UDP: Protocol = Protocol(sys::IPPROTO_UDP);
 }
 
 impl From<c_int> for Protocol {
