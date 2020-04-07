@@ -100,7 +100,7 @@ impl Type {
         target_os = "netbsd",
         target_os = "openbsd"
     ))]
-    pub fn non_blocking(self) -> Type {
+    pub const fn non_blocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
     }
 
@@ -118,7 +118,7 @@ impl Type {
         target_os = "netbsd",
         target_os = "openbsd"
     ))]
-    pub fn cloexec(self) -> Type {
+    pub const fn cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
     }
 }
