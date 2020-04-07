@@ -918,7 +918,7 @@ impl<'a> Write for &'a Socket {
 }
 
 impl fmt::Debug for Socket {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut f = f.debug_struct("Socket");
         f.field("fd", &self.fd);
         if let Ok(addr) = self.local_addr() {

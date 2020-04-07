@@ -35,18 +35,23 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// # Examples
 ///
 /// ```no_run
+/// # fn main() -> std::io::Result<()> {
 /// use std::net::SocketAddr;
-/// use socket2::{Socket, Domain, Type, SockAddr};
+/// use socket2::{Socket, Domain, Type};
 ///
 /// // create a TCP listener bound to two addresses
-/// let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+/// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
 ///
-/// socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
-/// socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
-/// socket.listen(128).unwrap();
+/// let address: SocketAddr = "[::1]:12345".parse().unwrap();
+/// let address = address.into();
+/// socket.bind(&address)?;
+/// socket.bind(&address)?;
+/// socket.listen(128)?;
 ///
 /// let listener = socket.into_tcp_listener();
 /// // ...
+/// # drop(listener);
+/// # Ok(()) }
 /// ```
 pub struct Socket {
     // The `sys` module most have access to the socket.
@@ -794,7 +799,7 @@ impl<'a> Write for &'a Socket {
 }
 
 impl fmt::Debug for Socket {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
