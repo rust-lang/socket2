@@ -40,10 +40,11 @@ fn domain_fmt_debug() {
 #[test]
 fn type_fmt_debug() {
     let tests = &[
-        (Type::stream(), "SOCK_STREAM"),
-        (Type::dgram(), "SOCK_DGRAM"),
-        (Type::seqpacket(), "SOCK_SEQPACKET"),
-        (Type::raw(), "SOCK_RAW"),
+        (Type::STREAM, "SOCK_STREAM"),
+        (Type::DGRAM, "SOCK_DGRAM"),
+        (Type::SEQPACKET, "SOCK_SEQPACKET"),
+        #[cfg(not(target_os = "redox"))]
+        (Type::RAW, "SOCK_RAW"),
         (500.into(), "500"),
     ];
 
