@@ -81,6 +81,8 @@ impl_debug!(
     libc::AF_INET,
     libc::AF_INET6,
     libc::AF_UNIX,
+    #[cfg(target_os = "linux")]
+    libc::AF_PACKET,
     libc::AF_UNSPEC, // = 0.
 );
 

@@ -23,7 +23,7 @@ fn domain_fmt_debug() {
         #[cfg(unix)]
         (Domain::UNIX, "AF_UNIX"),
         #[cfg(target_os = "linux")]
-        (Domain::PACKET, "AF_UNIX"),
+        (Domain::PACKET, "AF_PACKET"),
         (0.into(), "AF_UNSPEC"),
         (500.into(), "500"),
     ];
