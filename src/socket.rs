@@ -11,7 +11,7 @@
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::time::Duration;
 
@@ -104,27 +104,24 @@ impl Socket {
 
     /// Consumes this `Socket`, converting it into a `UnixStream`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "unix"))]
+    /// This function is only available on Unix.
+    #[cfg(unix)]
     pub fn into_unix_stream(self) -> UnixStream {
         self.into()
     }
 
     /// Consumes this `Socket`, converting it into a `UnixListener`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "unix"))]
+    /// This function is only available on Unix.
+    #[cfg(unix)]
     pub fn into_unix_listener(self) -> UnixListener {
         self.into()
     }
 
     /// Consumes this `Socket`, converting it into a `UnixDatagram`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "unix"))]
+    /// This function is only available on Unix.
+    #[cfg(unix)]
     pub fn into_unix_datagram(self) -> UnixDatagram {
         self.into()
     }
@@ -817,7 +814,7 @@ impl From<net::UdpSocket> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
         Socket {
@@ -826,7 +823,7 @@ impl From<UnixStream> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
         Socket {
@@ -835,7 +832,7 @@ impl From<UnixListener> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         Socket {
@@ -862,21 +859,21 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 impl From<Socket> for UnixStream {
     fn from(socket: Socket) -> UnixStream {
         socket.inner.into()
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 impl From<Socket> for UnixListener {
     fn from(socket: Socket) -> UnixListener {
         socket.inner.into()
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(unix)]
 impl From<Socket> for UnixDatagram {
     fn from(socket: Socket) -> UnixDatagram {
         socket.inner.into()
@@ -948,7 +945,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(unix, feature = "unix"))]
+    #[cfg(unix)]
     fn unix() {
         use tempdir::TempDir;
 

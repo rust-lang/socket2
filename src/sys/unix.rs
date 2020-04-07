@@ -16,7 +16,6 @@ use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
-#[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -989,21 +988,18 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<Socket> for UnixStream {
     fn from(socket: Socket) -> UnixStream {
         unsafe { UnixStream::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<Socket> for UnixListener {
     fn from(socket: Socket) -> UnixListener {
         unsafe { UnixListener::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<Socket> for UnixDatagram {
     fn from(socket: Socket) -> UnixDatagram {
         unsafe { UnixDatagram::from_raw_fd(socket.into_raw_fd()) }
@@ -1028,21 +1024,18 @@ impl From<net::UdpSocket> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }

@@ -59,13 +59,12 @@ impl SockAddr {
 
     /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
+    /// This function is only available on Unix.
     ///
     /// # Failure
     ///
     /// Returns an error if the path is longer than `SUN_LEN`.
-    #[cfg(all(unix, feature = "unix"))]
+    #[cfg(unix)]
     pub fn unix<P>(path: P) -> ::std::io::Result<SockAddr>
     where
         P: AsRef<::std::path::Path>,
