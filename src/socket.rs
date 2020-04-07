@@ -737,13 +737,8 @@ impl Socket {
 
     /// Check the value of the `SO_REUSEPORT` option on this socket.
     ///
-    /// This function is only available on Unix when the `reuseport` feature is
-    /// enabled.
-    #[cfg(all(
-        unix,
-        not(any(target_os = "solaris", target_os = "illumos")),
-        feature = "reuseport"
-    ))]
+    /// This function is only available on Unix.
+    #[cfg(all(unix, not(any(target_os = "solaris", target_os = "illumos"))))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         self.inner.reuse_port()
     }
@@ -754,13 +749,8 @@ impl Socket {
     /// addresses. For IPv4 sockets this means that a socket may bind even when
     /// there's a socket already listening on this port.
     ///
-    /// This function is only available on Unix when the `reuseport` feature is
-    /// enabled.
-    #[cfg(all(
-        unix,
-        not(any(target_os = "solaris", target_os = "illumos")),
-        feature = "reuseport"
-    ))]
+    /// This function is only available on Unix.
+    #[cfg(all(unix, not(any(target_os = "solaris", target_os = "illumos"))))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         self.inner.set_reuse_port(reuse)
     }
