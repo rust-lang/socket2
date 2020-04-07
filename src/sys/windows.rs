@@ -24,7 +24,7 @@ use winapi::ctypes::{c_char, c_long, c_ulong};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
-use winapi::shared::ntdef::{HANDLE, ULONG};
+use winapi::shared::ntdef::HANDLE;
 use winapi::shared::ws2def::{self, *};
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
@@ -955,26 +955,14 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
-    let res = crate::hton(
-        ((octets[0] as ULONG) << 24)
-            | ((octets[1] as ULONG) << 16)
-            | ((octets[2] as ULONG) << 8)
-            | ((octets[3] as ULONG) << 0),
-    );
+    let res = u32::from_ne_bytes(octets).to_be();
     let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };
     unsafe { *(new_addr.S_addr_mut()) = res };
     new_addr
 }
 
 fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    let h_addr = crate::ntoh(unsafe { *in_addr.S_addr() });
-
-    let a: u8 = (h_addr >> 24) as u8;
-    let b: u8 = (h_addr >> 16) as u8;
-    let c: u8 = (h_addr >> 8) as u8;
-    let d: u8 = (h_addr >> 0) as u8;
-
-    Ipv4Addr::new(a, b, c, d)
+    unsafe { *in_addr.S_addr() }.into()
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
@@ -1010,6 +998,13 @@ fn dur2linger(dur: Option<Duration>) -> sock::linger {
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
+
+    let ip = Ipv4Addr::new(127, 34, 4, 12);
+    let want = 127 << 24 | 34 << 16 | 4 << 8 | 12 << 0;
+    assert_eq!(unsafe { *to_s_addr(&ip).S_addr() }, want);
+    let mut addr: in_addr_S_un = unsafe { mem::zeroed() };
+    unsafe { *(addr.S_addr_mut()) = want };
+    assert_eq!(from_s_addr(addr), ip);
 }
 
 #[test]

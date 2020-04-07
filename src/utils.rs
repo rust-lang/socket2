@@ -9,19 +9,6 @@
 // except according to those terms.
 
 #[doc(hidden)]
-pub trait NetInt {
-    fn from_be(i: Self) -> Self;
-    fn to_be(&self) -> Self;
-}
-macro_rules! doit {
-    ($($t:ident)*) => ($(impl NetInt for $t {
-        fn from_be(i: Self) -> Self { <$t>::from_be(i) }
-        fn to_be(&self) -> Self { <$t>::to_be(*self) }
-    })*)
-}
-doit! { i8 i16 i32 i64 isize u8 u16 u32 u64 usize }
-
-#[doc(hidden)]
 pub trait One {
     fn one() -> Self;
 }
