@@ -24,7 +24,7 @@
 //! use socket2::{Socket, Domain, Type};
 //!
 //! // create a TCP listener bound to two addresses
-//! let socket = Socket::new(Domain::ipv6(), Type::stream(), None).unwrap();
+//! let socket = Socket::new(Domain::IPV6, Type::stream(), None).unwrap();
 //!
 //! socket.bind(&"[::1]:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
 //! socket.set_only_v6(false);
@@ -104,20 +104,16 @@ pub struct Domain(c_int);
 
 impl Domain {
     /// Domain for IPv4 communication, corresponding to `AF_INET`.
-    pub fn ipv4() -> Domain {
-        Domain(sys::AF_INET)
-    }
+    pub const IPV4: Domain = Domain(sys::AF_INET);
 
     /// Domain for IPv6 communication, corresponding to `AF_INET6`.
-    pub fn ipv6() -> Domain {
-        Domain(sys::AF_INET6)
-    }
+    pub const IPV6: Domain = Domain(sys::AF_INET6);
 
     /// Returns the correct domain for `address`.
     pub fn for_address(address: SocketAddr) -> Domain {
         match address {
-            SocketAddr::V4(_) => Domain::ipv4(),
-            SocketAddr::V6(_) => Domain::ipv6(),
+            SocketAddr::V4(_) => Domain::IPV4,
+            SocketAddr::V6(_) => Domain::IPV6,
         }
     }
 }

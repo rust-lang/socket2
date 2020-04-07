@@ -11,17 +11,19 @@ fn domain_for_address() {
     let ipv6: SocketAddr = "[::1]:8080".parse().unwrap();
     assert!(ipv6.is_ipv6());
 
-    assert_eq!(Domain::for_address(ipv4), Domain::ipv4());
-    assert_eq!(Domain::for_address(ipv6), Domain::ipv6());
+    assert_eq!(Domain::for_address(ipv4), Domain::IPV4);
+    assert_eq!(Domain::for_address(ipv6), Domain::IPV6);
 }
 
 #[test]
 fn domain_fmt_debug() {
     let tests = &[
-        (Domain::ipv4(), "AF_INET"),
-        (Domain::ipv6(), "AF_INET6"),
+        (Domain::IPV4, "AF_INET"),
+        (Domain::IPV6, "AF_INET6"),
         #[cfg(unix)]
-        (Domain::unix(), "AF_UNIX"),
+        (Domain::UNIX, "AF_UNIX"),
+        #[cfg(target_os = "linux")]
+        (Domain::PACKET, "AF_UNIX"),
         (0.into(), "AF_UNSPEC"),
         (500.into(), "500"),
     ];

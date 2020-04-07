@@ -39,7 +39,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// use socket2::{Socket, Domain, Type, SockAddr};
 ///
 /// // create a TCP listener bound to two addresses
-/// let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+/// let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
 ///
 /// socket.bind(&"127.0.0.1:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
 /// socket.bind(&"127.0.0.1:12346".parse::<SocketAddr>().unwrap().into()).unwrap();
@@ -900,7 +900,7 @@ mod test {
         // this IP is unroutable, so connections should always time out
         let addr = "10.255.255.1:80".parse::<SocketAddr>().unwrap().into();
 
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         match socket.connect_timeout(&addr, Duration::from_millis(250)) {
             Ok(_) => panic!("unexpected success"),
             Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {}
@@ -911,13 +911,13 @@ mod test {
     #[test]
     fn connect_timeout_unbound() {
         // bind and drop a socket to track down a "probably unassigned" port
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();
         socket.bind(&addr).unwrap();
         let addr = socket.local_addr().unwrap();
         drop(socket);
 
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         match socket.connect_timeout(&addr, Duration::from_millis(250)) {
             Ok(_) => panic!("unexpected success"),
             Err(ref e)
@@ -929,7 +929,7 @@ mod test {
 
     #[test]
     fn connect_timeout_valid() {
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         socket
             .bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
             .unwrap();
@@ -937,7 +937,7 @@ mod test {
 
         let addr = socket.local_addr().unwrap();
 
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         socket
             .connect_timeout(&addr, Duration::from_millis(250))
             .unwrap();
@@ -946,7 +946,7 @@ mod test {
     #[test]
     #[cfg(all(unix, feature = "pair", feature = "unix"))]
     fn pair() {
-        let (mut a, mut b) = Socket::pair(Domain::unix(), Type::stream(), None).unwrap();
+        let (mut a, mut b) = Socket::pair(Domain::UNIX, Type::stream(), None).unwrap();
         a.write_all(b"hello world").unwrap();
         let mut buf = [0; 11];
         b.read_exact(&mut buf).unwrap();
@@ -961,11 +961,11 @@ mod test {
         let dir = TempDir::new("unix").unwrap();
         let addr = SockAddr::unix(dir.path().join("sock")).unwrap();
 
-        let listener = Socket::new(Domain::unix(), Type::stream(), None).unwrap();
+        let listener = Socket::new(Domain::UNIX, Type::stream(), None).unwrap();
         listener.bind(&addr).unwrap();
         listener.listen(10).unwrap();
 
-        let mut a = Socket::new(Domain::unix(), Type::stream(), None).unwrap();
+        let mut a = Socket::new(Domain::UNIX, Type::stream(), None).unwrap();
         a.connect(&addr).unwrap();
 
         let mut b = listener.accept().unwrap().0;
@@ -978,7 +978,7 @@ mod test {
 
     #[test]
     fn keepalive() {
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         socket.set_keepalive(Some(Duration::from_secs(7))).unwrap();
         // socket.keepalive() doesn't work on Windows #24
         #[cfg(unix)]
@@ -990,7 +990,7 @@ mod test {
 
     #[test]
     fn nodelay() {
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
 
         assert!(socket.set_nodelay(true).is_ok());
 
@@ -1002,7 +1002,7 @@ mod test {
 
     #[test]
     fn out_of_band_inline() {
-        let socket = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let socket = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
 
         assert_eq!(socket.out_of_band_inline().unwrap(), false);
 
@@ -1013,13 +1013,13 @@ mod test {
     #[test]
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     fn out_of_band_send_recv() {
-        let s1 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let s1 = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
             .unwrap();
         let s1_addr = s1.local_addr().unwrap();
         s1.listen(1).unwrap();
 
-        let s2 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let s2 = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         s2.connect(&s1_addr).unwrap();
 
         let (s3, _) = s1.accept().unwrap();
@@ -1037,13 +1037,13 @@ mod test {
 
     #[test]
     fn tcp() {
-        let s1 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let s1 = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
             .unwrap();
         let s1_addr = s1.local_addr().unwrap();
         s1.listen(1).unwrap();
 
-        let s2 = Socket::new(Domain::ipv4(), Type::stream(), None).unwrap();
+        let s2 = Socket::new(Domain::IPV4, Type::stream(), None).unwrap();
         s2.connect(&s1_addr).unwrap();
 
         let (s3, _) = s1.accept().unwrap();

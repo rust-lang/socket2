@@ -65,9 +65,7 @@ use crate::SockAddr;
 /// Unix only API.
 impl Domain {
     /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
-    pub fn unix() -> Domain {
-        Domain(libc::AF_UNIX)
-    }
+    pub const UNIX: Domain = Domain(libc::AF_UNIX);
 
     /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
     ///
@@ -75,9 +73,7 @@ impl Domain {
     ///
     /// This function is only available on Linux.
     #[cfg(target_os = "linux")]
-    pub fn packet() -> Domain {
-        Domain(libc::AF_PACKET)
-    }
+    pub const PACKET: Domain = Domain(libc::AF_PACKET);
 }
 
 impl_debug!(
