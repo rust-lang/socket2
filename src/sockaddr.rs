@@ -28,7 +28,7 @@ pub struct SockAddr {
 }
 
 impl fmt::Debug for SockAddr {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut builder = fmt.debug_struct("SockAddr");
         builder.field("family", &self.family());
         if let Some(addr) = self.as_inet() {

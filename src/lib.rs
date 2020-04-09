@@ -20,22 +20,30 @@
 //! # Examples
 //!
 //! ```no_run
+//! # fn main() -> std::io::Result<()> {
 //! use std::net::SocketAddr;
 //! use socket2::{Socket, Domain, Type};
 //!
 //! // create a TCP listener bound to two addresses
-//! let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+//! let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
 //!
-//! socket.bind(&"[::1]:12345".parse::<SocketAddr>().unwrap().into()).unwrap();
-//! socket.set_only_v6(false);
-//! socket.listen(128).unwrap();
+//! let address: SocketAddr = "[::1]:12345".parse().unwrap();
+//! socket.bind(&address.into())?;
+//! socket.set_only_v6(false)?;
+//! socket.listen(128)?;
 //!
 //! let listener = socket.into_tcp_listener();
 //! // ...
+//! # drop(listener);
+//! # Ok(()) }
 //! ```
 
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
-#![deny(missing_docs)]
+#![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
+// Disallow warnings when running tests.
+#![cfg_attr(test, deny(warnings))]
+// Disallow warnings in examples.
+#![doc(test(attr(deny(warnings))))]
 
 use std::net::SocketAddr;
 
