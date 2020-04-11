@@ -47,7 +47,9 @@ pub use winapi::ctypes::c_int;
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use winapi::shared::ws2def::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+pub(crate) use winapi::shared::ws2def::{SOCK_DGRAM, SOCK_STREAM};
+#[cfg(feature = "all")]
+pub(crate) use winapi::shared::ws2def::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) const IPPROTO_ICMP: c_int = winapi::shared::ws2def::IPPROTO_ICMP as c_int;
 pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 as c_int;

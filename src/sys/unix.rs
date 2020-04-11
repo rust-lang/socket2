@@ -30,9 +30,9 @@ pub use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
-#[cfg(feature = "all")]
-pub(crate) use libc::SOCK_RAW;
-pub(crate) use libc::{SOCK_DGRAM, SOCK_SEQPACKET, SOCK_STREAM};
+pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
+#[cfg(all(feature = "all", not(target_os = "redox")))]
+pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 
@@ -84,6 +84,7 @@ impl_debug!(
     libc::AF_UNIX,
     #[cfg(target_os = "linux")]
     libc::AF_PACKET,
+    #[cfg(not(target_os = "redox"))]
     libc::AF_UNSPEC, // = 0.
 );
 
@@ -136,8 +137,11 @@ impl_debug!(
     crate::Type,
     libc::SOCK_STREAM,
     libc::SOCK_DGRAM,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_RAW,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_RDM,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
     #[cfg(any(
@@ -834,6 +838,7 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE)?;
@@ -841,6 +846,7 @@ impl Socket {
         }
     }
 
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE, oob_inline as c_int) }
     }
@@ -1198,6 +1204,7 @@ fn test_ip() {
 }
 
 #[test]
+#[cfg(all(feature = "all", not(target_os = "redox")))]
 fn test_out_of_band_inline() {
     let tcp = Socket::new(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
     assert_eq!(tcp.out_of_band_inline().unwrap(), false);

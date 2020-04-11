@@ -42,6 +42,7 @@ fn type_fmt_debug() {
     let tests = &[
         (Type::STREAM, "SOCK_STREAM"),
         (Type::DGRAM, "SOCK_DGRAM"),
+        #[cfg(all(feature = "all", not(target_os = "redox")))]
         (Type::SEQPACKET, "SOCK_SEQPACKET"),
         #[cfg(all(feature = "all", not(target_os = "redox")))]
         (Type::RAW, "SOCK_RAW"),

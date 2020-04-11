@@ -15,9 +15,9 @@ use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::time::Duration;
 
-#[cfg(any(unix, target_os = "redox"))]
+#[cfg(all(unix, feature = "all", not(target_os = "redox")))]
 use libc::MSG_OOB;
-#[cfg(windows)]
+#[cfg(all(windows, feature = "all"))]
 use winapi::um::winsock2::MSG_OOB;
 
 use crate::sys;
@@ -262,6 +262,7 @@ impl Socket {
     ///
     /// [`recv`]: #method.recv
     /// [`out_of_band_inline`]: #method.out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.recv(buf, MSG_OOB)
     }
@@ -326,6 +327,7 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     /// [`out_of_band_inline`]: #method.out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn send_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.send(buf, MSG_OOB)
     }
@@ -717,6 +719,7 @@ impl Socket {
     /// For more information about this option, see [`set_out_of_band_inline`][link].
     ///
     /// [link]: #method.set_out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         self.inner.out_of_band_inline()
     }
@@ -727,6 +730,7 @@ impl Socket {
     ///
     /// If this flag is not set, the `MSG_OOB` flag is needed
     /// while `recv`ing to aquire the out-of-band data.
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         self.inner.set_out_of_band_inline(oob_inline)
     }
@@ -998,6 +1002,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     fn out_of_band_inline() {
         let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 
@@ -1008,7 +1013,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(feature = "all", any(target_os = "windows", target_os = "linux")))]
     fn out_of_band_send_recv() {
         let s1 = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
         s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())

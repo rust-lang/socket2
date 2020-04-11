@@ -167,6 +167,7 @@ impl Type {
     pub const DGRAM: Type = Type(sys::SOCK_DGRAM);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
