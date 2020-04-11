@@ -22,7 +22,7 @@ fn domain_fmt_debug() {
         (Domain::IPV6, "AF_INET6"),
         #[cfg(unix)]
         (Domain::UNIX, "AF_UNIX"),
-        #[cfg(target_os = "linux")]
+        #[cfg(all(feature = "all", target_os = "linux"))]
         (Domain::PACKET, "AF_PACKET"),
         (0.into(), "AF_UNSPEC"),
         (500.into(), "500"),
@@ -43,7 +43,7 @@ fn type_fmt_debug() {
         (Type::STREAM, "SOCK_STREAM"),
         (Type::DGRAM, "SOCK_DGRAM"),
         (Type::SEQPACKET, "SOCK_SEQPACKET"),
-        #[cfg(not(target_os = "redox"))]
+        #[cfg(all(feature = "all", not(target_os = "redox")))]
         (Type::RAW, "SOCK_RAW"),
         (500.into(), "500"),
     ];

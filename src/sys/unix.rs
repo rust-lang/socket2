@@ -30,7 +30,9 @@ pub use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use libc::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+#[cfg(feature = "all")]
+pub(crate) use libc::SOCK_RAW;
+pub(crate) use libc::{SOCK_DGRAM, SOCK_SEQPACKET, SOCK_STREAM};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 
@@ -71,7 +73,7 @@ impl Domain {
     /// # Notes
     ///
     /// This function is only available on Linux.
-    #[cfg(target_os = "linux")]
+    #[cfg(all(feature = "all", target_os = "linux"))]
     pub const PACKET: Domain = Domain(libc::AF_PACKET);
 }
 
@@ -93,13 +95,16 @@ impl Type {
     ///
     /// This function is only available on Android, DragonFlyBSD, FreeBSD,
     /// Linux, NetBSD and OpenBSD.
-    #[cfg(any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "openbsd"
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
     ))]
     pub const fn non_blocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
@@ -111,13 +116,16 @@ impl Type {
     ///
     /// This function is only available on Android, DragonFlyBSD, FreeBSD,
     /// Linux, NetBSD and OpenBSD.
-    #[cfg(any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "openbsd"
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
     ))]
     pub const fn cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)

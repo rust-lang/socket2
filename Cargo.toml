@@ -28,3 +28,8 @@ redox_syscall = "0.1.38"
 
 [dev-dependencies]
 tempdir = "0.3"
+
+[features]
+default = []
+# Enable all API, even ones not available on all OSes.
+all = []

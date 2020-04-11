@@ -11,7 +11,7 @@
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::time::Duration;
 
@@ -76,7 +76,7 @@ impl Socket {
     /// This function corresponds to `socketpair(2)`.
     ///
     /// This function is only available on Unix.
-    #[cfg(unix)]
+    #[cfg(all(feature = "all", unix))]
     pub fn pair(
         domain: Domain,
         type_: Type,
@@ -105,7 +105,7 @@ impl Socket {
     /// Consumes this `Socket`, converting it into a `UnixStream`.
     ///
     /// This function is only available on Unix.
-    #[cfg(unix)]
+    #[cfg(all(feature = "all", unix))]
     pub fn into_unix_stream(self) -> UnixStream {
         self.into()
     }
@@ -113,7 +113,7 @@ impl Socket {
     /// Consumes this `Socket`, converting it into a `UnixListener`.
     ///
     /// This function is only available on Unix.
-    #[cfg(unix)]
+    #[cfg(all(feature = "all", unix))]
     pub fn into_unix_listener(self) -> UnixListener {
         self.into()
     }
@@ -121,7 +121,7 @@ impl Socket {
     /// Consumes this `Socket`, converting it into a `UnixDatagram`.
     ///
     /// This function is only available on Unix.
-    #[cfg(unix)]
+    #[cfg(all(feature = "all", unix))]
     pub fn into_unix_datagram(self) -> UnixDatagram {
         self.into()
     }
@@ -734,7 +734,10 @@ impl Socket {
     /// Check the value of the `SO_REUSEPORT` option on this socket.
     ///
     /// This function is only available on Unix.
-    #[cfg(all(unix, not(any(target_os = "solaris", target_os = "illumos"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(windows, target_os = "solaris", target_os = "illumos"))
+    ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         self.inner.reuse_port()
     }
@@ -746,7 +749,10 @@ impl Socket {
     /// there's a socket already listening on this port.
     ///
     /// This function is only available on Unix.
-    #[cfg(all(unix, not(any(target_os = "solaris", target_os = "illumos"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(windows, target_os = "solaris", target_os = "illumos"))
+    ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         self.inner.set_reuse_port(reuse)
     }
@@ -814,7 +820,7 @@ impl From<net::UdpSocket> for Socket {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
         Socket {
@@ -823,7 +829,7 @@ impl From<UnixStream> for Socket {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
         Socket {
@@ -832,7 +838,7 @@ impl From<UnixListener> for Socket {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         Socket {
@@ -859,21 +865,21 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixStream {
     fn from(socket: Socket) -> UnixStream {
         socket.inner.into()
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixListener {
     fn from(socket: Socket) -> UnixListener {
         socket.inner.into()
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixDatagram {
     fn from(socket: Socket) -> UnixDatagram {
         socket.inner.into()
@@ -935,7 +941,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(unix)]
+    #[cfg(all(feature = "all", unix))]
     fn pair() {
         let (mut a, mut b) = Socket::pair(Domain::UNIX, Type::STREAM, None).unwrap();
         a.write_all(b"hello world").unwrap();
@@ -945,7 +951,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(unix)]
+    #[cfg(all(feature = "all", unix))]
     fn unix() {
         use tempdir::TempDir;
 

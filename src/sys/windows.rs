@@ -267,7 +267,7 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            let socket = { sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len) };
+            let socket = sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len);
             let socket = match socket {
                 sock::INVALID_SOCKET => return Err(last_error()),
                 socket => Socket::from_raw_socket(socket as RawSocket),
