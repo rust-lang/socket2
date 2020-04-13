@@ -16,7 +16,6 @@ use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::ops::Neg;
-#[cfg(feature = "unix")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::os::unix::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -31,7 +30,9 @@ pub use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use libc::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
+#[cfg(all(feature = "all", not(target_os = "redox")))]
+pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 
@@ -72,7 +73,7 @@ impl Domain {
     /// # Notes
     ///
     /// This function is only available on Linux.
-    #[cfg(target_os = "linux")]
+    #[cfg(all(feature = "all", target_os = "linux"))]
     pub const PACKET: Domain = Domain(libc::AF_PACKET);
 }
 
@@ -83,6 +84,7 @@ impl_debug!(
     libc::AF_UNIX,
     #[cfg(target_os = "linux")]
     libc::AF_PACKET,
+    #[cfg(not(target_os = "redox"))]
     libc::AF_UNSPEC, // = 0.
 );
 
@@ -94,13 +96,16 @@ impl Type {
     ///
     /// This function is only available on Android, DragonFlyBSD, FreeBSD,
     /// Linux, NetBSD and OpenBSD.
-    #[cfg(any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "openbsd"
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
     ))]
     pub const fn non_blocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
@@ -112,13 +117,16 @@ impl Type {
     ///
     /// This function is only available on Android, DragonFlyBSD, FreeBSD,
     /// Linux, NetBSD and OpenBSD.
-    #[cfg(any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "openbsd"
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
     ))]
     pub const fn cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
@@ -129,8 +137,11 @@ impl_debug!(
     crate::Type,
     libc::SOCK_STREAM,
     libc::SOCK_DGRAM,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_RAW,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_RDM,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
     #[cfg(any(
@@ -814,11 +825,7 @@ impl Socket {
         }
     }
 
-    #[cfg(all(
-        unix,
-        not(any(target_os = "solaris", target_os = "illumos")),
-        feature = "reuseport"
-    ))]
+    #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT)?;
@@ -826,15 +833,12 @@ impl Socket {
         }
     }
 
-    #[cfg(all(
-        unix,
-        not(any(target_os = "solaris", target_os = "illumos")),
-        feature = "reuseport"
-    ))]
+    #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE)?;
@@ -842,6 +846,7 @@ impl Socket {
         }
     }
 
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE, oob_inline as c_int) }
     }
@@ -997,21 +1002,18 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<Socket> for UnixStream {
     fn from(socket: Socket) -> UnixStream {
         unsafe { UnixStream::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<Socket> for UnixListener {
     fn from(socket: Socket) -> UnixListener {
         unsafe { UnixListener::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<Socket> for UnixDatagram {
     fn from(socket: Socket) -> UnixDatagram {
         unsafe { UnixDatagram::from_raw_fd(socket.into_raw_fd()) }
@@ -1036,21 +1038,18 @@ impl From<net::UdpSocket> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
@@ -1205,6 +1204,7 @@ fn test_ip() {
 }
 
 #[test]
+#[cfg(all(feature = "all", not(target_os = "redox")))]
 fn test_out_of_band_inline() {
     let tcp = Socket::new(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
     assert_eq!(tcp.out_of_band_inline().unwrap(), false);

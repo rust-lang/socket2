@@ -47,7 +47,9 @@ pub use winapi::ctypes::c_int;
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use winapi::shared::ws2def::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+pub(crate) use winapi::shared::ws2def::{SOCK_DGRAM, SOCK_STREAM};
+#[cfg(feature = "all")]
+pub(crate) use winapi::shared::ws2def::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) const IPPROTO_ICMP: c_int = winapi::shared::ws2def::IPPROTO_ICMP as c_int;
 pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 as c_int;
@@ -267,7 +269,7 @@ impl Socket {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
             let mut len = mem::size_of_val(&storage) as c_int;
-            let socket = { sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len) };
+            let socket = sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len);
             let socket = match socket {
                 sock::INVALID_SOCKET => return Err(last_error()),
                 socket => Socket::from_raw_socket(socket as RawSocket),

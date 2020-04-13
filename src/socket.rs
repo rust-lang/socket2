@@ -11,13 +11,13 @@
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::time::Duration;
 
-#[cfg(any(unix, target_os = "redox"))]
+#[cfg(all(unix, feature = "all", not(target_os = "redox")))]
 use libc::MSG_OOB;
-#[cfg(windows)]
+#[cfg(all(windows, feature = "all"))]
 use winapi::um::winsock2::MSG_OOB;
 
 use crate::sys;
@@ -75,9 +75,8 @@ impl Socket {
     ///
     /// This function corresponds to `socketpair(2)`.
     ///
-    /// This function is only available on Unix when the `pair` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "pair"))]
+    /// This function is only available on Unix.
+    #[cfg(all(feature = "all", unix))]
     pub fn pair(
         domain: Domain,
         type_: Type,
@@ -105,27 +104,24 @@ impl Socket {
 
     /// Consumes this `Socket`, converting it into a `UnixStream`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "unix"))]
+    /// This function is only available on Unix.
+    #[cfg(all(feature = "all", unix))]
     pub fn into_unix_stream(self) -> UnixStream {
         self.into()
     }
 
     /// Consumes this `Socket`, converting it into a `UnixListener`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "unix"))]
+    /// This function is only available on Unix.
+    #[cfg(all(feature = "all", unix))]
     pub fn into_unix_listener(self) -> UnixListener {
         self.into()
     }
 
     /// Consumes this `Socket`, converting it into a `UnixDatagram`.
     ///
-    /// This function is only available on Unix when the `unix` feature is
-    /// enabled.
-    #[cfg(all(unix, feature = "unix"))]
+    /// This function is only available on Unix.
+    #[cfg(all(feature = "all", unix))]
     pub fn into_unix_datagram(self) -> UnixDatagram {
         self.into()
     }
@@ -266,6 +262,7 @@ impl Socket {
     ///
     /// [`recv`]: #method.recv
     /// [`out_of_band_inline`]: #method.out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.recv(buf, MSG_OOB)
     }
@@ -330,6 +327,7 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     /// [`out_of_band_inline`]: #method.out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn send_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.send(buf, MSG_OOB)
     }
@@ -721,6 +719,7 @@ impl Socket {
     /// For more information about this option, see [`set_out_of_band_inline`][link].
     ///
     /// [link]: #method.set_out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         self.inner.out_of_band_inline()
     }
@@ -731,18 +730,17 @@ impl Socket {
     ///
     /// If this flag is not set, the `MSG_OOB` flag is needed
     /// while `recv`ing to aquire the out-of-band data.
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         self.inner.set_out_of_band_inline(oob_inline)
     }
 
     /// Check the value of the `SO_REUSEPORT` option on this socket.
     ///
-    /// This function is only available on Unix when the `reuseport` feature is
-    /// enabled.
+    /// This function is only available on Unix.
     #[cfg(all(
-        unix,
-        not(any(target_os = "solaris", target_os = "illumos")),
-        feature = "reuseport"
+        feature = "all",
+        not(any(windows, target_os = "solaris", target_os = "illumos"))
     ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         self.inner.reuse_port()
@@ -754,12 +752,10 @@ impl Socket {
     /// addresses. For IPv4 sockets this means that a socket may bind even when
     /// there's a socket already listening on this port.
     ///
-    /// This function is only available on Unix when the `reuseport` feature is
-    /// enabled.
+    /// This function is only available on Unix.
     #[cfg(all(
-        unix,
-        not(any(target_os = "solaris", target_os = "illumos")),
-        feature = "reuseport"
+        feature = "all",
+        not(any(windows, target_os = "solaris", target_os = "illumos"))
     ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         self.inner.set_reuse_port(reuse)
@@ -828,7 +824,7 @@ impl From<net::UdpSocket> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
         Socket {
@@ -837,7 +833,7 @@ impl From<UnixStream> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
         Socket {
@@ -846,7 +842,7 @@ impl From<UnixListener> for Socket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         Socket {
@@ -873,21 +869,21 @@ impl From<Socket> for net::UdpSocket {
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixStream {
     fn from(socket: Socket) -> UnixStream {
         socket.inner.into()
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixListener {
     fn from(socket: Socket) -> UnixListener {
         socket.inner.into()
     }
 }
 
-#[cfg(all(unix, feature = "unix"))]
+#[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixDatagram {
     fn from(socket: Socket) -> UnixDatagram {
         socket.inner.into()
@@ -949,7 +945,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(unix, feature = "pair", feature = "unix"))]
+    #[cfg(all(feature = "all", unix))]
     fn pair() {
         let (mut a, mut b) = Socket::pair(Domain::UNIX, Type::STREAM, None).unwrap();
         a.write_all(b"hello world").unwrap();
@@ -959,7 +955,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(unix, feature = "unix"))]
+    #[cfg(all(feature = "all", unix))]
     fn unix() {
         use tempdir::TempDir;
 
@@ -1006,6 +1002,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     fn out_of_band_inline() {
         let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 
@@ -1016,7 +1013,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(feature = "all", any(target_os = "windows", target_os = "linux")))]
     fn out_of_band_send_recv() {
         let s1 = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
         s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())

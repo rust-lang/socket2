@@ -37,6 +37,11 @@
 //! # drop(listener);
 //! # Ok(()) }
 //! ```
+//!
+//! ## Features
+//!
+//! This crate has a single feature `all`, which enables all functions even ones
+//! that are not available on all OSes.
 
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
@@ -164,10 +169,11 @@ impl Type {
     pub const DGRAM: Type = Type(sys::SOCK_DGRAM);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
-    #[cfg(not(target_os = "redox"))]
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
