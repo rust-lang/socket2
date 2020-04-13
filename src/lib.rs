@@ -171,7 +171,6 @@ impl Type {
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
-    #[cfg(not(target_os = "redox"))]
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }

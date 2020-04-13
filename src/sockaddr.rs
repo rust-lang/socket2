@@ -64,7 +64,7 @@ impl SockAddr {
     /// # Failure
     ///
     /// Returns an error if the path is longer than `SUN_LEN`.
-    #[cfg(unix)]
+    #[cfg(all(unix, feature = "all"))]
     pub fn unix<P>(path: P) -> ::std::io::Result<SockAddr>
     where
         P: AsRef<::std::path::Path>,
