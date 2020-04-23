@@ -53,6 +53,7 @@ cfg_if::cfg_if! {
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
         use libc::TCP_KEEPALIVE as KEEPALIVE_OPTION;
+        use std::ffi::CString;
     } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd", target_os = "haiku"))] {
         use libc::SO_KEEPALIVE as KEEPALIVE_OPTION;
     } else {
@@ -540,6 +541,36 @@ impl Socket {
 
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
+    }
+
+    #[cfg(target_vendor = "apple")]
+    pub fn set_bound_interface(&self, name: &str) -> io::Result<()> {
+        const IP_BOUND_IF: libc::c_int = 25;
+        let name = CString::new(name).unwrap();
+        unsafe {
+            let index = libc::if_nametoindex(name.as_ptr());
+            self.setsockopt(libc::IPPROTO_IP, IP_BOUND_IF, index)
+        }
+    }
+
+    #[cfg(all(feature = "all", not(target_vendor = "apple")))]
+    pub fn set_bound_interface(&self, _name: &str) -> io::Result<()> {
+        unimplemented!()
+    }
+
+    #[cfg(target_vendor = "apple")]
+    pub fn set_bound_interface_v6(&self, name: &str) -> io::Result<()> {
+        const IPV6_BOUND_IF: libc::c_int = 125;
+        let name = CString::new(name).unwrap();
+        unsafe {
+            let index = libc::if_nametoindex(name.as_ptr());
+            self.setsockopt(libc::IPPROTO_IPV6, IPV6_BOUND_IF, index)
+        }
+    }
+
+    #[cfg(all(feature = "all", not(target_vendor = "apple")))]
+    pub fn set_bound_interface_v6(&self, _name: &str) -> io::Result<()> {
+        unimplemented!()
     }
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {

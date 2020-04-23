@@ -432,6 +432,16 @@ impl Socket {
         unsafe { self.setsockopt(IPPROTO_IP, IP_TTL, ttl as c_int) }
     }
 
+    #[cfg(feature = "all")]
+    pub fn set_bound_interface(&self, name: &str) -> io::Result<()> {
+        unimplemented!()
+    }
+
+    #[cfg(feature = "all")]
+    pub fn set_bound_interface_v6(&self, name: &str) -> io::Result<()> {
+        unimplemented!()
+    }
+
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS)?;
