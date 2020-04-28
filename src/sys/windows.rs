@@ -433,12 +433,12 @@ impl Socket {
     }
 
     #[cfg(feature = "all")]
-    pub fn set_bound_interface(&self, name: &str) -> io::Result<()> {
+    pub fn set_bound_interface(&self, _name: &str) -> io::Result<()> {
         unimplemented!()
     }
 
     #[cfg(feature = "all")]
-    pub fn set_bound_interface_v6(&self, name: &str) -> io::Result<()> {
+    pub fn set_bound_interface_v6(&self, _name: &str) -> io::Result<()> {
         unimplemented!()
     }
 
