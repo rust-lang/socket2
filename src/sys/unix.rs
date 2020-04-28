@@ -546,7 +546,7 @@ impl Socket {
     #[cfg(target_vendor = "apple")]
     pub fn set_bound_interface(&self, name: &str) -> io::Result<()> {
         const IP_BOUND_IF: libc::c_int = 25;
-        let name = CString::new(name).unwrap();
+        let name = CString::new(name)?;
         unsafe {
             let index = libc::if_nametoindex(name.as_ptr());
             self.setsockopt(libc::IPPROTO_IP, IP_BOUND_IF, index)
@@ -561,7 +561,7 @@ impl Socket {
     #[cfg(target_vendor = "apple")]
     pub fn set_bound_interface_v6(&self, name: &str) -> io::Result<()> {
         const IPV6_BOUND_IF: libc::c_int = 125;
-        let name = CString::new(name).unwrap();
+        let name = CString::new(name)?;
         unsafe {
             let index = libc::if_nametoindex(name.as_ptr());
             self.setsockopt(libc::IPPROTO_IPV6, IPV6_BOUND_IF, index)
