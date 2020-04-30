@@ -15,15 +15,23 @@
 // is platform specific, e.g. `Domain::UNIX`, is defined in `src/sys/*.rs` and
 // only for the platforms that support it.
 
-//! Utilities for handling sockets
+//! Utilities for creating and using sockets.
 //!
-//! This crate is sort of an evolution of the `net2` crate after seeing the
-//! issues on it over time. The intention of this crate is to provide as direct
-//! as possible access to the system's functionality for sockets as possible. No
-//! extra fluff (e.g. multiple syscalls or builders) provided in this crate.
-//! This also means it doesn't handle errors such as `EINTR`. As a result using
-//! this crate can be a little wordy, but it should give you maximal flexibility
-//! over configuration of sockets.
+//! The goal of this crate is to create and use a socket using advanced
+//! configuration options (those that are not available in the types in the
+//! standard library) without using any unsafe code.
+//!
+//! This crate provides as direct as possible access to the system's
+//! functionality for sockets as possible, this means **no** cross-platform
+//! utilities, no extra goodies, no creature comforts. It is up to the user to
+//! known how to use sockets when using this crate. *If you don't know how to
+//! create a socket using libc/system calls then this crate is not for you*.
+//! Most, if not all, functions directly relate to the equivalent system call
+//! with no error handling applied, so no handling errors such as [`EINTR`]. As
+//! a result using this crate can be a little wordy, but it should give you
+//! maximal flexibility over configuration of sockets.
+//!
+//! [`EINTR`]: std::io::ErrorKind::Interrupted
 //!
 //! # Examples
 //!
@@ -32,7 +40,7 @@
 //! use std::net::SocketAddr;
 //! use socket2::{Socket, Domain, Type};
 //!
-//! // create a TCP listener bound to two addresses
+//! // Create a TCP listener bound to two addresses.
 //! let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
 //!
 //! let address: SocketAddr = "[::1]:12345".parse().unwrap();
