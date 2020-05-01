@@ -200,6 +200,15 @@ impl Socket {
         sys::recv(self.inner, buf, flags.0)
     }
 
+    /// Receives data on the socket from the remote address to which it is
+    /// connected, without removing that data from the queue. On success,
+    /// returns the number of bytes peeked.
+    ///
+    /// This calls `recv(2)` with the `MSG_PEEK` flag set.
+    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.recv_with_flags(buf, RecvFlag::PEEK)
+    }
+
     /// Close the socket.
     ///
     /// This function directly corresponds to the `close(2)` function on Unix
@@ -515,15 +524,6 @@ impl Socket {
         self.inner.recv(buf, MSG_OOB)
     }
 
-    /// Receives data on the socket from the remote adress to which it is
-    /// connected, without removing that data from the queue. On success,
-    /// returns the number of bytes peeked.
-    ///
-    /// Successive calls return the same data. This is accomplished by passing
-    /// `MSG_PEEK` as a flag to the underlying `recv` system call.
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.peek(buf)
-    }
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.

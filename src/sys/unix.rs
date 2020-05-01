@@ -425,16 +425,6 @@ impl Socket {
         Ok(())
     }
 
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let n = syscall!(recv(
-            self.fd,
-            buf.as_mut_ptr() as *mut c_void,
-            cmp::min(buf.len(), max_len()),
-            libc::MSG_PEEK,
-        ))?;
-        Ok(n as usize)
-    }
-
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recv_from(buf, libc::MSG_PEEK)
     }

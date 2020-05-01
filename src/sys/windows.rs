@@ -381,24 +381,6 @@ impl Socket {
         }
     }
 
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        unsafe {
-            let n = {
-                sock::recv(
-                    self.socket,
-                    buf.as_mut_ptr() as *mut c_char,
-                    clamp(buf.len()),
-                    MSG_PEEK,
-                )
-            };
-            match n {
-                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
-                sock::SOCKET_ERROR => Err(last_error()),
-                n => Ok(n as usize),
-            }
-        }
-    }
-
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recv_from(buf, MSG_PEEK)
     }
