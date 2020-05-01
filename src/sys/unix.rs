@@ -194,6 +194,10 @@ pub(crate) fn bind(fd: socket_t, addr: &SockAddr) -> io::Result<()> {
     syscall!(bind(fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
 }
 
+pub(crate) fn connect(fd: socket_t, addr: &SockAddr) -> io::Result<()> {
+    syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Creates a pair of sockets which are connected to each other.

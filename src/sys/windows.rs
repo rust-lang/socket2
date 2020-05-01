@@ -132,6 +132,14 @@ pub(crate) fn bind(socket: socket_t, addr: &SockAddr) -> io::Result<()> {
     }
 }
 
+pub(crate) fn connect(socket: socket_t, addr: &SockAddr) -> io::Result<()> {
+    if unsafe { sock::connect(socket, addr.as_ptr(), addr.len()) } == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }

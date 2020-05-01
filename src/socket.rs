@@ -94,18 +94,15 @@ impl Socket {
         sys::bind(self.inner, addr)
     }
 
-    /*
-    /// Initiate a connection on this socket to the specified address.
+    /// Initiate a connection on this socket to the specified `addr`ess.
     ///
-    /// This function directly corresponds to the connect(2) function on Windows
-    /// and Unix.
-    ///
-    /// An error will be returned if `listen` or `connect` has already been
-    /// called on this builder.
+    /// This function directly corresponds to the `connect(2)` function on
+    /// Windows and Unix.
     pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        self.inner.connect(addr)
+        sys::connect(self.inner, addr)
     }
 
+    /*
     /// Initiate a connection on this socket to the specified address, only
     /// only waiting for a certain period of time for the connection to be
     /// established.
