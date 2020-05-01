@@ -35,7 +35,7 @@
 //!
 //! ```no_run
 //! # fn main() -> std::io::Result<()> {
-//! use std::net::SocketAddr;
+//! use std::net::{SocketAddr, TcpListener};
 //! use socket2::{Socket, Domain, Type};
 //!
 //! // Create a TCP listener bound to two addresses.
@@ -46,7 +46,7 @@
 //! socket.set_only_v6(false)?;
 //! socket.listen(128)?;
 //!
-//! let listener = socket.into_tcp_listener();
+//! let listener: TcpListener = socket.into();
 //! // ...
 //! # drop(listener);
 //! # Ok(()) }
