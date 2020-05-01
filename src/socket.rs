@@ -259,6 +259,209 @@ impl Socket {
     }
 }
 
+/// Multicast socket options.
+impl Socket {
+    /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// address of the local interface with which the system should join the
+    /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
+    /// interface is chosen by the system.
+    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+        let mreq = sys::ip_mreq(multiaddr, interface);
+        unsafe { self.setsockopt(sys::IPPROTO_IP, sys::IP_ADD_MEMBERSHIP, &mreq) }
+    }
+
+    /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// index of the interface to join/leave (or 0 to indicate any interface).
+    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
+        let mreq = sys::ipv6_mreq(multiaddr, interface);
+        unsafe {
+            self.setsockopt(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_ADD_MEMBERSHIP,
+                &mreq,
+            )
+        }
+    }
+
+    /// Executes an operation of the `IP_DROP_MEMBERSHIP` type.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::join_multicast_v4`].
+    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+        let mreq = sys::ip_mreq(multiaddr, interface);
+        unsafe { self.setsockopt(sys::IPPROTO_IP, sys::IP_DROP_MEMBERSHIP, &mreq) }
+    }
+
+    /// Executes an operation of the `IPV6_DROP_MEMBERSHIP` type.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::join_multicast_v6`].
+    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
+        let mreq = sys::ipv6_mreq(multiaddr, interface);
+        unsafe {
+            self.setsockopt(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_DROP_MEMBERSHIP,
+                &mreq,
+            )
+        }
+    }
+
+    /// Sets the value of the `IP_MULTICAST_LOOP` option for this socket.
+    ///
+    /// If enabled, multicast packets will be looped back to the local socket.
+    /// Note that this may not have any affect on IPv6 sockets.
+    pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
+        let multicast_loop_v4 = multicast_loop_v4 as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(
+                sys::IPPROTO_IP,
+                sys::IP_MULTICAST_LOOP,
+                &multicast_loop_v4,
+            )
+        }
+    }
+
+    /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::set_multicast_loop_v4`].
+    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
+        let res = unsafe { self.getsockopt::<sys::c_int>(sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP) };
+        res.map(|res| res != 0)
+    }
+
+    /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// Controls whether this socket sees the multicast packets it sends itself.
+    /// Note that this may not have any affect on IPv4 sockets.
+    pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
+        let multicast_loop_v6 = multicast_loop_v6 as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_MULTICAST_LOOP,
+                &multicast_loop_v6,
+            )
+        }
+    }
+
+    /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::set_multicast_loop_v6`].
+    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
+        let res = unsafe {
+            self.getsockopt::<sys::c_int>(sys::IPPROTO_IPV6 as sys::c_int, sys::IPV6_MULTICAST_LOOP)
+        };
+        res.map(|res| res != 0)
+    }
+
+    /// Sets the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// Indicates the time-to-live value of outgoing multicast packets for
+    /// this socket. The default value is 1 which means that multicast packets
+    /// don't leave the local network unless explicitly requested.
+    ///
+    /// Note that this may not have any affect on IPv6 sockets.
+    pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
+        let multicast_ttl_v4 = multicast_ttl_v4 as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(sys::IPPROTO_IP, sys::IP_MULTICAST_TTL, &multicast_ttl_v4)
+        }
+    }
+
+    /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::set_multicast_ttl_v4`].
+    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
+        let res = unsafe { self.getsockopt::<sys::c_int>(sys::IPPROTO_IP, sys::IP_MULTICAST_TTL) };
+        res.map(|res| res as u32)
+    }
+
+    /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    ///
+    /// Indicates the number of "routers" multicast packets will transit for
+    /// this socket. The default value is 1 which means that multicast packets
+    /// don't leave the local network unless explicitly requested.
+    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        let hops = hops as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_MULTICAST_HOPS,
+                &hops,
+            )
+        }
+    }
+
+    /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    ///
+    /// For more information about this option, see
+    /// [`Socket::set_multicast_hops_v6`].
+    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
+        let res = unsafe {
+            self.getsockopt::<sys::c_int>(sys::IPPROTO_IPV6 as sys::c_int, sys::IPV6_MULTICAST_HOPS)
+        };
+        res.map(|res| res as u32)
+    }
+
+    /// Sets the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets.
+    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
+        let imr_interface = sys::in_addr(interface);
+        unsafe { self.setsockopt(sys::IPPROTO_IP, sys::IP_MULTICAST_IF, &imr_interface) }
+    }
+
+    /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::set_multicast_if_v4`].
+    ///
+    /// Returns the interface to use for routing multicast packets.
+    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
+        let res = unsafe { self.getsockopt::<u32>(sys::IPPROTO_IP, sys::IP_MULTICAST_IF) };
+        res.map(sys::from_s_addr)
+    }
+
+    /// Sets the value of the `IPV6_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets. Unlike ipv4, this
+    /// is generally required in ipv6 contexts where network routing prefixes may
+    /// overlap.
+    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
+        let interface = interface as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_MULTICAST_IF,
+                &interface,
+            )
+        }
+    }
+
+    /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
+    ///
+    /// For more information about this option, see
+    /// [`Socket::set_multicast_if_v6`].
+    ///
+    /// Returns the interface to use for routing multicast packets.
+    pub fn multicast_if_v6(&self) -> io::Result<u32> {
+        let res = unsafe {
+            self.getsockopt::<sys::c_int>(sys::IPPROTO_IPV6 as sys::c_int, sys::IPV6_MULTICAST_IF)
+        };
+        res.map(|res| res as u32)
+    }
+}
+
 impl Socket {
     /*
     /// Receives data on the socket from the remote address to which it is
@@ -445,162 +648,6 @@ impl Socket {
     /// [link]: #method.set_broadcast
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
         self.inner.set_broadcast(broadcast)
-    }
-
-    /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_loop_v4`][link].
-    ///
-    /// [link]: #method.set_multicast_loop_v4
-    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        self.inner.multicast_loop_v4()
-    }
-
-    /// Sets the value of the `IP_MULTICAST_LOOP` option for this socket.
-    ///
-    /// If enabled, multicast packets will be looped back to the local socket.
-    /// Note that this may not have any affect on IPv6 sockets.
-    pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        self.inner.set_multicast_loop_v4(multicast_loop_v4)
-    }
-
-    /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_ttl_v4`][link].
-    ///
-    /// [link]: #method.set_multicast_ttl_v4
-    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        self.inner.multicast_ttl_v4()
-    }
-
-    /// Sets the value of the `IP_MULTICAST_TTL` option for this socket.
-    ///
-    /// Indicates the time-to-live value of outgoing multicast packets for
-    /// this socket. The default value is 1 which means that multicast packets
-    /// don't leave the local network unless explicitly requested.
-    ///
-    /// Note that this may not have any affect on IPv6 sockets.
-    pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        self.inner.set_multicast_ttl_v4(multicast_ttl_v4)
-    }
-
-    /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_hops_v6`][link].
-    ///
-    /// [link]: #method.set_multicast_hops_v6
-    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        self.inner.multicast_hops_v6()
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
-    ///
-    /// Indicates the number of "routers" multicast packets will transit for
-    /// this socket. The default value is 1 which means that multicast packets
-    /// don't leave the local network unless explicitly requested.
-    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        self.inner.set_multicast_hops_v6(hops)
-    }
-
-    /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_if_v4`][link].
-    ///
-    /// [link]: #method.set_multicast_if_v4
-    ///
-    /// Returns the interface to use for routing multicast packets.
-    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        self.inner.multicast_if_v4()
-    }
-
-    /// Sets the value of the `IP_MULTICAST_IF` option for this socket.
-    ///
-    /// Specifies the interface to use for routing multicast packets.
-    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner.set_multicast_if_v4(interface)
-    }
-
-    /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_if_v6`][link].
-    ///
-    /// [link]: #method.set_multicast_if_v6
-    ///
-    /// Returns the interface to use for routing multicast packets.
-    pub fn multicast_if_v6(&self) -> io::Result<u32> {
-        self.inner.multicast_if_v6()
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_IF` option for this socket.
-    ///
-    /// Specifies the interface to use for routing multicast packets. Unlike ipv4, this
-    /// is generally required in ipv6 contexts where network routing prefixes may
-    /// overlap.
-    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        self.inner.set_multicast_if_v6(interface)
-    }
-
-    /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_loop_v6`][link].
-    ///
-    /// [link]: #method.set_multicast_loop_v6
-    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        self.inner.multicast_loop_v6()
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
-    ///
-    /// Controls whether this socket sees the multicast packets it sends itself.
-    /// Note that this may not have any affect on IPv4 sockets.
-    pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
-        self.inner.set_multicast_loop_v6(multicast_loop_v6)
-    }
-
-    /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
-    ///
-    /// This function specifies a new multicast group for this socket to join.
-    /// The address must be a valid multicast address, and `interface` is the
-    /// address of the local interface with which the system should join the
-    /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
-    /// interface is chosen by the system.
-    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner.join_multicast_v4(multiaddr, interface)
-    }
-
-    /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
-    ///
-    /// This function specifies a new multicast group for this socket to join.
-    /// The address must be a valid multicast address, and `interface` is the
-    /// index of the interface to join/leave (or 0 to indicate any interface).
-    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        self.inner.join_multicast_v6(multiaddr, interface)
-    }
-
-    /// Executes an operation of the `IP_DROP_MEMBERSHIP` type.
-    ///
-    /// For more information about this option, see
-    /// [`join_multicast_v4`][link].
-    ///
-    /// [link]: #method.join_multicast_v4
-    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner.leave_multicast_v4(multiaddr, interface)
-    }
-
-    /// Executes an operation of the `IPV6_DROP_MEMBERSHIP` type.
-    ///
-    /// For more information about this option, see
-    /// [`join_multicast_v6`][link].
-    ///
-    /// [link]: #method.join_multicast_v6
-    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        self.inner.leave_multicast_v6(multiaddr, interface)
     }
 
     /// Reads the linger duration for this socket by getting the SO_LINGER

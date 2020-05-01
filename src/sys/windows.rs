@@ -48,7 +48,11 @@ pub use winapi::ctypes::c_int;
 pub(crate) use c_int as sockopt_len_t;
 pub(crate) use sock::SOCKET as socket_t;
 pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, IPPROTO_IPV6, SOL_SOCKET, SO_ERROR};
-pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL};
+pub(crate) use winapi::shared::ws2ipdef::{
+    IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
+    IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
+    IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL,
+};
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -454,119 +458,6 @@ impl Socket {
         unsafe { self.setsockopt(SOL_SOCKET, SO_BROADCAST, broadcast as c_int) }
     }
 
-    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IP, IP_MULTICAST_LOOP)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_LOOP, multicast_loop_v4 as c_int) }
-    }
-
-    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IP, IP_MULTICAST_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_TTL, multicast_ttl_v4 as c_int) }
-    }
-
-    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_HOPS, hops as c_int) }
-    }
-
-    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        unsafe {
-            let imr_interface: IN_ADDR = self.getsockopt(IPPROTO_IP, IP_MULTICAST_IF)?;
-            Ok(from_s_addr(imr_interface.S_un))
-        }
-    }
-
-    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        let interface = to_s_addr(interface);
-        let imr_interface = IN_ADDR { S_un: interface };
-
-        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, imr_interface) }
-    }
-
-    pub fn multicast_if_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF, interface as c_int) }
-    }
-
-    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_LOOP)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                IPPROTO_IPV6 as c_int,
-                IPV6_MULTICAST_LOOP,
-                multicast_loop_v6 as c_int,
-            )
-        }
-    }
-
-    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let multiaddr = to_s_addr(multiaddr);
-        let interface = to_s_addr(interface);
-        let mreq = IP_MREQ {
-            imr_multiaddr: IN_ADDR { S_un: multiaddr },
-            imr_interface: IN_ADDR { S_un: interface },
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq) }
-    }
-
-    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        let multiaddr = to_in6_addr(multiaddr);
-        let mreq = IPV6_MREQ {
-            ipv6mr_multiaddr: multiaddr,
-            ipv6mr_interface: interface,
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IPV6_ADD_MEMBERSHIP, mreq) }
-    }
-
-    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let multiaddr = to_s_addr(multiaddr);
-        let interface = to_s_addr(interface);
-        let mreq = IP_MREQ {
-            imr_multiaddr: IN_ADDR { S_un: multiaddr },
-            imr_interface: IN_ADDR { S_un: interface },
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IP_DROP_MEMBERSHIP, mreq) }
-    }
-
-    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        let multiaddr = to_in6_addr(multiaddr);
-        let mreq = IPV6_MREQ {
-            ipv6mr_multiaddr: multiaddr,
-            ipv6mr_interface: interface,
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq) }
-    }
-
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe { Ok(linger2dur(self.getsockopt(SOL_SOCKET, SO_LINGER)?)) }
     }
@@ -919,6 +810,21 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
     }
 }
 
+pub(crate) fn ip_mreq(multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> IP_MREQ {
+    let multiaddr = to_s_addr(multiaddr);
+    let interface = to_s_addr(interface);
+    IP_MREQ {
+        imr_multiaddr: IN_ADDR { S_un: multiaddr },
+        imr_interface: IN_ADDR { S_un: interface },
+    }
+}
+
+pub(crate) fn in_addr(addr: &Ipv4Addr) -> IN_ADDR {
+    IN_ADDR {
+        S_un: to_s_addr(addr),
+    }
+}
+
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
     let res = u32::from_ne_bytes(octets).to_be();
@@ -927,8 +833,16 @@ fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     new_addr
 }
 
-fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    unsafe { *in_addr.S_addr() }.into()
+pub(crate) fn from_s_addr(in_addr: u32) -> Ipv4Addr {
+    in_addr.into()
+}
+
+pub(crate) fn ipv6_mreq(multiaddr: &Ipv6Addr, interface: u32) -> IPV6_MREQ {
+    let multiaddr = to_in6_addr(multiaddr);
+    IPV6_MREQ {
+        ipv6mr_multiaddr: multiaddr,
+        ipv6mr_interface: interface,
+    }
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
