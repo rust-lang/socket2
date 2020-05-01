@@ -43,7 +43,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 ///
 /// ```no_run
 /// # fn main() -> std::io::Result<()> {
-/// use std::net::SocketAddr;
+/// use std::net::{SocketAddr, TcpListener};
 /// use socket2::{Socket, Domain, Type};
 ///
 /// // create a TCP listener bound to two addresses
@@ -55,7 +55,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// socket.bind(&address)?;
 /// socket.listen(128)?;
 ///
-/// let listener = socket.into_tcp_listener();
+/// let listener: TcpListener = socket.into();
 /// // ...
 /// # drop(listener);
 /// # Ok(()) }
@@ -92,45 +92,6 @@ impl Socket {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
         Ok((Socket { inner: sockets.0 }, Socket { inner: sockets.1 }))
-    }
-
-    /// Consumes this `Socket`, converting it to a `TcpStream`.
-    pub fn into_tcp_stream(self) -> net::TcpStream {
-        self.into()
-    }
-
-    /// Consumes this `Socket`, converting it to a `TcpListener`.
-    pub fn into_tcp_listener(self) -> net::TcpListener {
-        self.into()
-    }
-
-    /// Consumes this `Socket`, converting it to a `UdpSocket`.
-    pub fn into_udp_socket(self) -> net::UdpSocket {
-        self.into()
-    }
-
-    /// Consumes this `Socket`, converting it into a `UnixStream`.
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(feature = "all", unix))]
-    pub fn into_unix_stream(self) -> UnixStream {
-        self.into()
-    }
-
-    /// Consumes this `Socket`, converting it into a `UnixListener`.
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(feature = "all", unix))]
-    pub fn into_unix_listener(self) -> UnixListener {
-        self.into()
-    }
-
-    /// Consumes this `Socket`, converting it into a `UnixDatagram`.
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(feature = "all", unix))]
-    pub fn into_unix_datagram(self) -> UnixDatagram {
-        self.into()
     }
 
     /// Initiate a connection on this socket to the specified address.
