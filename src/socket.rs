@@ -21,7 +21,7 @@ use winapi::um::winsock2::MSG_OOB;
 use crate::sys;
 use crate::{Domain, Protocol, SockAddr, Type};
 
-/// Newtype, owned, wrapper around a system socket.
+/// Owned wrapper around a system socket.
 ///
 /// This type simply wraps an instance of a file descriptor (`c_int`) on Unix
 /// and an instance of `SOCKET` on Windows. This is the main type exported by
@@ -29,6 +29,13 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// platforms as closely as possible. Almost all methods correspond to
 /// precisely one libc or OS API call which is essentially just a "Rustic
 /// translation" of what's below.
+///
+/// This type can be freely converted into the network primitives provided by
+/// the standard library, such as [`TcpStream`] or [`UdpSocket`], using the
+/// [`Into`] trait, see the example below.
+///
+/// [`TcpStream`]: std::net::TcpStream
+/// [`UdpSocket`]: std::net::UdpSocket
 ///
 /// # Examples
 ///
