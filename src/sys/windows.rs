@@ -20,7 +20,7 @@ use std::ptr;
 use std::sync::Once;
 use std::time::Duration;
 
-use winapi::ctypes::{c_char, c_long, c_ulong};
+use winapi::ctypes::{c_char, c_ulong};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
@@ -151,71 +151,6 @@ impl Socket {
                 Ok(())
             } else {
                 Err(last_error())
-            }
-        }
-    }
-
-    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe {
-            if sock::connect(self.socket, addr.as_ptr(), addr.len()) == 0 {
-                Ok(())
-            } else {
-                Err(last_error())
-            }
-        }
-    }
-
-    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
-        self.set_nonblocking(true)?;
-        let r = self.connect(addr);
-        self.set_nonblocking(false)?;
-
-        match r {
-            Ok(()) => return Ok(()),
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
-            Err(e) => return Err(e),
-        }
-
-        if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "cannot set a 0 duration timeout",
-            ));
-        }
-
-        let mut timeout = sock::timeval {
-            tv_sec: timeout.as_secs() as c_long,
-            tv_usec: (timeout.subsec_nanos() / 1000) as c_long,
-        };
-        if timeout.tv_sec == 0 && timeout.tv_usec == 0 {
-            timeout.tv_usec = 1;
-        }
-
-        let fds = unsafe {
-            let mut fds = mem::zeroed::<sock::fd_set>();
-            fds.fd_count = 1;
-            fds.fd_array[0] = self.socket;
-            fds
-        };
-
-        let mut writefds = fds;
-        let mut errorfds = fds;
-
-        match unsafe { sock::select(1, ptr::null_mut(), &mut writefds, &mut errorfds, &timeout) } {
-            sock::SOCKET_ERROR => return Err(io::Error::last_os_error()),
-            0 => {
-                return Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "connection timed out",
-                ))
-            }
-            _ => {
-                if writefds.fd_count != 1 {
-                    if let Some(e) = self.take_error()? {
-                        return Err(e);
-                    }
-                }
-                Ok(())
             }
         }
     }
