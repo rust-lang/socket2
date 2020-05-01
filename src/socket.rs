@@ -67,19 +67,26 @@ pub struct Socket {
 }
 
 impl Socket {
-    /*
     /// Creates a new socket ready to be configured.
     ///
-    /// This function corresponds to `socket(2)` and simply creates a new
-    /// socket, no other configuration is done and further functions must be
-    /// invoked to configure this socket.
+    /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
+    /// Windows and simply creates a new socket, no other configuration is done
+    /// and further functions must be invoked to configure this socket.
+    ///
+    /// # Notes
+    ///
+    /// The standard library sets the `CLOEXEC` and `NOSIGPIPE` (macOS only)
+    /// flags on Unix on sockets, this function does **not** do this, but its
+    /// advisable.
+    ///
+    /// Similarly on Windows the `HANDLE_FLAG_INHERIT` is **not** set to zero,
+    /// but again in most cases its advisable to do so.
     pub fn new(domain: Domain, type_: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
-        Ok(Socket {
-            inner: sys::Socket::new(domain.0, type_.0, protocol)?,
-        })
+        sys::new_socket(domain.0, type_.0, protocol).map(|fd| Socket { inner: fd })
     }
 
+    /*
     /// Creates a pair of sockets which are connected to each other.
     ///
     /// This function corresponds to `socketpair(2)`.

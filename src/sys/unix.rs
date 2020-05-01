@@ -186,36 +186,15 @@ impl_debug!(
     libc::IPPROTO_UDP,
 );
 
+pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<socket_t> {
+    syscall!(socket(family, ty, protocol))
+}
+
 pub struct Socket {
     fd: c_int,
 }
 
 impl Socket {
-    pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
-        // On linux we first attempt to pass the SOCK_CLOEXEC flag to atomically
-        // create the socket and set it as CLOEXEC. Support for this option,
-        // however, was added in 2.6.27, and we still support 2.6.18 as a
-        // kernel, so if the returned error is EINVAL we fallthrough to the
-        // fallback.
-        #[cfg(target_os = "linux")]
-        {
-            match syscall!(socket(family, ty | libc::SOCK_CLOEXEC, protocol)) {
-                Ok(fd) => return unsafe { Ok(Socket::from_raw_fd(fd)) },
-                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
-                Err(e) => return Err(e),
-            }
-        }
-
-        let fd = syscall!(socket(family, ty, protocol))?;
-        let fd = unsafe { Socket::from_raw_fd(fd) };
-        set_cloexec(fd.as_raw_fd())?;
-        #[cfg(target_os = "macos")]
-        unsafe {
-            fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-        }
-        Ok(fd)
-    }
-
     pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
         let mut fds = [0, 0];
         syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
@@ -1135,6 +1114,7 @@ fn dur2linger(dur: Option<Duration>) -> libc::linger {
     }
 }
 
+/*
 #[test]
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
@@ -1155,3 +1135,4 @@ fn test_out_of_band_inline() {
     tcp.set_out_of_band_inline(true).unwrap();
     assert_eq!(tcp.out_of_band_inline().unwrap(), true);
 }
+*/

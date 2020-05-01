@@ -105,31 +105,30 @@ fn last_error() -> io::Error {
     io::Error::from_raw_os_error(unsafe { sock::WSAGetLastError() })
 }
 
+pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<socket_t> {
+    init();
+
+    let socket = unsafe {
+        sock::WSASocketW(
+            family,
+            ty,
+            protocol,
+            ptr::null_mut(),
+            0,
+            WSA_FLAG_OVERLAPPED,
+        )
+    };
+    match socket {
+        sock::INVALID_SOCKET => Err(io::Error::last_os_error()),
+        socket => Ok(socket),
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }
 
 impl Socket {
-    pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
-        init();
-        unsafe {
-            let socket = match sock::WSASocketW(
-                family,
-                ty,
-                protocol,
-                ptr::null_mut(),
-                0,
-                WSA_FLAG_OVERLAPPED,
-            ) {
-                sock::INVALID_SOCKET => return Err(last_error()),
-                socket => socket,
-            };
-            let socket = Socket::from_raw_socket(socket as RawSocket);
-            socket.set_no_inherit()?;
-            Ok(socket)
-        }
-    }
-
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
             if sock::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
@@ -1000,6 +999,7 @@ fn dur2linger(dur: Option<Duration>) -> sock::linger {
     }
 }
 
+/*
 #[test]
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
@@ -1021,3 +1021,4 @@ fn test_out_of_band_inline() {
     tcp.set_out_of_band_inline(true).unwrap();
     assert_eq!(tcp.out_of_band_inline().unwrap(), true);
 }
+*/
