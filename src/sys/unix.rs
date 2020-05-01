@@ -715,11 +715,10 @@ impl FromRawFd for crate::Socket {
     }
 }
 
-impl Drop for Socket {
+impl Drop for crate::Socket {
     fn drop(&mut self) {
-        unsafe {
-            let _ = libc::close(self.fd);
-        }
+        // Can't handle the error here.
+        let _ = unsafe { libc::close(self.inner) };
     }
 }
 

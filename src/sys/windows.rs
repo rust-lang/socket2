@@ -721,11 +721,10 @@ impl FromRawSocket for crate::Socket {
     }
 }
 
-impl Drop for Socket {
+impl Drop for crate::Socket {
     fn drop(&mut self) {
-        unsafe {
-            let _ = sock::closesocket(self.socket);
-        }
+        // Can't handle the error here.
+        let _ = unsafe { sock::closesocket(self.inner) };
     }
 }
 
