@@ -206,6 +206,8 @@ impl crate::Socket {
     ///
     /// Similar to [`Socket::new`] this does not set flags such as `CLOEXEC`
     /// flag which the user might want to set.
+    ///
+    /// [`Socket::new`]: crate::Socket::new
     #[cfg(feature = "all")]
     pub fn pair(
         domain: Domain,
