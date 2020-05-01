@@ -197,6 +197,20 @@ pub(crate) fn getpeername(socket: socket_t) -> io::Result<SockAddr> {
     }
 }
 
+pub(crate) fn shutdown(socket: socket_t, how: Shutdown) -> io::Result<()> {
+    let how = match how {
+        Shutdown::Write => SD_SEND,
+        Shutdown::Read => SD_RECEIVE,
+        Shutdown::Both => SD_BOTH,
+    };
+    let res = unsafe { sock::shutdown(socket, how) };
+    if res == sock::SOCKET_ERROR {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) unsafe fn getsockopt(
     socket: socket_t,
     level: c_int,
@@ -293,19 +307,6 @@ impl Socket {
             } else {
                 Err(io::Error::last_os_error())
             }
-        }
-    }
-
-    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        let how = match how {
-            Shutdown::Write => SD_SEND,
-            Shutdown::Read => SD_RECEIVE,
-            Shutdown::Both => SD_BOTH,
-        };
-        if unsafe { sock::shutdown(self.socket, how) == 0 } {
-            Ok(())
-        } else {
-            Err(last_error())
         }
     }
 

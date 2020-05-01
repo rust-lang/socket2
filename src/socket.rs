@@ -175,15 +175,17 @@ impl Socket {
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         self.inner.set_nonblocking(nonblocking)
     }
+    */
 
     /// Shuts down the read, write, or both halves of this connection.
     ///
-    /// This function will cause all pending and future I/O on the specified
-    /// portions to return immediately with an appropriate value.
+    /// This function directly corresponds to the `shutdown(2)` function on
+    /// Windows and Unix.
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        self.inner.shutdown(how)
+        sys::shutdown(self.inner, how)
     }
 
+    /*
     /// Receives data on the socket from the remote address to which it is
     /// connected.
     ///

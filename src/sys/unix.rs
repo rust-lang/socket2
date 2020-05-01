@@ -235,6 +235,15 @@ pub(crate) fn getpeername(fd: socket_t) -> io::Result<SockAddr> {
     })
 }
 
+pub(crate) fn shutdown(fd: socket_t, how: Shutdown) -> io::Result<()> {
+    let how = match how {
+        Shutdown::Write => libc::SHUT_WR,
+        Shutdown::Read => libc::SHUT_RD,
+        Shutdown::Both => libc::SHUT_RDWR,
+    };
+    syscall!(shutdown(fd, how)).map(|_| ())
+}
+
 pub(crate) unsafe fn getsockopt(
     fd: socket_t,
     level: c_int,
@@ -351,16 +360,6 @@ impl Socket {
         if new != previous {
             syscall!(fcntl(self.fd, libc::F_SETFL, new))?;
         }
-        Ok(())
-    }
-
-    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        let how = match how {
-            Shutdown::Write => libc::SHUT_WR,
-            Shutdown::Read => libc::SHUT_RD,
-            Shutdown::Both => libc::SHUT_RDWR,
-        };
-        syscall!(shutdown(self.fd, how))?;
         Ok(())
     }
 
