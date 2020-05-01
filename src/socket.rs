@@ -154,6 +154,40 @@ impl Socket {
     }
     */
 
+    /// Get the value of the `SO_ERROR` option on this socket.
+    ///
+    /// This will retrieve the stored error in the underlying socket, clearing
+    /// the field in the process. This can be useful for checking errors between
+    /// calls.
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        let res = unsafe { self.getsockopt::<sys::c_int>(sys::SOL_SOCKET, sys::SO_ERROR) };
+        res.map(|res| match res {
+            0 => None,
+            err => Some(io::Error::from_raw_os_error(err as i32)),
+        })
+    }
+
+    /*
+    /// Moves this TCP stream into or out of nonblocking mode.
+    ///
+    /// On Unix this corresponds to calling fcntl, and on Windows this
+    /// corresponds to calling ioctlsocket.
+    pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
+        self.inner.set_nonblocking(nonblocking)
+    }
+    */
+
+    /// Shuts down the read, write, or both halves of this connection.
+    ///
+    /// This function directly corresponds to the `shutdown(2)` function on
+    /// Windows and Unix.
+    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
+        sys::shutdown(self.inner, how)
+    }
+}
+
+/// IP socket options.
+impl Socket {
     /// Sets the value for the `IP_TTL` option on this socket.
     ///
     /// This value sets the time-to-live field that is used in every packet sent
@@ -223,38 +257,9 @@ impl Socket {
         };
         res.map(|res| res as u32)
     }
+}
 
-    /// Get the value of the `SO_ERROR` option on this socket.
-    ///
-    /// This will retrieve the stored error in the underlying socket, clearing
-    /// the field in the process. This can be useful for checking errors between
-    /// calls.
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        let res = unsafe { self.getsockopt::<sys::c_int>(sys::SOL_SOCKET, sys::SO_ERROR) };
-        res.map(|res| match res {
-            0 => None,
-            err => Some(io::Error::from_raw_os_error(err as i32)),
-        })
-    }
-
-    /*
-    /// Moves this TCP stream into or out of nonblocking mode.
-    ///
-    /// On Unix this corresponds to calling fcntl, and on Windows this
-    /// corresponds to calling ioctlsocket.
-    pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        self.inner.set_nonblocking(nonblocking)
-    }
-    */
-
-    /// Shuts down the read, write, or both halves of this connection.
-    ///
-    /// This function directly corresponds to the `shutdown(2)` function on
-    /// Windows and Unix.
-    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        sys::shutdown(self.inner, how)
-    }
-
+impl Socket {
     /*
     /// Receives data on the socket from the remote address to which it is
     /// connected.
