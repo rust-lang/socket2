@@ -27,7 +27,9 @@ use crate::{Domain, Protocol, Type};
 pub use libc::c_int;
 
 // Used in `Socket`.
-pub(crate) use libc::{c_int as socket_t, socklen_t as sockopt_len_t, SOL_SOCKET, SO_ERROR};
+pub(crate) use libc::{
+    c_int as socket_t, socklen_t as sockopt_len_t, IPPROTO_IP, IP_TTL, SOL_SOCKET, SO_ERROR,
+};
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -423,17 +425,6 @@ impl Socket {
             addr.len(),
         ))?;
         Ok(n as usize)
-    }
-
-    pub fn ttl(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
     }
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {

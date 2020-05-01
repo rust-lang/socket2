@@ -47,7 +47,8 @@ pub use winapi::ctypes::c_int;
 // Used in `Socket`.
 pub(crate) use c_int as sockopt_len_t;
 pub(crate) use sock::SOCKET as socket_t;
-pub(crate) use winapi::shared::ws2def::{SOL_SOCKET, SO_ERROR};
+pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, SOL_SOCKET, SO_ERROR};
+pub(crate) use winapi::shared::ws2ipdef::IP_TTL;
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -414,17 +415,6 @@ impl Socket {
     }
 
     // ================================================
-
-    pub fn ttl(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IP, IP_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IP, IP_TTL, ttl as c_int) }
-    }
 
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {

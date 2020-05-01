@@ -154,6 +154,23 @@ impl Socket {
     }
     */
 
+    /// Sets the value for the `IP_TTL` option on this socket.
+    ///
+    /// This value sets the time-to-live field that is used in every packet sent
+    /// from this socket.
+    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
+        let ttl = ttl as sys::c_int;
+        unsafe { self.setsockopt::<sys::c_int>(sys::IPPROTO_IP, sys::IP_TTL, &ttl) }
+    }
+
+    /// Gets the value of the `IP_TTL` option for this socket.
+    ///
+    /// For more information about this option, see [`Socket::set_ttl`].
+    pub fn ttl(&self) -> io::Result<u32> {
+        let res = unsafe { self.getsockopt::<sys::c_int>(sys::IPPROTO_IP, sys::IP_TTL) };
+        res.map(|res| res as u32)
+    }
+
     /// Get the value of the `SO_ERROR` option on this socket.
     ///
     /// This will retrieve the stored error in the underlying socket, clearing
@@ -301,22 +318,6 @@ impl Socket {
 
     // ================================================
 
-    /// Gets the value of the `IP_TTL` option for this socket.
-    ///
-    /// For more information about this option, see [`set_ttl`][link].
-    ///
-    /// [link]: #method.set_ttl
-    pub fn ttl(&self) -> io::Result<u32> {
-        self.inner.ttl()
-    }
-
-    /// Sets the value for the `IP_TTL` option on this socket.
-    ///
-    /// This value sets the time-to-live field that is used in every packet sent
-    /// from this socket.
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        self.inner.set_ttl(ttl)
-    }
 
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
     ///
