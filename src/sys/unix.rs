@@ -27,7 +27,7 @@ use crate::{Domain, Protocol, Type};
 pub use libc::c_int;
 
 // Used in `Socket`.
-pub(crate) use libc::{c_int as socket_t, socklen_t as sockopt_len_t};
+pub(crate) use libc::{c_int as socket_t, socklen_t as sockopt_len_t, SOL_SOCKET, SO_ERROR};
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -339,17 +339,6 @@ impl Socket {
         let fd = unsafe { Socket::from_raw_fd(fd) };
         set_cloexec(fd.as_raw_fd())?;
         Ok(fd)
-    }
-
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_ERROR)?;
-            if raw == 0 {
-                Ok(None)
-            } else {
-                Ok(Some(io::Error::from_raw_os_error(raw as i32)))
-            }
-        }
     }
 
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {

@@ -47,6 +47,7 @@ pub use winapi::ctypes::c_int;
 // Used in `Socket`.
 pub(crate) use c_int as sockopt_len_t;
 pub(crate) use sock::SOCKET as socket_t;
+pub(crate) use winapi::shared::ws2def::{SOL_SOCKET, SO_ERROR};
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -280,17 +281,6 @@ impl Socket {
             };
             socket.set_no_inherit()?;
             Ok(socket)
-        }
-    }
-
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        unsafe {
-            let raw: c_int = self.getsockopt(SOL_SOCKET, SO_ERROR)?;
-            if raw == 0 {
-                Ok(None)
-            } else {
-                Ok(Some(io::Error::from_raw_os_error(raw as i32)))
-            }
         }
     }
 

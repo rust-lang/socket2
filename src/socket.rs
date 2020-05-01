@@ -152,6 +152,7 @@ impl Socket {
     pub fn try_clone(&self) -> io::Result<Socket> {
         self.inner.try_clone().map(|s| Socket { inner: s })
     }
+    */
 
     /// Get the value of the `SO_ERROR` option on this socket.
     ///
@@ -159,9 +160,14 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        self.inner.take_error()
+        let res = unsafe { self.getsockopt::<sys::c_int>(sys::SOL_SOCKET, sys::SO_ERROR) };
+        res.map(|res| match res {
+            0 => None,
+            err => Some(io::Error::from_raw_os_error(err as i32)),
+        })
     }
 
+    /*
     /// Moves this TCP stream into or out of nonblocking mode.
     ///
     /// On Unix this corresponds to calling fcntl, and on Windows this
