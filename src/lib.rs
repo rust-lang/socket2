@@ -54,6 +54,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 use std::net::SocketAddr;
+use std::ops::BitOr;
 
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
 /// rather than a number.
@@ -221,6 +222,44 @@ impl From<c_int> for Protocol {
 
 impl From<Protocol> for c_int {
     fn from(p: Protocol) -> c_int {
+        p.0
+    }
+}
+
+/// Flags used in [`Socket::send_with_flags`], used in the `send(2)` function.
+///
+/// Multiple flags can be OR-ed together.
+// TODO: add a nicer `fmt::Debug` implementation.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct SendFlag(sys::c_int);
+
+impl SendFlag {
+    /// No flags specified.
+    pub const NONE: SendFlag = SendFlag(0);
+
+    /// Flag corresponding to `MSG_DONTROUTE`.
+    pub const DONTROUTE: SendFlag = SendFlag(sys::MSG_DONTROUTE);
+
+    /// Flag corresponding to `MSG_OOB`.
+    pub const OOB: SendFlag = SendFlag(sys::MSG_OOB);
+}
+
+impl BitOr for SendFlag {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        SendFlag(self.0 | rhs.0)
+    }
+}
+
+impl From<c_int> for SendFlag {
+    fn from(p: c_int) -> SendFlag {
+        SendFlag(p)
+    }
+}
+
+impl From<SendFlag> for c_int {
+    fn from(p: SendFlag) -> c_int {
         p.0
     }
 }

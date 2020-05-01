@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use libc::{self, c_void, socklen_t, ssize_t};
 
-use crate::{Domain, Protocol, Type};
+use crate::{Domain, Protocol, SendFlag, Type};
 
 pub use libc::c_int;
 
@@ -52,6 +52,8 @@ pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
+// Used in `SendFlag`.
+pub(crate) use libc::{MSG_DONTROUTE, MSG_OOB};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
@@ -188,6 +190,31 @@ impl_debug!(
     libc::IPPROTO_UDP,
 );
 
+/// Unix only API.
+impl SendFlag {
+    /// Flag corresponding to `MSG_DONTWAIT`.
+    #[cfg(feature = "all")]
+    pub const DONTWAIT: SendFlag = SendFlag(libc::MSG_DONTWAIT);
+
+    /// Flag corresponding to `MSG_EOR`.
+    #[cfg(feature = "all")]
+    pub const EOR: SendFlag = SendFlag(libc::MSG_EOR);
+
+    // TODO: check if the flags below are available on more OSes.
+
+    /// Flag corresponding to `MSG_CONFIRM`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const CONFIRM: SendFlag = SendFlag(libc::MSG_CONFIRM);
+
+    /// Flag corresponding to `MSG_MORE`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const MORE: SendFlag = SendFlag(libc::MSG_MORE);
+
+    /// Flag corresponding to `MSG_NOSIGNAL`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const NOSIGNAL: SendFlag = SendFlag(libc::MSG_NOSIGNAL);
+}
+
 pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<socket_t> {
     syscall!(socket(family, ty, protocol))
 }
@@ -235,6 +262,10 @@ pub(crate) fn getpeername(fd: socket_t) -> io::Result<SockAddr> {
         storage: unsafe { storage.assume_init() },
         len,
     })
+}
+
+pub(crate) fn send(fd: socket_t, buf: &[u8], flags: c_int) -> io::Result<usize> {
+    syscall!(send(fd, buf.as_ptr() as *const c_void, buf.len(), flags)).map(|n| n as usize)
 }
 
 pub(crate) fn shutdown(fd: socket_t, how: Shutdown) -> io::Result<()> {

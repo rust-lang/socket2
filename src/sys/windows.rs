@@ -64,6 +64,8 @@ pub(crate) const IPPROTO_ICMP: c_int = winapi::shared::ws2def::IPPROTO_ICMP as c
 pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 as c_int;
 pub(crate) const IPPROTO_TCP: c_int = winapi::shared::ws2def::IPPROTO_TCP as c_int;
 pub(crate) const IPPROTO_UDP: c_int = winapi::shared::ws2def::IPPROTO_UDP as c_int;
+// Used in `SendFlag`.
+pub(crate) use winapi::um::winsock2::{MSG_DONTROUTE, MSG_OOB};
 
 impl_debug!(
     crate::Domain,
@@ -213,6 +215,22 @@ pub(crate) fn shutdown(socket: socket_t, how: Shutdown) -> io::Result<()> {
         Err(io::Error::last_os_error())
     } else {
         Ok(())
+    }
+}
+
+pub(crate) fn send(socket: socket_t, buf: &[u8], flags: c_int) -> io::Result<usize> {
+    let n = unsafe {
+        sock::send(
+            socket,
+            buf.as_ptr() as *const c_char,
+            buf.len() as c_int,
+            flags,
+        )
+    };
+    if n == sock::SOCKET_ERROR {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(n as usize)
     }
 }
 

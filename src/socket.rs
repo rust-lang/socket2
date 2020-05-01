@@ -23,8 +23,7 @@ use libc::MSG_OOB;
 #[cfg(all(windows, feature = "all"))]
 use winapi::um::winsock2::MSG_OOB;
 
-use crate::sys;
-use crate::{Domain, Protocol, SockAddr, Type};
+use crate::{sys, Domain, Protocol, SendFlag, SockAddr, Type};
 
 /// Owned wrapper around a system socket.
 ///
@@ -168,6 +167,22 @@ impl Socket {
     /// Windows and Unix.
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         sys::shutdown(self.inner, how)
+    }
+
+    /// Sends data on the socket to a connected peer.
+    ///
+    /// This function directly corresponds to the `send(2)` function on
+    /// Windows and Unix.
+    ///
+    /// On success returns the number of bytes that were sent.
+    pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
+        self.send_with_flags(buf, SendFlag::NONE)
+    }
+
+    /// Identical to [`Socket::send`] but allows for specification of flags to
+    /// the underlying `send(2)` call.
+    pub fn send_with_flags(&self, buf: &[u8], flags: SendFlag) -> io::Result<usize> {
+        sys::send(self.inner, buf, flags.0)
     }
 }
 
@@ -528,23 +543,6 @@ impl Socket {
         self.inner.peek_from(buf)
     }
 
-    /// Sends data on the socket to a connected peer.
-    ///
-    /// This is typically used on TCP sockets or datagram sockets which have
-    /// been connected.
-    ///
-    /// On success returns the number of bytes that were sent.
-    pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.send(buf, 0)
-    }
-
-    /// Identical to [`send`] but allows for specification of arbitrary flags to the underlying
-    /// `send` call.
-    ///
-    /// [`send`]: #method.send
-    pub fn send_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
-        self.inner.send(buf, flags)
-    }
 
     /// Sends out-of-band (OOB) data on the socket to connected peer
     /// by setting the `MSG_OOB` flag for this call.
