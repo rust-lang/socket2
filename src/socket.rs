@@ -712,7 +712,7 @@ impl Socket {
     /// # Safety
     ///
     /// It is up to the user to ensure that `O` is the correct type for the
-    /// given `level` and `optname`.
+    /// given `level` and `name`.
     unsafe fn getsockopt<O>(&self, level: sys::c_int, name: sys::c_int) -> io::Result<O> {
         let mut opt: MaybeUninit<O> = MaybeUninit::uninit();
         let mut len = mem::size_of::<O>() as sys::sockopt_len_t;
@@ -728,6 +728,25 @@ impl Socket {
             // Safety: `getsockopt` above ensured that `opt` is initialised.
             opt.assume_init()
         })
+    }
+
+    /// Set an option on this socket.
+    ///
+    /// This function directly corresponds to the `setsockopt(2)` function on
+    /// Windows and Unix.
+    ///
+    /// # Safety
+    ///
+    /// It is up to the user to ensure that `O` is the correct type for the
+    /// given `level` and `name`.
+    unsafe fn setsockopt<O>(&self, level: sys::c_int, name: sys::c_int, opt: &O) -> io::Result<()> {
+        sys::setsockopt(
+            self.inner,
+            level,
+            name,
+            opt as *const O as *const _,
+            mem::size_of::<O>() as _,
+        )
     }
 }
 

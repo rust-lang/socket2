@@ -245,6 +245,16 @@ pub(crate) unsafe fn getsockopt(
     syscall!(getsockopt(fd, level, optname, optval, optlen)).map(|_| ())
 }
 
+pub(crate) unsafe fn setsockopt(
+    fd: socket_t,
+    level: c_int,
+    optname: c_int,
+    optval: *const c_void,
+    optlen: socklen_t,
+) -> io::Result<()> {
+    syscall!(setsockopt(fd, level, optname, optval, optlen)).map(|_| ())
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Creates a pair of sockets which are connected to each other.

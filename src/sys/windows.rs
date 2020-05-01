@@ -211,6 +211,21 @@ pub(crate) unsafe fn getsockopt(
     }
 }
 
+pub(crate) unsafe fn setsockopt(
+    socket: socket_t,
+    level: c_int,
+    optname: c_int,
+    optval: *const c_char,
+    optlen: c_int,
+) -> io::Result<()> {
+    let res = sock::setsockopt(socket, level, optname, optval, optlen);
+    if res == sock::SOCKET_ERROR {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }
