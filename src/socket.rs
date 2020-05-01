@@ -152,22 +152,7 @@ impl Socket {
     pub fn try_clone(&self) -> io::Result<Socket> {
         self.inner.try_clone().map(|s| Socket { inner: s })
     }
-    */
 
-    /// Get the value of the `SO_ERROR` option on this socket.
-    ///
-    /// This will retrieve the stored error in the underlying socket, clearing
-    /// the field in the process. This can be useful for checking errors between
-    /// calls.
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        let res = unsafe { self.getsockopt::<sys::c_int>(sys::SOL_SOCKET, sys::SO_ERROR) };
-        res.map(|res| match res {
-            0 => None,
-            err => Some(io::Error::from_raw_os_error(err as i32)),
-        })
-    }
-
-    /*
     /// Moves this TCP stream into or out of nonblocking mode.
     ///
     /// On Unix this corresponds to calling fcntl, and on Windows this
@@ -186,7 +171,23 @@ impl Socket {
     }
 }
 
-/// IP socket options.
+/// Socket options (`SOL_SOCKET`).
+impl Socket {
+    /// Get the value of the `SO_ERROR` option on this socket.
+    ///
+    /// This will retrieve the stored error in the underlying socket, clearing
+    /// the field in the process. This can be useful for checking errors between
+    /// calls.
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        let res = unsafe { self.getsockopt::<sys::c_int>(sys::SOL_SOCKET, sys::SO_ERROR) };
+        res.map(|res| match res {
+            0 => None,
+            err => Some(io::Error::from_raw_os_error(err as i32)),
+        })
+    }
+}
+
+/// IP socket options (`IP_PROTO` and `IPPROTO_IPV6`).
 impl Socket {
     /// Sets the value for the `IP_TTL` option on this socket.
     ///
@@ -257,10 +258,7 @@ impl Socket {
         };
         res.map(|res| res as u32)
     }
-}
 
-/// Multicast socket options.
-impl Socket {
     /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
     ///
     /// This function specifies a new multicast group for this socket to join.
