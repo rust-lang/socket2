@@ -125,12 +125,15 @@ impl Socket {
         sys::accept(self.inner).map(|(fd, addr)| (Socket { inner: fd }, addr))
     }
 
-    /*
-    /// Returns the socket address of the local half of this TCP connection.
+    /// Returns the address of the local half of this socket.
+    ///
+    /// This function directly corresponds to the `getsockname(2)` function on
+    /// Windows and Unix.
     pub fn local_addr(&self) -> io::Result<SockAddr> {
-        self.inner.local_addr()
+        sys::getsockname(self.inner)
     }
 
+    /*
     /// Returns the socket address of the remote peer of this TCP connection.
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
         self.inner.peer_addr()

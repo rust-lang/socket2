@@ -165,6 +165,21 @@ pub(crate) fn accept(socket: socket_t) -> io::Result<(socket_t, SockAddr)> {
     }
 }
 
+pub(crate) fn getsockname(socket: socket_t) -> io::Result<SockAddr> {
+    let mut storage: MaybeUninit<SOCKADDR_STORAGE> = MaybeUninit::uninit();
+    let mut len = mem::size_of::<SOCKADDR_STORAGE>() as c_int;
+    let res = unsafe { sock::getsockname(socket, &mut storage as *mut _ as *mut _, &mut len) };
+    if res == sock::SOCKET_ERROR {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(SockAddr {
+            // Safety: `getsockname` above ensures the address is valid.
+            storage: unsafe { storage.assume_init() },
+            len,
+        })
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }
