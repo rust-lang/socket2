@@ -26,6 +26,8 @@ use crate::{Domain, Type};
 
 pub use libc::c_int;
 
+// Used in `Socket`.
+pub(crate) use libc::c_int as socket_t;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -919,6 +921,7 @@ impl FromRawFd for Socket {
     }
 }
 
+/*
 impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
         self.inner.as_raw_fd()
@@ -938,6 +941,7 @@ impl FromRawFd for crate::Socket {
         }
     }
 }
+*/
 
 impl Drop for Socket {
     fn drop(&mut self) {

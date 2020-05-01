@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![allow(unused_imports, missing_debug_implementations)] // FIXME: remove.
+#![allow(dead_code, unused_imports, missing_debug_implementations)] // FIXME: remove.
 
 use std::fmt;
 use std::io::{self, Read, Write};
@@ -63,8 +63,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// # Ok(()) }
 /// ```
 pub struct Socket {
-    // The `sys` module most have access to the socket.
-    pub(crate) inner: sys::Socket,
+    pub(crate) inner: sys::socket_t,
 }
 
 impl Socket {

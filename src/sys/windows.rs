@@ -44,6 +44,8 @@ const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 
 pub use winapi::ctypes::c_int;
 
+// Used in `Socket`.
+pub(crate) use sock::SOCKET as socket_t;
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -836,6 +838,7 @@ impl FromRawSocket for Socket {
     }
 }
 
+/*
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
         self.inner.as_raw_socket()
@@ -855,6 +858,7 @@ impl FromRawSocket for crate::Socket {
         }
     }
 }
+*/
 
 impl Drop for Socket {
     fn drop(&mut self) {
