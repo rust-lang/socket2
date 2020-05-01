@@ -27,7 +27,7 @@ use crate::{Domain, Protocol, Type};
 pub use libc::c_int;
 
 // Used in `Socket`.
-pub(crate) use libc::c_int as socket_t;
+pub(crate) use libc::{c_int as socket_t, socklen_t as sockopt_len_t};
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -233,6 +233,16 @@ pub(crate) fn getpeername(fd: socket_t) -> io::Result<SockAddr> {
         storage: unsafe { storage.assume_init() },
         len,
     })
+}
+
+pub(crate) unsafe fn getsockopt(
+    fd: socket_t,
+    level: c_int,
+    optname: c_int,
+    optval: *mut c_void,
+    optlen: *mut socklen_t,
+) -> io::Result<()> {
+    syscall!(getsockopt(fd, level, optname, optval, optlen)).map(|_| ())
 }
 
 /// Unix only API.

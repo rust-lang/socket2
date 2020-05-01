@@ -12,6 +12,7 @@
 
 use std::fmt;
 use std::io::{self, Read, Write};
+use std::mem::{self, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 #[cfg(all(feature = "all", unix))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
@@ -702,6 +703,32 @@ impl Socket {
         self.inner.set_reuse_port(reuse)
     }
     */
+
+    /// Get an option on this socket.
+    ///
+    /// This function directly corresponds to the `getsockopt(2)` function on
+    /// Windows and Unix.
+    ///
+    /// # Safety
+    ///
+    /// It is up to the user to ensure that `O` is the correct type for the
+    /// given `level` and `optname`.
+    unsafe fn getsockopt<O>(&self, level: sys::c_int, name: sys::c_int) -> io::Result<O> {
+        let mut opt: MaybeUninit<O> = MaybeUninit::uninit();
+        let mut len = mem::size_of::<O>() as sys::sockopt_len_t;
+        sys::getsockopt(
+            self.inner,
+            level,
+            name,
+            opt.as_mut_ptr() as *mut _,
+            &mut len,
+        )
+        .map(|()| {
+            assert_eq!(len as usize, mem::size_of::<O>());
+            // Safety: `getsockopt` above ensured that `opt` is initialised.
+            opt.assume_init()
+        })
+    }
 }
 
 /*

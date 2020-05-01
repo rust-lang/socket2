@@ -45,6 +45,7 @@ const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 pub use winapi::ctypes::c_int;
 
 // Used in `Socket`.
+pub(crate) use c_int as sockopt_len_t;
 pub(crate) use sock::SOCKET as socket_t;
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
@@ -192,6 +193,21 @@ pub(crate) fn getpeername(socket: socket_t) -> io::Result<SockAddr> {
             storage: unsafe { storage.assume_init() },
             len,
         })
+    }
+}
+
+pub(crate) unsafe fn getsockopt(
+    socket: socket_t,
+    level: c_int,
+    optname: c_int,
+    optval: *mut c_char,
+    optlen: *mut c_int,
+) -> io::Result<()> {
+    let res = sock::getsockopt(socket, level, optname, optval, optlen);
+    if res == sock::SOCKET_ERROR {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
     }
 }
 
