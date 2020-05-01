@@ -861,13 +861,13 @@ impl<'a> Write for &'a Socket {
     }
 }
 
-/*
 impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }
 }
 
+/*
 impl From<net::TcpStream> for Socket {
     fn from(socket: net::TcpStream) -> Socket {
         Socket {
