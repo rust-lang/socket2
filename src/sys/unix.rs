@@ -8,19 +8,22 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::cmp;
-use std::fmt;
-use std::io;
 use std::io::{Read, Write};
-use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
+#[cfg(feature = "all")]
+use std::os::unix::ffi::OsStrExt;
+use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
-use std::os::unix::prelude::*;
+#[cfg(feature = "all")]
+use std::path::Path;
+#[cfg(feature = "all")]
+use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
+use std::{cmp, fmt, io, mem};
 
-use libc::{self, c_void, socklen_t, ssize_t};
+use libc::{self, c_void, ssize_t};
 
 use crate::{Domain, Type};
 
@@ -34,6 +37,10 @@ pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
+// Used in `SockAddr`.
+pub(crate) use libc::{
+    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
+};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -183,6 +190,55 @@ impl_debug!(
     libc::IPPROTO_TCP,
     libc::IPPROTO_UDP,
 );
+
+/// Unix only API.
+impl SockAddr {
+    /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
+    ///
+    /// This function is only available on Unix.
+    ///
+    /// # Failure
+    ///
+    /// Returns an error if the path is longer than `SUN_LEN`.
+    #[cfg(feature = "all")]
+    pub fn unix<P>(path: P) -> io::Result<SockAddr>
+    where
+        P: AsRef<Path>,
+    {
+        // Safety: zeroed `sockaddr_un` is valid.
+        let mut addr: libc::sockaddr_un = unsafe { mem::zeroed() };
+
+        let bytes = path.as_ref().as_os_str().as_bytes();
+        if bytes.len() >= addr.sun_path.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must be shorter than SUN_LEN",
+            ));
+        }
+
+        addr.sun_family = libc::AF_UNIX as sa_family_t;
+        // Safety: `bytes` and `addr.sun_path` are not overlapping and `bytes`
+        // points to valid memory.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                bytes.as_ptr(),
+                addr.sun_path.as_mut_ptr() as *mut u8,
+                bytes.len(),
+            )
+        };
+        // Zeroed memory above, so the path is already null terminated.
+
+        let base = &addr as *const _ as usize;
+        let path = &addr.sun_path as *const _ as usize;
+        let sun_path_offset = path - base;
+        let mut len = sun_path_offset + bytes.len();
+        match bytes.first() {
+            Some(&0) | None => {}
+            Some(_) => len += 1,
+        };
+        Ok(unsafe { SockAddr::from_raw_parts(&addr as *const _ as *const _, len as socklen_t) })
+    }
+}
 
 pub struct Socket {
     fd: c_int,
