@@ -28,8 +28,8 @@ pub use libc::c_int;
 
 // Used in `Socket`.
 pub(crate) use libc::{
-    c_int as socket_t, socklen_t as sockopt_len_t, IPPROTO_IP, IPPROTO_IPV6, IPV6_V6ONLY, IP_TTL,
-    SOL_SOCKET, SO_ERROR,
+    c_int as socket_t, socklen_t as sockopt_len_t, IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_HOPS,
+    IPV6_V6ONLY, IP_TTL, SOL_SOCKET, SO_ERROR,
 };
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
@@ -426,23 +426,6 @@ impl Socket {
             addr.len(),
         ))?;
         Ok(n as usize)
-    }
-
-    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::IPPROTO_IPV6 as c_int,
-                libc::IPV6_UNICAST_HOPS,
-                hops as c_int,
-            )
-        }
     }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {

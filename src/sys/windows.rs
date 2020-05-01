@@ -48,7 +48,7 @@ pub use winapi::ctypes::c_int;
 pub(crate) use c_int as sockopt_len_t;
 pub(crate) use sock::SOCKET as socket_t;
 pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, IPPROTO_IPV6, SOL_SOCKET, SO_ERROR};
-pub(crate) use winapi::shared::ws2ipdef::{IPV6_V6ONLY, IP_TTL};
+pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL};
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -415,17 +415,6 @@ impl Socket {
     }
 
     // ================================================
-
-    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS, hops as c_int) }
-    }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_RCVTIMEO)?)) }

@@ -200,6 +200,30 @@ impl Socket {
         res.map(|res| res != 0)
     }
 
+    /// Sets the value for the `IPV6_UNICAST_HOPS` option on this socket.
+    ///
+    /// Specifies the hop limit for ipv6 unicast packets.
+    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        let hops = hops as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_UNICAST_HOPS,
+                &hops,
+            )
+        }
+    }
+
+    /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
+    ///
+    /// For more information about this option, see [`Socket::set_unicast_hops_v6`].
+    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
+        let res = unsafe {
+            self.getsockopt::<sys::c_int>(sys::IPPROTO_IPV6 as sys::c_int, sys::IPV6_UNICAST_HOPS)
+        };
+        res.map(|res| res as u32)
+    }
+
     /// Get the value of the `SO_ERROR` option on this socket.
     ///
     /// This will retrieve the stored error in the underlying socket, clearing
@@ -347,20 +371,6 @@ impl Socket {
 
     // ================================================
 
-
-    /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
-    ///
-    /// Specifies the hop limit for ipv6 unicast packets
-    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        self.inner.unicast_hops_v6()
-    }
-
-    /// Sets the value for the `IPV6_UNICAST_HOPS` option on this socket.
-    ///
-    /// Specifies the hop limit for ipv6 unicast packets
-    pub fn set_unicast_hops_v6(&self, ttl: u32) -> io::Result<()> {
-        self.inner.set_unicast_hops_v6(ttl)
-    }
 
     /// Returns the read timeout of this socket.
     ///
