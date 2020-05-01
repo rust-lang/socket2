@@ -124,21 +124,19 @@ pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Resul
     }
 }
 
+pub(crate) fn bind(socket: socket_t, addr: &SockAddr) -> io::Result<()> {
+    if unsafe { sock::bind(socket, addr.as_ptr(), addr.len()) } == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }
 
 impl Socket {
-    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe {
-            if sock::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
-                Ok(())
-            } else {
-                Err(last_error())
-            }
-        }
-    }
-
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         unsafe {
             if sock::listen(self.socket, backlog) == 0 {

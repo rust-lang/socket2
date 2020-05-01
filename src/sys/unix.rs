@@ -190,6 +190,10 @@ pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Resul
     syscall!(socket(family, ty, protocol))
 }
 
+pub(crate) fn bind(fd: socket_t, addr: &SockAddr) -> io::Result<()> {
+    syscall!(bind(fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Creates a pair of sockets which are connected to each other.
@@ -223,10 +227,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        syscall!(bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
-    }
-
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         syscall!(listen(self.fd, backlog)).map(|_| ())
     }

@@ -86,6 +86,14 @@ impl Socket {
         sys::new_socket(domain.0, type_.0, protocol).map(|fd| Socket { inner: fd })
     }
 
+    /// Binds this socket to the specified `addr`ess.
+    ///
+    /// This function directly corresponds to the `bind(2)` function on Windows
+    /// and Unix.
+    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
+        sys::bind(self.inner, addr)
+    }
+
     /*
     /// Initiate a connection on this socket to the specified address.
     ///
@@ -121,13 +129,6 @@ impl Socket {
         self.inner.connect_timeout(addr, timeout)
     }
 
-    /// Binds this socket to the specified address.
-    ///
-    /// This function directly corresponds to the bind(2) function on Windows
-    /// and Unix.
-    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        self.inner.bind(addr)
-    }
 
     /// Mark a socket as ready to accept incoming connection requests using
     /// accept()
