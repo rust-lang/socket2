@@ -87,22 +87,6 @@ impl Socket {
     }
 
     /*
-    /// Creates a pair of sockets which are connected to each other.
-    ///
-    /// This function corresponds to `socketpair(2)`.
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(feature = "all", unix))]
-    pub fn pair(
-        domain: Domain,
-        type_: Type,
-        protocol: Option<Protocol>,
-    ) -> io::Result<(Socket, Socket)> {
-        let protocol = protocol.map(|p| p.0).unwrap_or(0);
-        let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
-        Ok((Socket { inner: sockets.0 }, Socket { inner: sockets.1 }))
-    }
-
     /// Initiate a connection on this socket to the specified address.
     ///
     /// This function directly corresponds to the connect(2) function on Windows

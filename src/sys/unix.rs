@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 
 use libc::{self, c_void, socklen_t, ssize_t};
 
-use crate::{Domain, Type};
+use crate::{Domain, Protocol, Type};
 
 pub use libc::c_int;
 
@@ -190,27 +190,39 @@ pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Resul
     syscall!(socket(family, ty, protocol))
 }
 
+/// Unix only API.
+impl crate::Socket {
+    /// Creates a pair of sockets which are connected to each other.
+    ///
+    /// This function corresponds to `socketpair(2)`.
+    ///
+    /// # Notes
+    ///
+    /// This function is only available on Unix.
+    ///
+    /// Similar to [`Socket::new`] this does not set flags such as `CLOEXEC`
+    /// flag which the user might want to set.
+    #[cfg(feature = "all")]
+    pub fn pair(
+        domain: Domain,
+        type_: Type,
+        protocol: Option<Protocol>,
+    ) -> io::Result<(crate::Socket, crate::Socket)> {
+        let mut fds = [0, 0];
+        let protocol = protocol.map(|p| p.0).unwrap_or(0);
+        syscall!(socketpair(domain.0, type_.0, protocol, fds.as_mut_ptr()))?;
+        Ok((
+            crate::Socket { inner: fds[0] },
+            crate::Socket { inner: fds[1] },
+        ))
+    }
+}
+
 pub struct Socket {
     fd: c_int,
 }
 
 impl Socket {
-    pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
-        let mut fds = [0, 0];
-        syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
-        let fds = unsafe { (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1])) };
-        set_cloexec(fds.0.as_raw_fd())?;
-        set_cloexec(fds.1.as_raw_fd())?;
-        #[cfg(target_os = "macos")]
-        unsafe {
-            fds.0
-                .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-            fds.1
-                .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-        }
-        Ok(fds)
-    }
-
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         syscall!(bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
     }
