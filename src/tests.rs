@@ -1,8 +1,8 @@
 use std::io::Write;
-use std::net::SocketAddr;
+use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::str;
 
-use crate::{Domain, Protocol, Type};
+use crate::{Domain, Protocol, SockAddr, Type};
 
 #[test]
 fn domain_for_address() {
@@ -75,4 +75,35 @@ fn protocol_fmt_debug() {
         let got = str::from_utf8(&buf).unwrap();
         assert_eq!(got, *want);
     }
+}
+
+#[test]
+fn socket_address_ipv4() {
+    let string = "127.0.0.1:80";
+    let std = string.parse::<SocketAddrV4>().unwrap();
+    let addr = SockAddr::from(std);
+
+    assert_eq!(addr.as_std(), Some(SocketAddr::V4(std)));
+    assert_eq!(addr.as_inet(), Some(std));
+    assert!(addr.as_inet6().is_none());
+}
+
+#[test]
+fn socket_address_ipv6() {
+    let string = "[2001:db8::ff00:42:8329]:80";
+    let std = string.parse::<SocketAddrV6>().unwrap();
+    let addr = SockAddr::from(std);
+
+    assert_eq!(addr.as_std(), Some(SocketAddr::V6(std)));
+    assert!(addr.as_inet().is_none());
+    assert_eq!(addr.as_inet6(), Some(std));
+}
+
+#[test]
+#[cfg(all(unix, feature = "all"))]
+fn socket_address_unix() {
+    let string = "/tmp/socket";
+    let addr = SockAddr::unix(string).unwrap();
+    assert!(addr.as_inet().is_none());
+    assert!(addr.as_inet6().is_none());
 }
