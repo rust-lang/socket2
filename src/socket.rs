@@ -133,12 +133,15 @@ impl Socket {
         sys::getsockname(self.inner)
     }
 
-    /*
-    /// Returns the socket address of the remote peer of this TCP connection.
+    /// Returns the address of the remote peer of this socket.
+    ///
+    /// This function directly corresponds to the `getpeername(2)` function on
+    /// Windows and Unix.
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
-        self.inner.peer_addr()
+        sys::getpeername(self.inner)
     }
 
+    /*
     /// Creates a new independently owned handle to the underlying socket.
     ///
     /// The returned `TcpStream` is a reference to the same stream that this

@@ -225,6 +225,16 @@ pub(crate) fn getsockname(fd: socket_t) -> io::Result<SockAddr> {
     })
 }
 
+pub(crate) fn getpeername(fd: socket_t) -> io::Result<SockAddr> {
+    let mut storage: MaybeUninit<libc::sockaddr_storage> = MaybeUninit::uninit();
+    let mut len = mem::size_of::<libc::sockaddr_storage>() as socklen_t;
+    syscall!(getpeername(fd, &mut storage as *mut _ as *mut _, &mut len)).map(|_| SockAddr {
+        // Safety: getsockname` above ensures the address is valid.
+        storage: unsafe { storage.assume_init() },
+        len,
+    })
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Creates a pair of sockets which are connected to each other.
