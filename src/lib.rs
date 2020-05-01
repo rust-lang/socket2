@@ -263,3 +263,44 @@ impl From<SendFlag> for c_int {
         p.0
     }
 }
+
+/// Flags used in [`Socket::recv_with_flags`], used in the `recv(2)` function.
+///
+/// Multiple flags can be OR-ed together.
+// TODO: add a nicer `fmt::Debug` implementation.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct RecvFlag(sys::c_int);
+
+impl RecvFlag {
+    /// No flags specified.
+    pub const NONE: RecvFlag = RecvFlag(0);
+
+    /// Flag corresponding to `MSG_OOB`.
+    pub const OOB: RecvFlag = RecvFlag(sys::MSG_OOB);
+
+    /// Flag corresponding to `MSG_PEEK`.
+    pub const PEEK: RecvFlag = RecvFlag(sys::MSG_PEEK);
+
+    /// Flag corresponding to `MSG_WAITALL`.
+    pub const WAITALL: RecvFlag = RecvFlag(sys::MSG_WAITALL);
+}
+
+impl BitOr for RecvFlag {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        RecvFlag(self.0 | rhs.0)
+    }
+}
+
+impl From<c_int> for RecvFlag {
+    fn from(p: c_int) -> RecvFlag {
+        RecvFlag(p)
+    }
+}
+
+impl From<RecvFlag> for c_int {
+    fn from(p: RecvFlag) -> c_int {
+        p.0
+    }
+}

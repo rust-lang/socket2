@@ -35,7 +35,6 @@ use winapi::um::winsock2 as sock;
 use crate::SockAddr;
 
 const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
-const MSG_PEEK: c_int = 0x2;
 const SD_BOTH: c_int = 2;
 const SD_RECEIVE: c_int = 0;
 const SD_SEND: c_int = 1;
@@ -64,8 +63,8 @@ pub(crate) const IPPROTO_ICMP: c_int = winapi::shared::ws2def::IPPROTO_ICMP as c
 pub(crate) const IPPROTO_ICMPV6: c_int = winapi::shared::ws2def::IPPROTO_ICMPV6 as c_int;
 pub(crate) const IPPROTO_TCP: c_int = winapi::shared::ws2def::IPPROTO_TCP as c_int;
 pub(crate) const IPPROTO_UDP: c_int = winapi::shared::ws2def::IPPROTO_UDP as c_int;
-// Used in `SendFlag`.
-pub(crate) use winapi::um::winsock2::{MSG_DONTROUTE, MSG_OOB};
+// Used in `SendFlag` and `RecvFlag`.
+pub(crate) use winapi::um::winsock2::{MSG_DONTROUTE, MSG_OOB, MSG_PEEK, MSG_WAITALL};
 
 impl_debug!(
     crate::Domain,
@@ -215,6 +214,28 @@ pub(crate) fn send(socket: socket_t, buf: &[u8], flags: c_int) -> io::Result<usi
     };
     if n == sock::SOCKET_ERROR {
         Err(io::Error::last_os_error())
+    } else {
+        Ok(n as usize)
+    }
+}
+
+pub(crate) fn recv(socket: socket_t, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+    let n = unsafe {
+        sock::send(
+            socket,
+            buf.as_mut_ptr() as *const c_char,
+            buf.len() as c_int,
+            flags,
+        )
+    };
+    if n == sock::SOCKET_ERROR {
+        let err = unsafe { sock::WSAGetLastError() };
+        if err == sock::WSAESHUTDOWN {
+            // Mimic what Unix does.
+            Ok(0)
+        } else {
+            Err(io::Error::from_raw_os_error(err as i32))
+        }
     } else {
         Ok(n as usize)
     }

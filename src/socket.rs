@@ -23,7 +23,7 @@ use libc::MSG_OOB;
 #[cfg(all(windows, feature = "all"))]
 use winapi::um::winsock2::MSG_OOB;
 
-use crate::{sys, Domain, Protocol, SendFlag, SockAddr, Type};
+use crate::{sys, Domain, Protocol, RecvFlag, SendFlag, SockAddr, Type};
 
 /// Owned wrapper around a system socket.
 ///
@@ -183,6 +183,21 @@ impl Socket {
     /// the underlying `send(2)` call.
     pub fn send_with_flags(&self, buf: &[u8], flags: SendFlag) -> io::Result<usize> {
         sys::send(self.inner, buf, flags.0)
+    }
+
+    /// Receives data on the socket from the remote address to which it is
+    /// connected.
+    ///
+    /// This function directly corresponds to the `recv(2)` function on
+    /// Windows and Unix.
+    pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.recv_with_flags(buf, RecvFlag::NONE)
+    }
+
+    /// Identical to [`Socket::recv`] but allows for specification of flags to
+    /// the underlying `recv(2)` call.
+    pub fn recv_with_flags(&self, buf: &mut [u8], flags: RecvFlag) -> io::Result<usize> {
+        sys::recv(self.inner, buf, flags.0)
     }
 
     /// Close the socket.
@@ -487,24 +502,6 @@ impl Socket {
 
 impl Socket {
     /*
-    /// Receives data on the socket from the remote address to which it is
-    /// connected.
-    ///
-    /// The [`connect`] method will connect this socket to a remote address. This
-    /// method will fail if the socket is not connected.
-    ///
-    /// [`connect`]: #method.connect
-    pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.recv(buf, 0)
-    }
-
-    /// Identical to [`recv`] but allows for specification of arbitrary flags to the underlying
-    /// `recv` call.
-    ///
-    /// [`recv`]: #method.recv
-    pub fn recv_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
-        self.inner.recv(buf, flags)
-    }
 
     /// Receives out-of-band (OOB) data on the socket from the remote address to
     /// which it is connected by setting the `MSG_OOB` flag for this call.

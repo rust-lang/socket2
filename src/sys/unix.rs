@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use libc::{self, c_void, socklen_t, ssize_t};
 
-use crate::{Domain, Protocol, SendFlag, Type};
+use crate::{Domain, Protocol, RecvFlag, SendFlag, Type};
 
 pub use libc::c_int;
 
@@ -52,8 +52,8 @@ pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
-// Used in `SendFlag`.
-pub(crate) use libc::{MSG_DONTROUTE, MSG_OOB};
+// Used in `SendFlag` and `RecvFlag`.
+pub(crate) use libc::{MSG_DONTROUTE, MSG_OOB, MSG_PEEK, MSG_WAITALL};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "macos", target_os = "ios"))] {
@@ -215,6 +215,27 @@ impl SendFlag {
     pub const NOSIGNAL: SendFlag = SendFlag(libc::MSG_NOSIGNAL);
 }
 
+/// Unix only API.
+impl RecvFlag {
+    // TODO: check if the flags below are available on more OSes.
+
+    /// Flag corresponding to `MSG_CMSG_CLOEXEC`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const CMSG_CLOEXEC: RecvFlag = RecvFlag(libc::MSG_CMSG_CLOEXEC);
+
+    /// Flag corresponding to `MSG_DONTWAIT`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const DONTWAIT: RecvFlag = RecvFlag(libc::MSG_DONTWAIT);
+
+    /// Flag corresponding to `MSG_ERRQUEUE`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const ERRQUEUE: RecvFlag = RecvFlag(libc::MSG_ERRQUEUE);
+
+    /// Flag corresponding to `MSG_TRUNC`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const TRUNC: RecvFlag = RecvFlag(libc::MSG_TRUNC);
+}
+
 pub(crate) fn new_socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<socket_t> {
     syscall!(socket(family, ty, protocol))
 }
@@ -266,6 +287,10 @@ pub(crate) fn getpeername(fd: socket_t) -> io::Result<SockAddr> {
 
 pub(crate) fn send(fd: socket_t, buf: &[u8], flags: c_int) -> io::Result<usize> {
     syscall!(send(fd, buf.as_ptr() as *const c_void, buf.len(), flags)).map(|n| n as usize)
+}
+
+pub(crate) fn recv(fd: socket_t, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+    syscall!(recv(fd, buf.as_mut_ptr() as *mut c_void, buf.len(), flags)).map(|n| n as usize)
 }
 
 pub(crate) fn shutdown(fd: socket_t, how: Shutdown) -> io::Result<()> {
@@ -398,16 +423,6 @@ impl Socket {
             syscall!(fcntl(self.fd, libc::F_SETFL, new))?;
         }
         Ok(())
-    }
-
-    pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
-        let n = syscall!(recv(
-            self.fd,
-            buf.as_mut_ptr() as *mut c_void,
-            cmp::min(buf.len(), max_len()),
-            flags,
-        ))?;
-        Ok(n as usize)
     }
 
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
