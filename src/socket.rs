@@ -8,6 +8,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![allow(unused_imports, missing_debug_implementations)] // FIXME: remove.
+
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
@@ -66,6 +68,7 @@ pub struct Socket {
 }
 
 impl Socket {
+    /*
     /// Creates a new socket ready to be configured.
     ///
     /// This function corresponds to `socket(2)` and simply creates a new
@@ -728,8 +731,10 @@ impl Socket {
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         self.inner.set_reuse_port(reuse)
     }
+    */
 }
 
+/*
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.read(buf)
@@ -857,7 +862,9 @@ impl From<Socket> for UnixDatagram {
         socket.inner.into()
     }
 }
+*/
 
+/*
 #[cfg(test)]
 mod test {
     use std::net::SocketAddr;
@@ -1023,3 +1030,4 @@ mod test {
         assert_eq!(s3.recv(&mut buf).unwrap(), 11);
     }
 }
+*/
