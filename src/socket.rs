@@ -171,6 +171,35 @@ impl Socket {
         res.map(|res| res as u32)
     }
 
+    /// Sets the value for the `IPV6_V6ONLY` option on this socket.
+    ///
+    /// If this is set to `true` then the socket is restricted to sending and
+    /// receiving IPv6 packets only. In this case two IPv4 and IPv6 applications
+    /// can bind the same port at the same time.
+    ///
+    /// If this is set to `false` then the socket can be used to send and
+    /// receive packets from an IPv4-mapped IPv6 address.
+    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
+        let only_v6 = only_v6 as sys::c_int;
+        unsafe {
+            self.setsockopt::<sys::c_int>(
+                sys::IPPROTO_IPV6 as sys::c_int,
+                sys::IPV6_V6ONLY,
+                &only_v6,
+            )
+        }
+    }
+
+    /// Gets the value of the `IPV6_V6ONLY` option for this socket.
+    ///
+    /// For more information about this option, see [`Socket::set_only_v6`].
+    pub fn only_v6(&self) -> io::Result<bool> {
+        let res = unsafe {
+            self.getsockopt::<sys::c_int>(sys::IPPROTO_IPV6 as sys::c_int, sys::IPV6_V6ONLY)
+        };
+        res.map(|res| res != 0)
+    }
+
     /// Get the value of the `SO_ERROR` option on this socket.
     ///
     /// This will retrieve the stored error in the underlying socket, clearing
@@ -331,27 +360,6 @@ impl Socket {
     /// Specifies the hop limit for ipv6 unicast packets
     pub fn set_unicast_hops_v6(&self, ttl: u32) -> io::Result<()> {
         self.inner.set_unicast_hops_v6(ttl)
-    }
-
-    /// Gets the value of the `IPV6_V6ONLY` option for this socket.
-    ///
-    /// For more information about this option, see [`set_only_v6`][link].
-    ///
-    /// [link]: #method.set_only_v6
-    pub fn only_v6(&self) -> io::Result<bool> {
-        self.inner.only_v6()
-    }
-
-    /// Sets the value for the `IPV6_V6ONLY` option on this socket.
-    ///
-    /// If this is set to `true` then the socket is restricted to sending and
-    /// receiving IPv6 packets only. In this case two IPv4 and IPv6 applications
-    /// can bind the same port at the same time.
-    ///
-    /// If this is set to `false` then the socket can be used to send and
-    /// receive packets from an IPv4-mapped IPv6 address.
-    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        self.inner.set_only_v6(only_v6)
     }
 
     /// Returns the read timeout of this socket.

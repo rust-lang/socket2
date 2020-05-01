@@ -47,8 +47,8 @@ pub use winapi::ctypes::c_int;
 // Used in `Socket`.
 pub(crate) use c_int as sockopt_len_t;
 pub(crate) use sock::SOCKET as socket_t;
-pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, SOL_SOCKET, SO_ERROR};
-pub(crate) use winapi::shared::ws2ipdef::IP_TTL;
+pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, IPPROTO_IPV6, SOL_SOCKET, SO_ERROR};
+pub(crate) use winapi::shared::ws2ipdef::{IPV6_V6ONLY, IP_TTL};
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
 // Used in `Type`.
@@ -425,17 +425,6 @@ impl Socket {
 
     pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
         unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS, hops as c_int) }
-    }
-
-    pub fn only_v6(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY, only_v6 as c_int) }
     }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
