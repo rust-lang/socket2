@@ -687,27 +687,30 @@ impl FromRawSocket for Socket {
     }
 }
 
-/*
+#[cfg(feature = "all")]
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
-        self.inner.as_raw_socket()
+        self.inner as RawSocket
     }
 }
 
+#[cfg(feature = "all")]
 impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
-        self.inner.into_raw_socket()
+        let socket = self.inner;
+        mem::forget(self);
+        return socket as RawSocket;
     }
 }
 
+#[cfg(feature = "all")]
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket {
-            inner: Socket::from_raw_socket(socket),
+            inner: socket as socket_t,
         }
     }
 }
-*/
 
 impl Drop for Socket {
     fn drop(&mut self) {
