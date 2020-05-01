@@ -204,6 +204,22 @@ pub(crate) fn getpeername(socket: socket_t) -> io::Result<SockAddr> {
     }
 }
 
+pub(crate) fn send(socket: socket_t, buf: &[u8], flags: c_int) -> io::Result<usize> {
+    let n = unsafe {
+        sock::send(
+            socket,
+            buf.as_ptr() as *const c_char,
+            buf.len() as c_int,
+            flags,
+        )
+    };
+    if n == sock::SOCKET_ERROR {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(n as usize)
+    }
+}
+
 pub(crate) fn shutdown(socket: socket_t, how: Shutdown) -> io::Result<()> {
     let how = match how {
         Shutdown::Write => SD_SEND,
@@ -218,19 +234,12 @@ pub(crate) fn shutdown(socket: socket_t, how: Shutdown) -> io::Result<()> {
     }
 }
 
-pub(crate) fn send(socket: socket_t, buf: &[u8], flags: c_int) -> io::Result<usize> {
-    let n = unsafe {
-        sock::send(
-            socket,
-            buf.as_ptr() as *const c_char,
-            buf.len() as c_int,
-            flags,
-        )
-    };
-    if n == sock::SOCKET_ERROR {
+pub(crate) fn close(socket: socket_t) -> io::Result<()> {
+    let res = unsafe { sock::closesocket(socket) };
+    if res == sock::SOCKET_ERROR {
         Err(io::Error::last_os_error())
     } else {
-        Ok(n as usize)
+        Ok(())
     }
 }
 

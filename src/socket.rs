@@ -184,6 +184,16 @@ impl Socket {
     pub fn send_with_flags(&self, buf: &[u8], flags: SendFlag) -> io::Result<usize> {
         sys::send(self.inner, buf, flags.0)
     }
+
+    /// Close the socket.
+    ///
+    /// This function directly corresponds to the `close(2)` function on Unix
+    /// and `closesocket` on Windows.
+    pub fn close(self) -> io::Result<()> {
+        let inner = self.inner;
+        mem::forget(self);
+        sys::close(inner)
+    }
 }
 
 /// Socket options (`SOL_SOCKET`).

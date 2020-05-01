@@ -277,6 +277,10 @@ pub(crate) fn shutdown(fd: socket_t, how: Shutdown) -> io::Result<()> {
     syscall!(shutdown(fd, how)).map(|_| ())
 }
 
+pub(crate) fn close(fd: socket_t) -> io::Result<()> {
+    syscall!(close(fd)).map(|_| ())
+}
+
 pub(crate) unsafe fn getsockopt(
     fd: socket_t,
     level: c_int,
