@@ -140,21 +140,19 @@ pub(crate) fn connect(socket: socket_t, addr: &SockAddr) -> io::Result<()> {
     }
 }
 
+pub(crate) fn listen(socket: socket_t, backlog: i32) -> io::Result<()> {
+    if unsafe { sock::listen(socket, backlog) } == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }
 
 impl Socket {
-    pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        unsafe {
-            if sock::listen(self.socket, backlog) == 0 {
-                Ok(())
-            } else {
-                Err(last_error())
-            }
-        }
-    }
-
     pub fn local_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();

@@ -198,6 +198,10 @@ pub(crate) fn connect(fd: socket_t, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
 }
 
+pub(crate) fn listen(fd: socket_t, backlog: i32) -> io::Result<()> {
+    syscall!(listen(fd, backlog)).map(|_| ())
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Creates a pair of sockets which are connected to each other.
@@ -233,10 +237,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        syscall!(listen(self.fd, backlog)).map(|_| ())
-    }
-
     pub fn local_addr(&self) -> io::Result<SockAddr> {
         let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
         let mut len = mem::size_of_val(&storage) as libc::socklen_t;
