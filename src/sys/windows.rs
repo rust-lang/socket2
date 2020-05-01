@@ -11,7 +11,7 @@
 use std::cmp;
 use std::fmt;
 use std::io;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::mem::{self, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -648,26 +648,6 @@ impl Read for Socket {
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.recv(buf, 0)
-    }
-}
-
-impl Write for Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        <&Socket>::write(&mut &*self, buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        <&Socket>::flush(&mut &*self)
-    }
-}
-
-impl<'a> Write for &'a Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.send(buf, 0)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
     }
 }
 

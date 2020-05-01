@@ -837,27 +837,31 @@ impl<'a> Read for &'a Socket {
         (&self.inner).read(buf)
     }
 }
+*/
+
+// TODO: implement io::Write::write_vectored on Socket.
 
 impl Write for Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.write(buf)
+        self.send(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
+        Ok(())
     }
 }
 
 impl<'a> Write for &'a Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        (&self.inner).write(buf)
+        self.send(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        (&self.inner).flush()
+        Ok(())
     }
 }
 
+/*
 impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
