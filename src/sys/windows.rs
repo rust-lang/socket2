@@ -12,7 +12,7 @@ use std::cmp;
 use std::fmt;
 use std::io;
 use std::io::{Read, Write};
-use std::mem;
+use std::mem::{self, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::windows::prelude::*;
@@ -148,6 +148,23 @@ pub(crate) fn listen(socket: socket_t, backlog: i32) -> io::Result<()> {
     }
 }
 
+pub(crate) fn accept(socket: socket_t) -> io::Result<(socket_t, SockAddr)> {
+    let mut storage: MaybeUninit<SOCKADDR_STORAGE> = MaybeUninit::uninit();
+    let mut len = mem::size_of::<SOCKADDR_STORAGE>() as c_int;
+    let socket = unsafe { sock::accept(socket, &mut storage as *mut _ as *mut _, &mut len) };
+    match socket {
+        sock::INVALID_SOCKET => Err(io::Error::last_os_error()),
+        socket => {
+            let addr = SockAddr {
+                // Safety: `accept` above ensures the address is valid.
+                storage: unsafe { storage.assume_init() },
+                len,
+            };
+            Ok((socket, addr))
+        }
+    }
+}
+
 pub struct Socket {
     socket: sock::SOCKET,
 }
@@ -202,21 +219,6 @@ impl Socket {
             };
             socket.set_no_inherit()?;
             Ok(socket)
-        }
-    }
-
-    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        unsafe {
-            let mut storage: SOCKADDR_STORAGE = mem::zeroed();
-            let mut len = mem::size_of_val(&storage) as c_int;
-            let socket = sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len);
-            let socket = match socket {
-                sock::INVALID_SOCKET => return Err(last_error()),
-                socket => Socket::from_raw_socket(socket as RawSocket),
-            };
-            socket.set_no_inherit()?;
-            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, len);
-            Ok((socket, addr))
         }
     }
 

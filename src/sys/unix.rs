@@ -12,7 +12,7 @@ use std::cmp;
 use std::fmt;
 use std::io;
 use std::io::{Read, Write};
-use std::mem;
+use std::mem::{self, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
@@ -202,6 +202,19 @@ pub(crate) fn listen(fd: socket_t, backlog: i32) -> io::Result<()> {
     syscall!(listen(fd, backlog)).map(|_| ())
 }
 
+pub(crate) fn accept(fd: socket_t) -> io::Result<(socket_t, SockAddr)> {
+    let mut storage: MaybeUninit<libc::sockaddr_storage> = MaybeUninit::uninit();
+    let mut len = mem::size_of::<libc::sockaddr_storage>() as socklen_t;
+    syscall!(accept(fd, &mut storage as *mut _ as *mut _, &mut len)).map(|fd| {
+        let addr = SockAddr {
+            // Safety: `accept` above ensures the address is valid.
+            storage: unsafe { storage.assume_init() },
+            len,
+        };
+        (fd, addr)
+    })
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Creates a pair of sockets which are connected to each other.
@@ -286,40 +299,6 @@ impl Socket {
         let fd = unsafe { Socket::from_raw_fd(fd) };
         set_cloexec(fd.as_raw_fd())?;
         Ok(fd)
-    }
-
-    #[allow(unused_mut)]
-    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut len = mem::size_of_val(&storage) as socklen_t;
-
-        let mut socket = None;
-        #[cfg(target_os = "linux")]
-        {
-            let res = syscall!(accept4(
-                self.fd,
-                &mut storage as *mut _ as *mut _,
-                &mut len,
-                libc::SOCK_CLOEXEC,
-            ));
-            match res {
-                Ok(fd) => socket = Some(Socket { fd: fd }),
-                Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
-                Err(e) => return Err(e),
-            }
-        }
-
-        let socket = match socket {
-            Some(socket) => socket,
-            None => {
-                let fd = syscall!(accept(self.fd, &mut storage as *mut _ as *mut _, &mut len))?;
-                let fd = unsafe { Socket::from_raw_fd(fd) };
-                set_cloexec(fd.as_raw_fd())?;
-                fd
-            }
-        };
-        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
-        Ok((socket, addr))
     }
 
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {

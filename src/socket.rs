@@ -111,18 +111,21 @@ impl Socket {
         sys::listen(self.inner, backlog)
     }
 
-    /*
     /// Accept a new incoming connection from this listener.
     ///
     /// This function will block the calling thread until a new connection is
     /// established. When established, the corresponding `Socket` and the
     /// remote peer's address will be returned.
+    ///
+    /// # Notes
+    ///
+    /// Similar to [`Socket::new`] this does not set flags such as `CLOEXEC`
+    /// flag which the user might want to set.
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        self.inner
-            .accept()
-            .map(|(socket, addr)| (Socket { inner: socket }, addr))
+        sys::accept(self.inner).map(|(fd, addr)| (Socket { inner: fd }, addr))
     }
 
+    /*
     /// Returns the socket address of the local half of this TCP connection.
     pub fn local_addr(&self) -> io::Result<SockAddr> {
         self.inner.local_addr()

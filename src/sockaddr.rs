@@ -23,8 +23,8 @@ use winapi::um::ws2tcpip::socklen_t;
 /// `SockAddr`s may be constructed directly to and from the standard library
 /// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
 pub struct SockAddr {
-    storage: sockaddr_storage,
-    len: socklen_t,
+    pub(crate) storage: sockaddr_storage,
+    pub(crate) len: socklen_t,
 }
 
 impl fmt::Debug for SockAddr {
