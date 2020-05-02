@@ -132,6 +132,7 @@ impl_debug!(
     libc::SOCK_STREAM,
     libc::SOCK_DGRAM,
     libc::SOCK_RAW,
+    #[cfg(not(target_os = "haiku"))]
     libc::SOCK_RDM,
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
