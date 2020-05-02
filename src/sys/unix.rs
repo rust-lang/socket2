@@ -150,7 +150,7 @@ impl_debug!(
     libc::SOCK_DGRAM,
     #[cfg(not(target_os = "redox"))]
     libc::SOCK_RAW,
-    #[cfg(not(target_os = "redox"))]
+    #[cfg(not(any(target_os = "redox", target_os = "haiku")))]
     libc::SOCK_RDM,
     #[cfg(not(target_os = "redox"))]
     libc::SOCK_SEQPACKET,
