@@ -55,16 +55,9 @@ impl SockAddr {
     /// Returns this address as a `SocketAddr` if it is in the `AF_INET` (IP v4)
     /// or `AF_INET6` (IP v6) family, otherwise returns `None`.
     pub fn as_std(&self) -> Option<SocketAddr> {
-        let storage: *const sockaddr_storage = (&self.storage) as *const _;
-        match self.storage.ss_family as c_int {
-            AF_INET => Some(SocketAddr::V4(unsafe {
-                *(storage as *const sockaddr_in as *const _)
-            })),
-            AF_INET6 => Some(SocketAddr::V6(unsafe {
-                *(storage as *const sockaddr_in6 as *const _)
-            })),
-            _ => None,
-        }
+        self.as_inet()
+            .map(|a| a.into())
+            .or_else(|| self.as_inet6().map(|a| a.into()))
     }
 
     /// Returns this address as a `SocketAddrV4` if it is in the `AF_INET`
