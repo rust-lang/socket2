@@ -12,6 +12,8 @@ use std::net::{self, Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "all")]
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
+#[cfg(feature = "all")]
+use std::os::unix::net::SocketAddr;
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
@@ -235,6 +237,43 @@ impl SockAddr {
             Some(_) => len += 1,
         };
         Ok(unsafe { SockAddr::from_raw_parts(&addr as *const _ as *const _, len as socklen_t) })
+    }
+
+    /// Convert address to unix SocketAddr.
+    #[cfg(feature = "all")]
+    pub fn as_unix(&self) -> io::Result<SocketAddr> {
+        let mut len = self.len();
+        let addr = unsafe { &*(self.as_ptr() as *const libc::sockaddr_un) };
+        if len == 0 {
+            // When there is a datagram from unnamed unix socket
+            // linux returns zero bytes of address
+            let base = addr as *const _ as usize;
+            let path = &addr.sun_path as *const _ as usize;
+            len = (path - base) as libc::socklen_t; // i.e., zero-length address
+        } else if addr.sun_family != libc::AF_UNIX as libc::sa_family_t {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "file descriptor did not correspond to a Unix socket",
+            ));
+        }
+
+        let mut addr: libc::sockaddr_un = unsafe { mem::zeroed() };
+        unsafe {
+            ptr::copy_nonoverlapping(self.as_ptr(), &mut addr as *mut _ as *mut _, len as usize)
+        };
+
+        #[allow(dead_code)]
+        struct SocketAddrInternal {
+            addr: libc::sockaddr_un,
+            len: libc::socklen_t,
+        }
+
+        Ok(unsafe {
+            std::mem::transmute(SocketAddrInternal {
+                addr,
+                len: len as _,
+            })
+        })
     }
 }
 
