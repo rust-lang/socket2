@@ -677,9 +677,7 @@ impl Socket {
             )
         };
         if n == 0 {
-            Ok(if ka.onoff == 0 {
-                None
-            } else if ka.keepaliveinterval == 0 {
+            Ok(if ka.onoff == 0 || ka.keepaliveinterval == 0 {
                 None
             } else {
                 let seconds = ka.keepaliveinterval / 1000;
