@@ -261,7 +261,7 @@ impl Socket {
         let fd = syscall!(socket(family, ty, protocol))?;
         let fd = unsafe { Socket::from_raw_fd(fd) };
         set_cloexec(fd.as_raw_fd())?;
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
         unsafe {
             fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
         }
@@ -274,7 +274,7 @@ impl Socket {
         let fds = unsafe { (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1])) };
         set_cloexec(fds.0.as_raw_fd())?;
         set_cloexec(fds.1.as_raw_fd())?;
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
         unsafe {
             fds.0
                 .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
