@@ -962,14 +962,14 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
     let octets = addr.octets();
-    let res = u32::from_ne_bytes(octets).to_be();
+    let res = u32::from_ne_bytes(octets);
     let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };
     unsafe { *(new_addr.S_addr_mut()) = res };
     new_addr
 }
 
 fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    unsafe { *in_addr.S_addr() }.into()
+    unsafe { *in_addr.S_addr() }.to_be().into()
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
@@ -1007,7 +1007,7 @@ fn test_ip() {
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
-    let want = 127 << 24 | 34 << 16 | 4 << 8 | 12 << 0;
+    let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
     assert_eq!(unsafe { *to_s_addr(&ip).S_addr() }, want);
     let mut addr: in_addr_S_un = unsafe { mem::zeroed() };
     unsafe { *(addr.S_addr_mut()) = want };
