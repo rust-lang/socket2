@@ -1141,11 +1141,11 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
 
 fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
     let octets = addr.octets();
-    u32::from_ne_bytes(octets).to_be()
+    u32::from_ne_bytes(octets)
 }
 
 fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
-    in_addr.into()
+    in_addr.to_be().into()
 }
 
 fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
@@ -1191,7 +1191,7 @@ fn test_ip() {
     assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
-    let want = 127 << 24 | 34 << 16 | 4 << 8 | 12 << 0;
+    let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
     assert_eq!(to_s_addr(&ip), want);
     assert_eq!(from_s_addr(want), ip);
 }
