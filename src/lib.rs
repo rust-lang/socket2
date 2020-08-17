@@ -137,16 +137,6 @@ impl Domain {
     /// Domain for IPv6 communication, corresponding to `AF_INET6`.
     pub const IPV6: Domain = Domain(sys::AF_INET6);
 
-    /// Domain for IPv4 communication, corresponding to `AF_INET`.
-    pub fn ipv4() -> Domain {
-        Domain::IPV4
-    }
-
-    /// Domain for IPv6 communication, corresponding to `AF_INET6`.
-    pub fn ipv6() -> Domain {
-        Domain::IPV6
-    }
-
     /// Returns the correct domain for `address`.
     pub fn for_address(address: SocketAddr) -> Domain {
         match address {
