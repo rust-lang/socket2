@@ -370,6 +370,18 @@ impl Socket {
         self.inner.set_ttl(ttl)
     }
 
+    /// Sets the value for the `SO_MARK` option on this socket.
+    ///
+    /// This value sets the socket mark field for each packet sent through
+    /// this socket. Changing the mark can be used for mark-based routing
+    /// without netfilter or for packet filtering.
+    ///
+    /// This function is only available on Unix and requires the
+    /// `CAP_NET_ADMIN` capability.
+    pub fn set_mark(&self, mark: u32) -> io::Result<()> {
+        self.inner.set_mark(mark)
+    }
+
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets
