@@ -563,6 +563,7 @@ impl Socket {
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
     }
 
+    #[cfg(target_os = "linux")]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
     }

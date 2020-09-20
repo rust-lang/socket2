@@ -378,6 +378,7 @@ impl Socket {
     ///
     /// This function is only available on Unix and requires the
     /// `CAP_NET_ADMIN` capability.
+    #[cfg(target_os = "linux")]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         self.inner.set_mark(mark)
     }
