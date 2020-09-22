@@ -588,7 +588,7 @@ impl Socket {
             ipv6mr_multiaddr: multiaddr,
             ipv6mr_interface: interface,
         };
-        unsafe { self.setsockopt(IPPROTO_IP, IPV6_ADD_MEMBERSHIP, mreq) }
+        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_ADD_MEMBERSHIP, mreq) }
     }
 
     pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
