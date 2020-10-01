@@ -9,7 +9,7 @@
 use std::cmp;
 use std::fmt;
 use std::io;
-use std::io::{Read, Write};
+use std::io::{IoSlice, IoSliceMut, Read, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -338,6 +338,77 @@ impl Socket {
         }
     }
 
+    pub fn recv_vectored(
+        &self,
+        bufs: &mut [IoSliceMut<'_>],
+        flags: c_int,
+    ) -> io::Result<(usize, bool)> {
+        let mut nread = 0;
+        let mut flags = flags as DWORD;
+        let ret = unsafe {
+            sock::WSARecv(
+                self.socket,
+                bufs.as_mut_ptr() as *mut WSABUF,
+                bufs.len().min(DWORD::MAX as usize) as DWORD,
+                &mut nread,
+                &mut flags,
+                ptr::null_mut(),
+                None,
+            )
+        };
+
+        let nread = nread as usize;
+        if ret == 0 {
+            Ok((nread, false))
+        } else {
+            let error = last_error();
+            match error.raw_os_error() {
+                Some(sock::WSAESHUTDOWN) => Ok((0, false)),
+                Some(sock::WSAEMSGSIZE) => Ok((nread, true)),
+                _ => Err(error),
+            }
+        }
+    }
+
+    pub fn recv_from_vectored(
+        &self,
+        bufs: &mut [IoSliceMut<'_>],
+        flags: c_int,
+    ) -> io::Result<(usize, bool, SockAddr)> {
+        let mut nread = 0;
+        let mut flags = flags as DWORD;
+        let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
+        let mut addrlen = mem::size_of_val(&storage) as c_int;
+        let ret = unsafe {
+            sock::WSARecvFrom(
+                self.socket,
+                bufs.as_mut_ptr() as *mut WSABUF,
+                bufs.len().min(DWORD::MAX as usize) as DWORD,
+                &mut nread,
+                &mut flags,
+                &mut storage as *mut SOCKADDR_STORAGE as *mut SOCKADDR,
+                &mut addrlen,
+                ptr::null_mut(),
+                None,
+            )
+        };
+
+        let truncated;
+        if ret == 0 {
+            truncated = false;
+        } else {
+            let error = last_error();
+            if error.raw_os_error() == Some(sock::WSAEMSGSIZE) {
+                truncated = true;
+            } else {
+                return Err(error);
+            }
+        }
+
+        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen) };
+        Ok((nread as usize, truncated, addr))
+    }
+
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         unsafe {
             let n = {
@@ -373,6 +444,51 @@ impl Socket {
             } else {
                 Ok(n as usize)
             }
+        }
+    }
+
+    pub fn send_vectored(&self, bufs: &[IoSlice<'_>], flags: c_int) -> io::Result<usize> {
+        let mut nsent = 0;
+        let ret = unsafe {
+            sock::WSASend(
+                self.socket,
+                bufs.as_ptr() as *mut WSABUF,
+                bufs.len().min(DWORD::MAX as usize) as DWORD,
+                &mut nsent,
+                flags as DWORD,
+                std::ptr::null_mut(),
+                None,
+            )
+        };
+        match ret {
+            0 => Ok(nsent as usize),
+            _ => Err(last_error()),
+        }
+    }
+
+    pub fn send_to_vectored(
+        &self,
+        bufs: &[IoSlice<'_>],
+        flags: c_int,
+        addr: &SockAddr,
+    ) -> io::Result<usize> {
+        let mut nsent = 0;
+        let ret = unsafe {
+            sock::WSASendTo(
+                self.socket,
+                bufs.as_ptr() as *mut WSABUF,
+                bufs.len().min(DWORD::MAX as usize) as DWORD,
+                &mut nsent,
+                flags as DWORD,
+                addr.as_ptr(),
+                addr.len(),
+                std::ptr::null_mut(),
+                None,
+            )
+        };
+        match ret {
+            0 => Ok(nsent as usize),
+            _ => Err(last_error()),
         }
     }
 

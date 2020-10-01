@@ -2,7 +2,7 @@ use std::io::Write;
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::str;
 
-use crate::{Domain, Protocol, SockAddr, Type};
+use crate::{Domain, Protocol, SockAddr, Socket, Type};
 
 #[test]
 fn domain_for_address() {
@@ -106,4 +106,190 @@ fn socket_address_unix() {
     let addr = SockAddr::unix(string).unwrap();
     assert!(addr.as_inet().is_none());
     assert!(addr.as_inet6().is_none());
+}
+
+/// Create a pair of non-connected UDP sockets suitable for unit tests.
+#[cfg(not(target_os = "redox"))]
+fn udp_pair_unconnected() -> (Socket, Socket) {
+    // Use ephemeral ports assigned by the OS.
+    let unspecified_addr = std::net::SocketAddrV6::new(std::net::Ipv6Addr::LOCALHOST, 0, 0, 0);
+    let socket_a = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
+    let socket_b = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
+
+    socket_a.bind(&unspecified_addr.into()).unwrap();
+    socket_b.bind(&unspecified_addr.into()).unwrap();
+
+    // Set low timeouts to prevent the tests from blocking.
+    socket_a
+        .set_read_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+    socket_b
+        .set_read_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+    socket_a
+        .set_write_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+    socket_b
+        .set_write_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+
+    (socket_a, socket_b)
+}
+
+/// Create a pair of connected UDP sockets suitable for unit tests.
+#[cfg(not(target_os = "redox"))]
+fn udp_pair_connected() -> (Socket, Socket) {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+
+    let addr_a = socket_a.local_addr().unwrap();
+    let addr_b = socket_b.local_addr().unwrap();
+    socket_a.connect(&addr_b).unwrap();
+    socket_b.connect(&addr_a).unwrap();
+
+    (socket_a, socket_b)
+}
+
+#[test]
+#[cfg(not(target_os = "redox"))]
+fn send_recv_vectored() {
+    use std::io::{IoSlice, IoSliceMut};
+
+    let (socket_a, socket_b) = udp_pair_connected();
+
+    let sent = socket_a
+        .send_vectored(
+            &[
+                IoSlice::new(b"the"),
+                IoSlice::new(b"weeknight"),
+                IoSlice::new(b"would"),
+                IoSlice::new(b"yellow"),
+            ],
+            0,
+        )
+        .unwrap();
+    assert_eq!(sent, 23);
+
+    let mut the = [0u8; 3];
+    let mut wee = [0u8; 3];
+    let mut knight = [0u8; 6];
+    let mut would = [0u8; 5];
+    let mut yell = [0u8; 4];
+    let mut ow = [0u8; 2];
+
+    let (received, truncated) = socket_b
+        .recv_vectored(
+            &mut [
+                IoSliceMut::new(&mut the),
+                IoSliceMut::new(&mut wee),
+                IoSliceMut::new(&mut knight),
+                IoSliceMut::new(&mut would),
+                IoSliceMut::new(&mut yell),
+                IoSliceMut::new(&mut ow),
+            ],
+            0,
+        )
+        .unwrap();
+    assert_eq!(received, 23);
+    assert_eq!(truncated, false);
+
+    assert_eq!(&the, b"the");
+    assert_eq!(&wee, b"wee");
+    assert_eq!(&knight, b"knight");
+    assert_eq!(&would, b"would");
+    assert_eq!(&yell, b"yell");
+    assert_eq!(&ow, b"ow");
+}
+
+#[test]
+#[cfg(not(target_os = "redox"))]
+fn send_from_recv_to_vectored() {
+    use std::io::{IoSlice, IoSliceMut};
+
+    let (socket_a, socket_b) = udp_pair_unconnected();
+    let addr_a = socket_a.local_addr().unwrap();
+    let addr_b = socket_b.local_addr().unwrap();
+
+    let sent = socket_a
+        .send_to_vectored(
+            &[
+                IoSlice::new(b"surgeon"),
+                IoSlice::new(b"has"),
+                IoSlice::new(b"menswear"),
+            ],
+            &addr_b,
+            0,
+        )
+        .unwrap();
+    assert_eq!(sent, 18);
+
+    let mut surgeon = [0u8; 7];
+    let mut has = [0u8; 3];
+    let mut men = [0u8; 3];
+    let mut swear = [0u8; 5];
+    let (received, truncated, addr) = socket_b
+        .recv_from_vectored(
+            &mut [
+                IoSliceMut::new(&mut surgeon),
+                IoSliceMut::new(&mut has),
+                IoSliceMut::new(&mut men),
+                IoSliceMut::new(&mut swear),
+            ],
+            0,
+        )
+        .unwrap();
+
+    assert_eq!(received, 18);
+    assert_eq!(truncated, false);
+    assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
+    assert_eq!(&surgeon, b"surgeon");
+    assert_eq!(&has, b"has");
+    assert_eq!(&men, b"men");
+    assert_eq!(&swear, b"swear");
+}
+
+#[test]
+#[cfg(not(target_os = "redox"))]
+fn recv_vectored_truncated() {
+    use std::io::IoSliceMut;
+
+    let (socket_a, socket_b) = udp_pair_connected();
+
+    let sent = socket_a
+        .send(b"do not feed the gremlins after midnight")
+        .unwrap();
+    assert_eq!(sent, 39);
+
+    let mut buffer = [0u8; 24];
+
+    let (received, truncated) = socket_b
+        .recv_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
+        .unwrap();
+    assert_eq!(received, 24);
+    assert_eq!(truncated, true);
+    assert_eq!(&buffer, b"do not feed the gremlins");
+}
+
+#[test]
+#[cfg(not(target_os = "redox"))]
+fn recv_from_vectored_truncated() {
+    use std::io::IoSliceMut;
+
+    let (socket_a, socket_b) = udp_pair_unconnected();
+    let addr_a = socket_a.local_addr().unwrap();
+    let addr_b = socket_b.local_addr().unwrap();
+
+    let sent = socket_a
+        .send_to(b"do not feed the gremlins after midnight", &addr_b)
+        .unwrap();
+    assert_eq!(sent, 39);
+
+    let mut buffer = [0u8; 24];
+
+    let (received, truncated, addr) = socket_b
+        .recv_from_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
+        .unwrap();
+    assert_eq!(received, 24);
+    assert_eq!(truncated, true);
+    assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
+    assert_eq!(&buffer, b"do not feed the gremlins");
 }
