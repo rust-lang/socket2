@@ -428,7 +428,15 @@ impl Socket {
         let mut len = mem::size_of_val(&storage) as socklen_t;
 
         let mut socket = None;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ))]
         {
             let res = syscall!(accept4(
                 self.fd,
@@ -437,7 +445,7 @@ impl Socket {
                 libc::SOCK_CLOEXEC,
             ));
             match res {
-                Ok(fd) => socket = Some(Socket { fd: fd }),
+                Ok(fd) => socket = Some(Socket { fd }),
                 Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
                 Err(e) => return Err(e),
             }
