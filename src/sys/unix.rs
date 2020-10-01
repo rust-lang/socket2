@@ -292,6 +292,33 @@ impl Socket {
 
     pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
         let mut fds = [0, 0];
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "opensbd"
+        ))]
+        {
+            let ret = syscall!(socketpair(
+                family,
+                ty | libc::SOCK_CLOEXEC,
+                protocol,
+                fds.as_mut_ptr()
+            ));
+            match ret {
+                Ok(_) => {
+                    let fds = unsafe { (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1])) };
+                    // We're not on OS X or iOS, so we don't set SO_NOSIGPIPE.
+                    return Ok(fds);
+                }
+                Err(ref e) if e.raw_os_error() == Some(NO_SOCK_CLOEXEC_ERROR) => {}
+                Err(e) => return Err(e),
+            }
+        }
+
         syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
         let fds = unsafe { (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1])) };
         set_cloexec(fds.0.as_raw_fd())?;
