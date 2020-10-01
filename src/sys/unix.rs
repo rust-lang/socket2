@@ -132,13 +132,14 @@ impl Type {
     /// # Notes
     ///
     /// This function is only available on Android, DragonFlyBSD, FreeBSD,
-    /// Linux, NetBSD and OpenBSD.
+    /// Illumos, Linux, NetBSD and OpenBSD.
     #[cfg(all(
         feature = "all",
         any(
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
+            target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd"
@@ -188,6 +189,18 @@ impl_debug!(
     libc::IPPROTO_TCP,
     libc::IPPROTO_UDP,
 );
+
+#[cfg(any(target_os = "android", target_os = "linux"))]
+const NO_SOCK_CLOEXEC_ERROR: c_int = libc::EINVAL;
+
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "opensbd"
+))]
+const NO_SOCK_CLOEXEC_ERROR: c_int = libc::EPROTOTYPE;
 
 /// Unix only API.
 impl SockAddr {
@@ -244,16 +257,25 @@ pub struct Socket {
 
 impl Socket {
     pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
-        // On linux we first attempt to pass the SOCK_CLOEXEC flag to atomically
+        // We first attempt to pass the SOCK_CLOEXEC flag to atomically
         // create the socket and set it as CLOEXEC. Support for this option,
-        // however, was added in 2.6.27, and we still support 2.6.18 as a
+        // however, was added in Linux 2.6.27, and we still support 2.6.18 as a
         // kernel, so if the returned error is EINVAL we fallthrough to the
         // fallback.
-        #[cfg(target_os = "linux")]
+        // FreeBSD introduced in in version 10.0, NetBSD in 6.0, OpenBSD in 5.7.
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "opensbd"
+        ))]
         {
             match syscall!(socket(family, ty | libc::SOCK_CLOEXEC, protocol)) {
                 Ok(fd) => return unsafe { Ok(Socket::from_raw_fd(fd)) },
-                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
+                Err(ref e) if e.raw_os_error() == Some(NO_SOCK_CLOEXEC_ERROR) => {}
                 Err(e) => return Err(e),
             }
         }
