@@ -8,6 +8,8 @@
 
 use std::fmt;
 use std::io::{self, Read, Write};
+#[cfg(not(target_os = "redox"))]
+use std::io::{IoSlice, IoSliceMut};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 #[cfg(all(feature = "all", unix))]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
@@ -260,6 +262,21 @@ impl Socket {
         self.inner().recv(buf, flags)
     }
 
+    /// Identical to [`recv_with_flags`] but reads into a slice of buffers.
+    ///
+    /// In addition to the number of bytes read, this function a flag to indicate if a received datagram was truncated.
+    /// For stream sockets, the flag has no meaning.
+    ///
+    /// [`recv_with_flags`]: #method.recv_with_flags
+    #[cfg(not(target_os = "redox"))]
+    pub fn recv_vectored(
+        &self,
+        bufs: &mut [IoSliceMut<'_>],
+        flags: i32,
+    ) -> io::Result<(usize, bool)> {
+        self.inner().recv_vectored(bufs, flags)
+    }
+
     /// Receives out-of-band (OOB) data on the socket from the remote address to
     /// which it is connected by setting the `MSG_OOB` flag for this call.
     ///
@@ -300,6 +317,21 @@ impl Socket {
         self.inner().recv_from(buf, flags)
     }
 
+    /// Identical to [`recv_from_with_flags`] but reads into a slice of buffers.
+    ///
+    /// In addition to the number of bytes read, this function a flag to indicate if a received datagram was truncated.
+    /// For stream sockets, the flag has no meaning.
+    ///
+    /// [`recv_from_with_flags`]: #method.recv_from_with_flags
+    #[cfg(not(target_os = "redox"))]
+    pub fn recv_from_vectored(
+        &self,
+        bufs: &mut [IoSliceMut<'_>],
+        flags: i32,
+    ) -> io::Result<(usize, bool, SockAddr)> {
+        self.inner().recv_from_vectored(bufs, flags)
+    }
+
     /// Receives data from the socket, without removing it from the queue.
     ///
     /// Successive calls return the same data. This is accomplished by passing
@@ -329,6 +361,14 @@ impl Socket {
         self.inner().send(buf, flags)
     }
 
+    /// Identical to [`send_with_flags`] but writes from a slice of buffers.
+    ///
+    /// [`send_with_flags`]: #method.send_with_flags
+    #[cfg(not(target_os = "redox"))]
+    pub fn send_vectored(&self, bufs: &[IoSlice<'_>], flags: i32) -> io::Result<usize> {
+        self.inner().send_vectored(bufs, flags)
+    }
+
     /// Sends out-of-band (OOB) data on the socket to connected peer
     /// by setting the `MSG_OOB` flag for this call.
     ///
@@ -356,6 +396,19 @@ impl Socket {
     /// [`send_to`]: #method.send_to
     pub fn send_to_with_flags(&self, buf: &[u8], addr: &SockAddr, flags: i32) -> io::Result<usize> {
         self.inner().send_to(buf, flags, addr)
+    }
+
+    /// Identical to [`send_with_flags`] but writes from a slice of buffers.
+    ///
+    /// [`send_with_flags`]: #method.send_with_flags
+    #[cfg(not(target_os = "redox"))]
+    pub fn send_to_vectored(
+        &self,
+        bufs: &[IoSlice<'_>],
+        addr: &SockAddr,
+        flags: i32,
+    ) -> io::Result<usize> {
+        self.inner().send_to_vectored(bufs, flags, addr)
     }
 
     // ================================================

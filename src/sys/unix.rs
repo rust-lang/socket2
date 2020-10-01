@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#[cfg(not(target_os = "redox"))]
+use std::io::{IoSlice, IoSliceMut};
 use std::io::{Read, Write};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -78,6 +80,20 @@ macro_rules! syscall {
         }
     }};
 }
+
+#[cfg(any(target_os = "android", all(target_os = "linux", target_env = "gnu")))]
+type IovLen = usize;
+
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "ios",
+    all(target_os = "linux", target_env = "musl",),
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+type IovLen = c_int;
 
 /// Unix only API.
 impl Domain {
@@ -488,6 +504,51 @@ impl Socket {
         Ok((n as usize, addr))
     }
 
+    #[cfg(not(target_os = "redox"))]
+    pub fn recv_vectored(
+        &self,
+        bufs: &mut [IoSliceMut<'_>],
+        flags: c_int,
+    ) -> io::Result<(usize, bool)> {
+        let mut msg = libc::msghdr {
+            msg_name: std::ptr::null_mut(),
+            msg_namelen: 0,
+            msg_iov: bufs.as_mut_ptr().cast(),
+            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
+            msg_control: std::ptr::null_mut(),
+            msg_controllen: 0,
+            msg_flags: 0,
+        };
+
+        let n = syscall!(recvmsg(self.fd, &mut msg as *mut _, flags))?;
+        let truncated = msg.msg_flags & libc::MSG_TRUNC != 0;
+        Ok((n as usize, truncated))
+    }
+
+    #[cfg(not(target_os = "redox"))]
+    pub fn recv_from_vectored(
+        &self,
+        bufs: &mut [IoSliceMut<'_>],
+        flags: c_int,
+    ) -> io::Result<(usize, bool, SockAddr)> {
+        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+        let mut msg = libc::msghdr {
+            msg_name: &mut storage as *mut libc::sockaddr_storage as *mut c_void,
+            msg_namelen: mem::size_of_val(&storage) as socklen_t,
+            msg_iov: bufs.as_mut_ptr().cast(),
+            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
+            msg_control: std::ptr::null_mut(),
+            msg_controllen: 0,
+            msg_flags: 0,
+        };
+
+        let n = syscall!(recvmsg(self.fd, &mut msg as *mut _, flags))?;
+        let truncated = msg.msg_flags & libc::MSG_TRUNC != 0;
+        let addr =
+            unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, msg.msg_namelen) };
+        Ok((n as usize, truncated, addr))
+    }
+
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         let n = syscall!(send(
             self.fd,
@@ -507,6 +568,43 @@ impl Socket {
             addr.as_ptr(),
             addr.len(),
         ))?;
+        Ok(n as usize)
+    }
+
+    #[cfg(not(target_os = "redox"))]
+    pub fn send_vectored(&self, bufs: &[IoSlice<'_>], flags: c_int) -> io::Result<usize> {
+        let mut msg = libc::msghdr {
+            msg_name: std::ptr::null_mut(),
+            msg_namelen: 0,
+            msg_iov: bufs.as_ptr() as *mut libc::iovec,
+            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
+            msg_control: std::ptr::null_mut(),
+            msg_controllen: 0,
+            msg_flags: 0,
+        };
+
+        let n = syscall!(sendmsg(self.fd, &mut msg as *mut libc::msghdr, flags))?;
+        Ok(n as usize)
+    }
+
+    #[cfg(not(target_os = "redox"))]
+    pub fn send_to_vectored(
+        &self,
+        bufs: &[IoSlice<'_>],
+        flags: c_int,
+        addr: &SockAddr,
+    ) -> io::Result<usize> {
+        let mut msg = libc::msghdr {
+            msg_name: addr.as_ptr() as *mut c_void,
+            msg_namelen: addr.len(),
+            msg_iov: bufs.as_ptr() as *mut libc::iovec,
+            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
+            msg_control: std::ptr::null_mut(),
+            msg_controllen: 0,
+            msg_flags: 0,
+        };
+
+        let n = syscall!(sendmsg(self.fd, &mut msg as *mut libc::msghdr, flags))?;
         Ok(n as usize)
     }
 
