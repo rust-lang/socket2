@@ -254,6 +254,12 @@ impl crate::Socket {
     pub fn set_cloexec(&self) -> io::Result<()> {
         fcntl_add(self.inner, libc::FD_CLOEXEC)
     }
+
+    /// Sets `SO_NOSIGPIPE` to one.
+    #[cfg(target_vendor = "apple")]
+    pub fn set_nosigpipe(&self) -> io::Result<()> {
+        unsafe { setsockopt(self.inner, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32) }
+    }
 }
 
 fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
@@ -265,6 +271,22 @@ fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
         // Flag was already set.
         Ok(())
     }
+}
+
+#[cfg(target_vendor = "apple")]
+unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()>
+where
+    T: Copy,
+{
+    let payload = &payload as *const T as *const c_void;
+    syscall!(setsockopt(
+        fd,
+        opt,
+        val,
+        payload,
+        mem::size_of::<T>() as libc::socklen_t,
+    ))?;
+    Ok(())
 }
 
 #[repr(transparent)] // Required during rewriting.
