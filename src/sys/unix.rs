@@ -241,37 +241,16 @@ impl SockAddr {
 // TODO: rename to `Socket` once the struct `Socket` is no longer used.
 pub(crate) type SysSocket = c_int;
 
+pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<SysSocket> {
+    syscall!(socket(family, ty, protocol))
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     fd: SysSocket,
 }
 
 impl Socket {
-    pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
-        // On linux we first attempt to pass the SOCK_CLOEXEC flag to atomically
-        // create the socket and set it as CLOEXEC. Support for this option,
-        // however, was added in 2.6.27, and we still support 2.6.18 as a
-        // kernel, so if the returned error is EINVAL we fallthrough to the
-        // fallback.
-        #[cfg(target_os = "linux")]
-        {
-            match syscall!(socket(family, ty | libc::SOCK_CLOEXEC, protocol)) {
-                Ok(fd) => return unsafe { Ok(Socket::from_raw_fd(fd)) },
-                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {}
-                Err(e) => return Err(e),
-            }
-        }
-
-        let fd = syscall!(socket(family, ty, protocol))?;
-        let fd = unsafe { Socket::from_raw_fd(fd) };
-        set_cloexec(fd.as_raw_fd())?;
-        #[cfg(any(target_os = "macos", target_os = "ios"))]
-        unsafe {
-            fd.setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-        }
-        Ok(fd)
-    }
-
     pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
         let mut fds = [0, 0];
         syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
@@ -1224,7 +1203,9 @@ fn test_ip() {
 #[test]
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 fn test_out_of_band_inline() {
-    let tcp = Socket::new(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap();
+    let tcp = Socket {
+        fd: socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap(),
+    };
     assert_eq!(tcp.out_of_band_inline().unwrap(), false);
 
     tcp.set_out_of_band_inline(true).unwrap();
