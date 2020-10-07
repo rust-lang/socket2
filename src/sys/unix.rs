@@ -245,6 +245,28 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
     syscall!(socket(family, ty, protocol))
 }
 
+impl crate::Socket {
+    /// Sets `CLOEXEC` on the socket.
+    ///
+    /// # Notes
+    ///
+    /// On supported platforms you can use [`Protocol::cloexec`].
+    pub fn set_cloexec(&self) -> io::Result<()> {
+        fcntl_add(self.inner, libc::FD_CLOEXEC)
+    }
+}
+
+fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
+    let previous = syscall!(fcntl(fd, libc::F_GETFD))?;
+    let new = previous | flag;
+    if new != previous {
+        syscall!(fcntl(fd, libc::F_SETFD, new)).map(|_| ())
+    } else {
+        // Flag was already set.
+        Ok(())
+    }
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     fd: SysSocket,
