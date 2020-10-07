@@ -238,8 +238,12 @@ impl SockAddr {
     }
 }
 
+// TODO: rename to `Socket` once the struct `Socket` is no longer used.
+pub(crate) type SysSocket = c_int;
+
+#[repr(transparent)] // Required during rewriting.
 pub struct Socket {
-    fd: c_int,
+    fd: SysSocket,
 }
 
 impl Socket {
@@ -913,6 +917,14 @@ impl Socket {
         assert_eq!(len as usize, mem::size_of::<T>());
         Ok(slot)
     }
+
+    pub fn inner(self) -> SysSocket {
+        self.fd
+    }
+
+    pub fn from_inner(fd: SysSocket) -> Socket {
+        Socket { fd }
+    }
 }
 
 impl Read for Socket {
@@ -988,28 +1000,22 @@ impl FromRawFd for Socket {
 
 impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
-        self.inner.as_raw_fd()
+        self.inner
     }
 }
 
 impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> c_int {
-        self.inner.into_raw_fd()
+        let fd = self.inner;
+        mem::forget(self);
+        fd
     }
 }
 
 impl FromRawFd for crate::Socket {
     unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
         crate::Socket {
-            inner: Socket::from_raw_fd(fd),
-        }
-    }
-}
-
-impl Drop for Socket {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = libc::close(self.fd);
+            inner: Socket::from_raw_fd(fd).inner(),
         }
     }
 }
@@ -1083,6 +1089,12 @@ impl From<UnixListener> for Socket {
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+    }
+}
+
+pub(crate) fn close(fd: SysSocket) {
+    unsafe {
+        let _ = libc::close(fd);
     }
 }
 

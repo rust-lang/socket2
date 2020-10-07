@@ -108,8 +108,12 @@ fn last_error() -> io::Error {
     io::Error::from_raw_os_error(unsafe { sock::WSAGetLastError() })
 }
 
+// TODO: rename to `Socket` once the struct `Socket` is no longer used.
+pub(crate) type SysSocket = sock::SOCKET;
+
+#[repr(transparent)] // Required during rewriting.
 pub struct Socket {
-    socket: sock::SOCKET,
+    socket: SysSocket,
 }
 
 impl Socket {
@@ -771,6 +775,14 @@ impl Socket {
             }
         }
     }
+
+    pub fn inner(self) -> SysSocket {
+        self.socket
+    }
+
+    pub fn from_inner(socket: SysSocket) -> Socket {
+        Socket { socket }
+    }
 }
 
 impl Read for Socket {
@@ -843,28 +855,22 @@ impl FromRawSocket for Socket {
 
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
-        self.inner.as_raw_socket()
+        self.inner as RawSocket
     }
 }
 
 impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
-        self.inner.into_raw_socket()
+        let socket = self.inner;
+        mem::forget(self);
+        socket as RawSocket
     }
 }
 
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket {
-            inner: Socket::from_raw_socket(socket),
-        }
-    }
-}
-
-impl Drop for Socket {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = sock::closesocket(self.socket);
+            inner: Socket::from_raw_socket(socket).inner(),
         }
     }
 }
@@ -902,6 +908,12 @@ impl From<net::TcpListener> for Socket {
 impl From<net::UdpSocket> for Socket {
     fn from(socket: net::UdpSocket) -> Socket {
         unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
+    }
+}
+
+pub(crate) fn close(socket: SysSocket) {
+    unsafe {
+        let _ = sock::closesocket(socket);
     }
 }
 
