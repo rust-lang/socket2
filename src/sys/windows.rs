@@ -111,32 +111,30 @@ fn last_error() -> io::Error {
 // TODO: rename to `Socket` once the struct `Socket` is no longer used.
 pub(crate) type SysSocket = sock::SOCKET;
 
+pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<SysSocket> {
+    init();
+
+    unsafe {
+        match sock::WSASocketW(
+            family,
+            ty,
+            protocol,
+            ptr::null_mut(),
+            0,
+            WSA_FLAG_OVERLAPPED,
+        ) {
+            sock::INVALID_SOCKET => Err(last_error()),
+            socket => Ok(socket),
+        }
+    }
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     socket: SysSocket,
 }
 
 impl Socket {
-    pub fn new(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
-        init();
-        unsafe {
-            let socket = match sock::WSASocketW(
-                family,
-                ty,
-                protocol,
-                ptr::null_mut(),
-                0,
-                WSA_FLAG_OVERLAPPED,
-            ) {
-                sock::INVALID_SOCKET => return Err(last_error()),
-                socket => socket,
-            };
-            let socket = Socket::from_raw_socket(socket as RawSocket);
-            socket.set_no_inherit()?;
-            Ok(socket)
-        }
-    }
-
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         unsafe {
             if sock::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
@@ -1028,7 +1026,9 @@ fn test_ip() {
 
 #[test]
 fn test_out_of_band_inline() {
-    let tcp = Socket::new(AF_INET, SOCK_STREAM, 0).unwrap();
+    let tcp = Socket {
+        socket: socket(AF_INET, SOCK_STREAM, 0).unwrap(),
+    };
     assert_eq!(tcp.out_of_band_inline().unwrap(), false);
 
     tcp.set_out_of_band_inline(true).unwrap();
