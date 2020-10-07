@@ -129,6 +129,18 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
     }
 }
 
+impl crate::Socket {
+    /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
+    pub fn set_no_inherit(&self) -> io::Result<()> {
+        let r = unsafe { SetHandleInformation(self.inner as HANDLE, HANDLE_FLAG_INHERIT, 0) };
+        if r == 0 {
+            Err(last_error())
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     socket: SysSocket,
