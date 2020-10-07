@@ -60,7 +60,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// ```
 pub struct Socket {
     // The `sys` module most have access to the socket.
-    pub(crate) inner: sys::Socket,
+    pub(crate) inner: sys::SysSocket,
 }
 
 impl Socket {
@@ -72,7 +72,7 @@ impl Socket {
     pub fn new(domain: Domain, type_: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         Ok(Socket {
-            inner: sys::Socket::new(domain.0, type_.0, protocol)?,
+            inner: sys::Socket::new(domain.0, type_.0, protocol)?.inner(),
         })
     }
 
@@ -89,7 +89,14 @@ impl Socket {
     ) -> io::Result<(Socket, Socket)> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
-        Ok((Socket { inner: sockets.0 }, Socket { inner: sockets.1 }))
+        Ok((
+            Socket {
+                inner: sockets.0.inner(),
+            },
+            Socket {
+                inner: sockets.1.inner(),
+            },
+        ))
     }
 
     /// Consumes this `Socket`, converting it to a `TcpStream`.
@@ -139,7 +146,7 @@ impl Socket {
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
     pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        self.inner.connect(addr)
+        self.inner().connect(addr)
     }
 
     /// Initiate a connection on this socket to the specified address, only
@@ -162,7 +169,7 @@ impl Socket {
     /// If the connection request times out, it may still be processing in the
     /// background - a second call to `connect` or `connect_timeout` may fail.
     pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
-        self.inner.connect_timeout(addr, timeout)
+        self.inner().connect_timeout(addr, timeout)
     }
 
     /// Binds this socket to the specified address.
@@ -170,7 +177,7 @@ impl Socket {
     /// This function directly corresponds to the bind(2) function on Windows
     /// and Unix.
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        self.inner.bind(addr)
+        self.inner().bind(addr)
     }
 
     /// Mark a socket as ready to accept incoming connection requests using
@@ -182,7 +189,7 @@ impl Socket {
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        self.inner.listen(backlog)
+        self.inner().listen(backlog)
     }
 
     /// Accept a new incoming connection from this listener.
@@ -191,19 +198,24 @@ impl Socket {
     /// established. When established, the corresponding `Socket` and the
     /// remote peer's address will be returned.
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        self.inner
-            .accept()
-            .map(|(socket, addr)| (Socket { inner: socket }, addr))
+        self.inner().accept().map(|(socket, addr)| {
+            (
+                Socket {
+                    inner: socket.inner(),
+                },
+                addr,
+            )
+        })
     }
 
     /// Returns the socket address of the local half of this TCP connection.
     pub fn local_addr(&self) -> io::Result<SockAddr> {
-        self.inner.local_addr()
+        self.inner().local_addr()
     }
 
     /// Returns the socket address of the remote peer of this TCP connection.
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
-        self.inner.peer_addr()
+        self.inner().peer_addr()
     }
 
     /// Creates a new independently owned handle to the underlying socket.
@@ -213,7 +225,9 @@ impl Socket {
     /// data, and options set on one stream will be propagated to the other
     /// stream.
     pub fn try_clone(&self) -> io::Result<Socket> {
-        self.inner.try_clone().map(|s| Socket { inner: s })
+        self.inner()
+            .try_clone()
+            .map(|s| Socket { inner: s.inner() })
     }
 
     /// Get the value of the `SO_ERROR` option on this socket.
@@ -222,7 +236,7 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        self.inner.take_error()
+        self.inner().take_error()
     }
 
     /// Moves this TCP stream into or out of nonblocking mode.
@@ -230,7 +244,7 @@ impl Socket {
     /// On Unix this corresponds to calling fcntl, and on Windows this
     /// corresponds to calling ioctlsocket.
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        self.inner.set_nonblocking(nonblocking)
+        self.inner().set_nonblocking(nonblocking)
     }
 
     /// Shuts down the read, write, or both halves of this connection.
@@ -238,7 +252,7 @@ impl Socket {
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        self.inner.shutdown(how)
+        self.inner().shutdown(how)
     }
 
     /// Receives data on the socket from the remote address to which it is
@@ -249,7 +263,7 @@ impl Socket {
     ///
     /// [`connect`]: #method.connect
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.recv(buf, 0)
+        self.inner().recv(buf, 0)
     }
 
     /// Identical to [`recv`] but allows for specification of arbitrary flags to the underlying
@@ -257,7 +271,7 @@ impl Socket {
     ///
     /// [`recv`]: #method.recv
     pub fn recv_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
-        self.inner.recv(buf, flags)
+        self.inner().recv(buf, flags)
     }
 
     /// Receives out-of-band (OOB) data on the socket from the remote address to
@@ -269,7 +283,7 @@ impl Socket {
     /// [`out_of_band_inline`]: #method.out_of_band_inline
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.recv(buf, MSG_OOB)
+        self.inner().recv(buf, MSG_OOB)
     }
 
     /// Receives data on the socket from the remote adress to which it is
@@ -279,13 +293,13 @@ impl Socket {
     /// Successive calls return the same data. This is accomplished by passing
     /// `MSG_PEEK` as a flag to the underlying `recv` system call.
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.peek(buf)
+        self.inner().peek(buf)
     }
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
     pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.inner.recv_from(buf, 0)
+        self.inner().recv_from(buf, 0)
     }
 
     /// Identical to [`recv_from`] but allows for specification of arbitrary flags to the underlying
@@ -297,7 +311,7 @@ impl Socket {
         buf: &mut [u8],
         flags: i32,
     ) -> io::Result<(usize, SockAddr)> {
-        self.inner.recv_from(buf, flags)
+        self.inner().recv_from(buf, flags)
     }
 
     /// Receives data from the socket, without removing it from the queue.
@@ -308,7 +322,7 @@ impl Socket {
     /// On success, returns the number of bytes peeked and the address from
     /// whence the data came.
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.inner.peek_from(buf)
+        self.inner().peek_from(buf)
     }
 
     /// Sends data on the socket to a connected peer.
@@ -318,7 +332,7 @@ impl Socket {
     ///
     /// On success returns the number of bytes that were sent.
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.send(buf, 0)
+        self.inner().send(buf, 0)
     }
 
     /// Identical to [`send`] but allows for specification of arbitrary flags to the underlying
@@ -326,7 +340,7 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     pub fn send_with_flags(&self, buf: &[u8], flags: i32) -> io::Result<usize> {
-        self.inner.send(buf, flags)
+        self.inner().send(buf, flags)
     }
 
     /// Sends out-of-band (OOB) data on the socket to connected peer
@@ -338,7 +352,7 @@ impl Socket {
     /// [`out_of_band_inline`]: #method.out_of_band_inline
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.send(buf, MSG_OOB)
+        self.inner().send(buf, MSG_OOB)
     }
 
     /// Sends data on the socket to the given address. On success, returns the
@@ -347,7 +361,7 @@ impl Socket {
     /// This is typically used on UDP or datagram-oriented sockets. On success
     /// returns the number of bytes that were sent.
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
-        self.inner.send_to(buf, 0, addr)
+        self.inner().send_to(buf, 0, addr)
     }
 
     /// Identical to [`send_to`] but allows for specification of arbitrary flags to the underlying
@@ -355,7 +369,7 @@ impl Socket {
     ///
     /// [`send_to`]: #method.send_to
     pub fn send_to_with_flags(&self, buf: &[u8], addr: &SockAddr, flags: i32) -> io::Result<usize> {
-        self.inner.send_to(buf, flags, addr)
+        self.inner().send_to(buf, flags, addr)
     }
 
     // ================================================
@@ -366,7 +380,7 @@ impl Socket {
     ///
     /// [link]: #method.set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
-        self.inner.ttl()
+        self.inner().ttl()
     }
 
     /// Sets the value for the `IP_TTL` option on this socket.
@@ -374,7 +388,7 @@ impl Socket {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        self.inner.set_ttl(ttl)
+        self.inner().set_ttl(ttl)
     }
 
     /// Sets the value for the `SO_MARK` option on this socket.
@@ -387,21 +401,21 @@ impl Socket {
     /// `CAP_NET_ADMIN` capability.
     #[cfg(target_os = "linux")]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
-        self.inner.set_mark(mark)
+        self.inner().set_mark(mark)
     }
 
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        self.inner.unicast_hops_v6()
+        self.inner().unicast_hops_v6()
     }
 
     /// Sets the value for the `IPV6_UNICAST_HOPS` option on this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets
     pub fn set_unicast_hops_v6(&self, ttl: u32) -> io::Result<()> {
-        self.inner.set_unicast_hops_v6(ttl)
+        self.inner().set_unicast_hops_v6(ttl)
     }
 
     /// Gets the value of the `IPV6_V6ONLY` option for this socket.
@@ -410,7 +424,7 @@ impl Socket {
     ///
     /// [link]: #method.set_only_v6
     pub fn only_v6(&self) -> io::Result<bool> {
-        self.inner.only_v6()
+        self.inner().only_v6()
     }
 
     /// Sets the value for the `IPV6_V6ONLY` option on this socket.
@@ -422,14 +436,14 @@ impl Socket {
     /// If this is set to `false` then the socket can be used to send and
     /// receive packets from an IPv4-mapped IPv6 address.
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        self.inner.set_only_v6(only_v6)
+        self.inner().set_only_v6(only_v6)
     }
 
     /// Returns the read timeout of this socket.
     ///
     /// If the timeout is `None`, then `read` calls will block indefinitely.
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        self.inner.read_timeout()
+        self.inner().read_timeout()
     }
 
     /// Sets the read timeout to the timeout specified.
@@ -438,14 +452,14 @@ impl Socket {
     /// indefinitely. It is an error to pass the zero `Duration` to this
     /// method.
     pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        self.inner.set_read_timeout(dur)
+        self.inner().set_read_timeout(dur)
     }
 
     /// Returns the write timeout of this socket.
     ///
     /// If the timeout is `None`, then `write` calls will block indefinitely.
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        self.inner.write_timeout()
+        self.inner().write_timeout()
     }
 
     /// Sets the write timeout to the timeout specified.
@@ -454,7 +468,7 @@ impl Socket {
     /// indefinitely. It is an error to pass the zero `Duration` to this
     /// method.
     pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        self.inner.set_write_timeout(dur)
+        self.inner().set_write_timeout(dur)
     }
 
     /// Gets the value of the `TCP_NODELAY` option on this socket.
@@ -463,7 +477,7 @@ impl Socket {
     ///
     /// [link]: #method.set_nodelay
     pub fn nodelay(&self) -> io::Result<bool> {
-        self.inner.nodelay()
+        self.inner().nodelay()
     }
 
     /// Sets the value of the `TCP_NODELAY` option on this socket.
@@ -474,7 +488,7 @@ impl Socket {
     /// sufficient amount to send out, thereby avoiding the frequent sending of
     /// small packets.
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        self.inner.set_nodelay(nodelay)
+        self.inner().set_nodelay(nodelay)
     }
 
     /// Sets the value of the `SO_BROADCAST` option for this socket.
@@ -482,7 +496,7 @@ impl Socket {
     /// When enabled, this socket is allowed to send packets to a broadcast
     /// address.
     pub fn broadcast(&self) -> io::Result<bool> {
-        self.inner.broadcast()
+        self.inner().broadcast()
     }
 
     /// Gets the value of the `SO_BROADCAST` option for this socket.
@@ -492,7 +506,7 @@ impl Socket {
     ///
     /// [link]: #method.set_broadcast
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
-        self.inner.set_broadcast(broadcast)
+        self.inner().set_broadcast(broadcast)
     }
 
     /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
@@ -502,7 +516,7 @@ impl Socket {
     ///
     /// [link]: #method.set_multicast_loop_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        self.inner.multicast_loop_v4()
+        self.inner().multicast_loop_v4()
     }
 
     /// Sets the value of the `IP_MULTICAST_LOOP` option for this socket.
@@ -510,7 +524,7 @@ impl Socket {
     /// If enabled, multicast packets will be looped back to the local socket.
     /// Note that this may not have any affect on IPv6 sockets.
     pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        self.inner.set_multicast_loop_v4(multicast_loop_v4)
+        self.inner().set_multicast_loop_v4(multicast_loop_v4)
     }
 
     /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
@@ -520,7 +534,7 @@ impl Socket {
     ///
     /// [link]: #method.set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        self.inner.multicast_ttl_v4()
+        self.inner().multicast_ttl_v4()
     }
 
     /// Sets the value of the `IP_MULTICAST_TTL` option for this socket.
@@ -531,7 +545,7 @@ impl Socket {
     ///
     /// Note that this may not have any affect on IPv6 sockets.
     pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        self.inner.set_multicast_ttl_v4(multicast_ttl_v4)
+        self.inner().set_multicast_ttl_v4(multicast_ttl_v4)
     }
 
     /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
@@ -541,7 +555,7 @@ impl Socket {
     ///
     /// [link]: #method.set_multicast_hops_v6
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        self.inner.multicast_hops_v6()
+        self.inner().multicast_hops_v6()
     }
 
     /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
@@ -550,7 +564,7 @@ impl Socket {
     /// this socket. The default value is 1 which means that multicast packets
     /// don't leave the local network unless explicitly requested.
     pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        self.inner.set_multicast_hops_v6(hops)
+        self.inner().set_multicast_hops_v6(hops)
     }
 
     /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
@@ -562,14 +576,14 @@ impl Socket {
     ///
     /// Returns the interface to use for routing multicast packets.
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        self.inner.multicast_if_v4()
+        self.inner().multicast_if_v4()
     }
 
     /// Sets the value of the `IP_MULTICAST_IF` option for this socket.
     ///
     /// Specifies the interface to use for routing multicast packets.
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner.set_multicast_if_v4(interface)
+        self.inner().set_multicast_if_v4(interface)
     }
 
     /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
@@ -581,7 +595,7 @@ impl Socket {
     ///
     /// Returns the interface to use for routing multicast packets.
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
-        self.inner.multicast_if_v6()
+        self.inner().multicast_if_v6()
     }
 
     /// Sets the value of the `IPV6_MULTICAST_IF` option for this socket.
@@ -590,7 +604,7 @@ impl Socket {
     /// is generally required in ipv6 contexts where network routing prefixes may
     /// overlap.
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        self.inner.set_multicast_if_v6(interface)
+        self.inner().set_multicast_if_v6(interface)
     }
 
     /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
@@ -600,7 +614,7 @@ impl Socket {
     ///
     /// [link]: #method.set_multicast_loop_v6
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        self.inner.multicast_loop_v6()
+        self.inner().multicast_loop_v6()
     }
 
     /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
@@ -608,7 +622,7 @@ impl Socket {
     /// Controls whether this socket sees the multicast packets it sends itself.
     /// Note that this may not have any affect on IPv4 sockets.
     pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
-        self.inner.set_multicast_loop_v6(multicast_loop_v6)
+        self.inner().set_multicast_loop_v6(multicast_loop_v6)
     }
 
     /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
@@ -619,7 +633,7 @@ impl Socket {
     /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
     /// interface is chosen by the system.
     pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner.join_multicast_v4(multiaddr, interface)
+        self.inner().join_multicast_v4(multiaddr, interface)
     }
 
     /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
@@ -628,7 +642,7 @@ impl Socket {
     /// The address must be a valid multicast address, and `interface` is the
     /// index of the interface to join/leave (or 0 to indicate any interface).
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        self.inner.join_multicast_v6(multiaddr, interface)
+        self.inner().join_multicast_v6(multiaddr, interface)
     }
 
     /// Executes an operation of the `IP_DROP_MEMBERSHIP` type.
@@ -638,7 +652,7 @@ impl Socket {
     ///
     /// [link]: #method.join_multicast_v4
     pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner.leave_multicast_v4(multiaddr, interface)
+        self.inner().leave_multicast_v4(multiaddr, interface)
     }
 
     /// Executes an operation of the `IPV6_DROP_MEMBERSHIP` type.
@@ -648,23 +662,23 @@ impl Socket {
     ///
     /// [link]: #method.join_multicast_v6
     pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        self.inner.leave_multicast_v6(multiaddr, interface)
+        self.inner().leave_multicast_v6(multiaddr, interface)
     }
 
     /// Reads the linger duration for this socket by getting the SO_LINGER
     /// option
     pub fn linger(&self) -> io::Result<Option<Duration>> {
-        self.inner.linger()
+        self.inner().linger()
     }
 
     /// Sets the linger duration of this socket by setting the SO_LINGER option
     pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
-        self.inner.set_linger(dur)
+        self.inner().set_linger(dur)
     }
 
     /// Check the `SO_REUSEADDR` option on this socket.
     pub fn reuse_address(&self) -> io::Result<bool> {
-        self.inner.reuse_address()
+        self.inner().reuse_address()
     }
 
     /// Set value for the `SO_REUSEADDR` option on this socket.
@@ -673,7 +687,7 @@ impl Socket {
     /// addresses. For IPv4 sockets this means that a socket may bind even when
     /// there's a socket already listening on this port.
     pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
-        self.inner.set_reuse_address(reuse)
+        self.inner().set_reuse_address(reuse)
     }
 
     /// Gets the value of the `SO_RCVBUF` option on this socket.
@@ -683,7 +697,7 @@ impl Socket {
     ///
     /// [link]: #method.set_recv_buffer_size
     pub fn recv_buffer_size(&self) -> io::Result<usize> {
-        self.inner.recv_buffer_size()
+        self.inner().recv_buffer_size()
     }
 
     /// Sets the value of the `SO_RCVBUF` option on this socket.
@@ -691,7 +705,7 @@ impl Socket {
     /// Changes the size of the operating system's receive buffer associated
     /// with the socket.
     pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
-        self.inner.set_recv_buffer_size(size)
+        self.inner().set_recv_buffer_size(size)
     }
 
     /// Gets the value of the `SO_SNDBUF` option on this socket.
@@ -700,7 +714,7 @@ impl Socket {
     ///
     /// [link]: #method.set_send_buffer
     pub fn send_buffer_size(&self) -> io::Result<usize> {
-        self.inner.send_buffer_size()
+        self.inner().send_buffer_size()
     }
 
     /// Sets the value of the `SO_SNDBUF` option on this socket.
@@ -708,7 +722,7 @@ impl Socket {
     /// Changes the size of the operating system's send buffer associated with
     /// the socket.
     pub fn set_send_buffer_size(&self, size: usize) -> io::Result<()> {
-        self.inner.set_send_buffer_size(size)
+        self.inner().set_send_buffer_size(size)
     }
 
     /// Returns whether keepalive messages are enabled on this socket, and if so
@@ -718,7 +732,7 @@ impl Socket {
     ///
     /// [link]: #method.set_keepalive
     pub fn keepalive(&self) -> io::Result<Option<Duration>> {
-        self.inner.keepalive()
+        self.inner().keepalive()
     }
 
     /// Sets whether keepalive messages are enabled to be sent on this socket.
@@ -734,7 +748,7 @@ impl Socket {
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.
     pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
-        self.inner.set_keepalive(keepalive)
+        self.inner().set_keepalive(keepalive)
     }
 
     /// Returns the value of the `SO_OOBINLINE` flag of the underlying socket.
@@ -743,7 +757,7 @@ impl Socket {
     /// [link]: #method.set_out_of_band_inline
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
-        self.inner.out_of_band_inline()
+        self.inner().out_of_band_inline()
     }
 
     /// Sets the `SO_OOBINLINE` flag of the underlying socket.
@@ -754,7 +768,7 @@ impl Socket {
     /// while `recv`ing to aquire the out-of-band data.
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
-        self.inner.set_out_of_band_inline(oob_inline)
+        self.inner().set_out_of_band_inline(oob_inline)
     }
 
     /// Check the value of the `SO_REUSEPORT` option on this socket.
@@ -765,7 +779,7 @@ impl Socket {
         not(any(windows, target_os = "solaris", target_os = "illumos"))
     ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
-        self.inner.reuse_port()
+        self.inner().reuse_port()
     }
 
     /// Set value for the `SO_REUSEPORT` option on this socket.
@@ -780,52 +794,58 @@ impl Socket {
         not(any(windows, target_os = "solaris", target_os = "illumos"))
     ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
-        self.inner.set_reuse_port(reuse)
+        self.inner().set_reuse_port(reuse)
+    }
+
+    fn inner(&self) -> &sys::Socket {
+        // Safety: this is safe because `sys::Socket` has the
+        // `repr(transparent)` attribute.
+        unsafe { &*(&self.inner as *const sys::SysSocket as *const sys::Socket) }
     }
 }
 
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.read(buf)
+        self.inner().read(buf)
     }
 }
 
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        (&self.inner).read(buf)
+        self.inner().read(buf)
     }
 }
 
 impl Write for Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.write(buf)
+        self.inner().write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
+        self.inner().flush()
     }
 }
 
 impl<'a> Write for &'a Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        (&self.inner).write(buf)
+        self.inner().write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        (&self.inner).flush()
+        self.inner().flush()
     }
 }
 
 impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.fmt(f)
+        self.inner().fmt(f)
     }
 }
 
 impl From<net::TcpStream> for Socket {
     fn from(socket: net::TcpStream) -> Socket {
         Socket {
-            inner: socket.into(),
+            inner: sys::Socket::from(socket).inner(),
         }
     }
 }
@@ -833,7 +853,7 @@ impl From<net::TcpStream> for Socket {
 impl From<net::TcpListener> for Socket {
     fn from(socket: net::TcpListener) -> Socket {
         Socket {
-            inner: socket.into(),
+            inner: sys::Socket::from(socket).inner(),
         }
     }
 }
@@ -841,7 +861,7 @@ impl From<net::TcpListener> for Socket {
 impl From<net::UdpSocket> for Socket {
     fn from(socket: net::UdpSocket) -> Socket {
         Socket {
-            inner: socket.into(),
+            inner: sys::Socket::from(socket).inner(),
         }
     }
 }
@@ -850,7 +870,7 @@ impl From<net::UdpSocket> for Socket {
 impl From<UnixStream> for Socket {
     fn from(socket: UnixStream) -> Socket {
         Socket {
-            inner: socket.into(),
+            inner: sys::Socket::from(socket).inner(),
         }
     }
 }
@@ -859,7 +879,7 @@ impl From<UnixStream> for Socket {
 impl From<UnixListener> for Socket {
     fn from(socket: UnixListener) -> Socket {
         Socket {
-            inner: socket.into(),
+            inner: sys::Socket::from(socket).inner(),
         }
     }
 }
@@ -868,47 +888,53 @@ impl From<UnixListener> for Socket {
 impl From<UnixDatagram> for Socket {
     fn from(socket: UnixDatagram) -> Socket {
         Socket {
-            inner: socket.into(),
+            inner: sys::Socket::from(socket).inner(),
         }
     }
 }
 
 impl From<Socket> for net::TcpStream {
     fn from(socket: Socket) -> net::TcpStream {
-        socket.inner.into()
+        sys::Socket::from_inner(socket.inner).into()
     }
 }
 
 impl From<Socket> for net::TcpListener {
     fn from(socket: Socket) -> net::TcpListener {
-        socket.inner.into()
+        sys::Socket::from_inner(socket.inner).into()
     }
 }
 
 impl From<Socket> for net::UdpSocket {
     fn from(socket: Socket) -> net::UdpSocket {
-        socket.inner.into()
+        sys::Socket::from_inner(socket.inner).into()
     }
 }
 
 #[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixStream {
     fn from(socket: Socket) -> UnixStream {
-        socket.inner.into()
+        sys::Socket::from_inner(socket.inner).into()
     }
 }
 
 #[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixListener {
     fn from(socket: Socket) -> UnixListener {
-        socket.inner.into()
+        sys::Socket::from_inner(socket.inner).into()
     }
 }
 
 #[cfg(all(feature = "all", unix))]
 impl From<Socket> for UnixDatagram {
     fn from(socket: Socket) -> UnixDatagram {
-        socket.inner.into()
+        sys::Socket::from_inner(socket.inner).into()
+    }
+}
+
+impl Drop for Socket {
+    fn drop(&mut self) {
+        sys::close(self.inner);
     }
 }
 
