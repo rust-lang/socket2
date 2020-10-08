@@ -129,6 +129,14 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
     }
 }
 
+pub(crate) fn bind(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
+    if unsafe { sock::bind(socket, addr.as_ptr(), addr.len()) == 0 } {
+        Ok(())
+    } else {
+        Err(last_error())
+    }
+}
+
 pub(crate) fn connect(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
     if unsafe { sock::connect(socket, addr.as_ptr(), addr.len()) == 0 } {
         Ok(())
@@ -155,16 +163,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe {
-            if sock::bind(self.socket, addr.as_ptr(), addr.len()) == 0 {
-                Ok(())
-            } else {
-                Err(last_error())
-            }
-        }
-    }
-
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         unsafe {
             if sock::listen(self.socket, backlog) == 0 {

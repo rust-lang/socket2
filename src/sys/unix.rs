@@ -251,6 +251,10 @@ pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Resul
     syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr())).map(|_| fds)
 }
 
+pub(crate) fn bind(fd: SysSocket, addr: &SockAddr) -> io::Result<()> {
+    syscall!(bind(fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
+}
+
 pub(crate) fn connect(fd: SysSocket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
 }
@@ -305,10 +309,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        syscall!(bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
-    }
-
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         syscall!(listen(self.fd, backlog)).map(|_| ())
     }
