@@ -264,6 +264,46 @@ pub(crate) fn listen(fd: SysSocket, backlog: i32) -> io::Result<()> {
 }
 
 impl crate::Socket {
+    /// Accept a new incoming connection from this listener.
+    ///
+    /// This function directly corresponds to the `accept4(2)` function.
+    ///
+    /// This function will block the calling thread until a new connection is
+    /// established. When established, the corresponding `Socket` and the remote
+    /// peer's address will be returned.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
+    ))]
+    pub fn accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
+        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+        let mut len = mem::size_of_val(&storage) as socklen_t;
+
+        let res = syscall!(accept4(
+            self.inner,
+            &mut storage as *mut _ as *mut _,
+            &mut len,
+            flags,
+        ));
+        match res {
+            Ok(inner) => {
+                let socket = crate::Socket { inner };
+                let addr =
+                    unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
+                Ok((socket, addr))
+            }
+            Err(e) => Err(e),
+        }
+    }
+
     /// Sets `CLOEXEC` on the socket.
     ///
     /// # Notes
