@@ -145,6 +145,14 @@ pub(crate) fn connect(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
     }
 }
 
+pub(crate) fn listen(socket: SysSocket, backlog: i32) -> io::Result<()> {
+    if unsafe { sock::listen(socket, backlog) == 0 } {
+        Ok(())
+    } else {
+        Err(last_error())
+    }
+}
+
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
     pub fn set_no_inherit(&self) -> io::Result<()> {
@@ -163,16 +171,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        unsafe {
-            if sock::listen(self.socket, backlog) == 0 {
-                Ok(())
-            } else {
-                Err(last_error())
-            }
-        }
-    }
-
     pub fn local_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
