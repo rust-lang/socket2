@@ -129,6 +129,14 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
     }
 }
 
+pub(crate) fn connect(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
+    if unsafe { sock::connect(socket, addr.as_ptr(), addr.len()) == 0 } {
+        Ok(())
+    } else {
+        Err(last_error())
+    }
+}
+
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
     pub fn set_no_inherit(&self) -> io::Result<()> {
@@ -160,16 +168,6 @@ impl Socket {
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         unsafe {
             if sock::listen(self.socket, backlog) == 0 {
-                Ok(())
-            } else {
-                Err(last_error())
-            }
-        }
-    }
-
-    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        unsafe {
-            if sock::connect(self.socket, addr.as_ptr(), addr.len()) == 0 {
                 Ok(())
             } else {
                 Err(last_error())

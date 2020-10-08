@@ -251,6 +251,10 @@ pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Resul
     syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr())).map(|_| fds)
 }
 
+pub(crate) fn connect(fd: SysSocket, addr: &SockAddr) -> io::Result<()> {
+    syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
+}
+
 impl crate::Socket {
     /// Sets `CLOEXEC` on the socket.
     ///
@@ -307,10 +311,6 @@ impl Socket {
 
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         syscall!(listen(self.fd, backlog)).map(|_| ())
-    }
-
-    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        syscall!(connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ())
     }
 
     pub fn local_addr(&self) -> io::Result<SockAddr> {
