@@ -61,6 +61,18 @@ pub(crate) use winapi::shared::ws2def::{
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 
+/// Helper macro to execute a system call that returns an `io::Result`.
+macro_rules! syscall {
+    ($fn: ident ( $($arg: expr),* $(,)* ), $err_test: path, $err_value: expr) => {{
+        let res = unsafe { sock::$fn($($arg, )*) };
+        if $err_test(&res, &$err_value) {
+            Err(io::Error::from_raw_os_error(unsafe { sock::WSAGetLastError() }))
+        } else {
+            Ok(res)
+        }
+    }};
+}
+
 impl_debug!(
     crate::Domain,
     ws2def::AF_INET,
@@ -114,43 +126,30 @@ pub(crate) type SysSocket = sock::SOCKET;
 pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<SysSocket> {
     init();
 
-    unsafe {
-        match sock::WSASocketW(
+    syscall!(
+        WSASocketW(
             family,
             ty,
             protocol,
             ptr::null_mut(),
             0,
             WSA_FLAG_OVERLAPPED,
-        ) {
-            sock::INVALID_SOCKET => Err(last_error()),
-            socket => Ok(socket),
-        }
-    }
+        ),
+        PartialEq::eq,
+        sock::INVALID_SOCKET
+    )
 }
 
 pub(crate) fn bind(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
-    if unsafe { sock::bind(socket, addr.as_ptr(), addr.len()) == 0 } {
-        Ok(())
-    } else {
-        Err(last_error())
-    }
+    syscall!(bind(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
 pub(crate) fn connect(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
-    if unsafe { sock::connect(socket, addr.as_ptr(), addr.len()) == 0 } {
-        Ok(())
-    } else {
-        Err(last_error())
-    }
+    syscall!(connect(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
 pub(crate) fn listen(socket: SysSocket, backlog: i32) -> io::Result<()> {
-    if unsafe { sock::listen(socket, backlog) == 0 } {
-        Ok(())
-    } else {
-        Err(last_error())
-    }
+    syscall!(listen(socket, backlog), PartialEq::ne, 0).map(|_| ())
 }
 
 impl crate::Socket {
