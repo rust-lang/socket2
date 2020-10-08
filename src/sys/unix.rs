@@ -18,7 +18,7 @@ use std::path::Path;
 #[cfg(feature = "all")]
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::{cmp, fmt, io, mem};
 
 use libc::{self, c_void, ssize_t};
@@ -311,81 +311,6 @@ impl Socket {
 
     pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
         syscall!(connect(self.fd, addr.as_ptr(), addr.len())).map(|_| ())
-    }
-
-    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
-        self.set_nonblocking(true)?;
-        let r = self.connect(addr);
-        self.set_nonblocking(false)?;
-
-        match r {
-            Ok(()) => return Ok(()),
-            // there's no io::ErrorKind conversion registered for EINPROGRESS :(
-            Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
-            Err(e) => return Err(e),
-        }
-
-        let mut pollfd = libc::pollfd {
-            fd: self.fd,
-            events: libc::POLLOUT,
-            revents: 0,
-        };
-
-        if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "cannot set a 0 duration timeout",
-            ));
-        }
-
-        let start = Instant::now();
-
-        loop {
-            let elapsed = start.elapsed();
-            if elapsed >= timeout {
-                return Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "connection timed out",
-                ));
-            }
-
-            let timeout = timeout - elapsed;
-            let mut timeout = timeout
-                .as_secs()
-                .saturating_mul(1_000)
-                .saturating_add(timeout.subsec_nanos() as u64 / 1_000_000);
-            if timeout == 0 {
-                timeout = 1;
-            }
-
-            let timeout = cmp::min(timeout, c_int::max_value() as u64) as c_int;
-
-            match unsafe { libc::poll(&mut pollfd, 1, timeout) } {
-                -1 => {
-                    let err = io::Error::last_os_error();
-                    if err.kind() != io::ErrorKind::Interrupted {
-                        return Err(err);
-                    }
-                }
-                0 => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::TimedOut,
-                        "connection timed out",
-                    ))
-                }
-                _ => {
-                    // linux returns POLLOUT|POLLERR|POLLHUP for refused connections (!), so look
-                    // for POLLHUP rather than read readiness
-                    if pollfd.revents & libc::POLLHUP != 0 {
-                        let e = self.take_error()?.unwrap_or_else(|| {
-                            io::Error::new(io::ErrorKind::Other, "no error set after POLLHUP")
-                        });
-                        return Err(e);
-                    }
-                    return Ok(());
-                }
-            }
-        }
     }
 
     pub fn local_addr(&self) -> io::Result<SockAddr> {
