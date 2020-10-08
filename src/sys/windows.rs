@@ -66,7 +66,7 @@ macro_rules! syscall {
     ($fn: ident ( $($arg: expr),* $(,)* ), $err_test: path, $err_value: expr) => {{
         let res = unsafe { sock::$fn($($arg, )*) };
         if $err_test(&res, &$err_value) {
-            Err(io::Error::from_raw_os_error(unsafe { sock::WSAGetLastError() }))
+            Err(io::Error::last_os_error())
         } else {
             Ok(res)
         }
