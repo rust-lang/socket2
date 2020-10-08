@@ -147,13 +147,13 @@ impl Socket {
 
     /// Initiate a connection on this socket to the specified address.
     ///
-    /// This function directly corresponds to the connect(2) function on Windows
-    /// and Unix.
+    /// This function directly corresponds to the `connect(2)` function on
+    /// Windows and Unix.
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
-    pub fn connect(&self, addr: &SockAddr) -> io::Result<()> {
-        self.inner().connect(addr)
+    pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
+        sys::connect(self.inner, address)
     }
 
     /// Binds this socket to the specified address.
