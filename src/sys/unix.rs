@@ -263,6 +263,16 @@ pub(crate) fn listen(fd: SysSocket, backlog: i32) -> io::Result<()> {
     syscall!(listen(fd, backlog)).map(|_| ())
 }
 
+pub(crate) fn accept(fd: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
+    // Safety: zeroed `sockaddr_storage` is valid.
+    let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    let mut len = mem::size_of_val(&storage) as socklen_t;
+    syscall!(accept(fd, &mut storage as *mut _ as *mut _, &mut len)).map(|fd| {
+        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
+        (fd, addr)
+    })
+}
+
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
     ///
@@ -402,48 +412,6 @@ impl Socket {
         let fd = unsafe { Socket::from_raw_fd(fd) };
         set_cloexec(fd.as_raw_fd())?;
         Ok(fd)
-    }
-
-    #[allow(unused_mut)]
-    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut len = mem::size_of_val(&storage) as socklen_t;
-
-        let mut socket = None;
-        #[cfg(any(
-            target_os = "android",
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "illumos",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_os = "openbsd"
-        ))]
-        {
-            let res = syscall!(accept4(
-                self.fd,
-                &mut storage as *mut _ as *mut _,
-                &mut len,
-                libc::SOCK_CLOEXEC,
-            ));
-            match res {
-                Ok(fd) => socket = Some(Socket { fd }),
-                Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {}
-                Err(e) => return Err(e),
-            }
-        }
-
-        let socket = match socket {
-            Some(socket) => socket,
-            None => {
-                let fd = syscall!(accept(self.fd, &mut storage as *mut _ as *mut _, &mut len))?;
-                let fd = unsafe { Socket::from_raw_fd(fd) };
-                set_cloexec(fd.as_raw_fd())?;
-                fd
-            }
-        };
-        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
-        Ok((socket, addr))
     }
 
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
