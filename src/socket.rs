@@ -145,6 +145,14 @@ impl Socket {
             .map(|fds| (Socket { inner: fds[0] }, Socket { inner: fds[1] }))
     }
 
+    /// Binds this socket to the specified address.
+    ///
+    /// This function directly corresponds to the `bind(2)` function on Windows
+    /// and Unix.
+    pub fn bind(&self, address: &SockAddr) -> io::Result<()> {
+        sys::bind(self.inner, address)
+    }
+
     /// Initiate a connection on this socket to the specified address.
     ///
     /// This function directly corresponds to the `connect(2)` function on
@@ -154,14 +162,6 @@ impl Socket {
     /// called on this builder.
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
         sys::connect(self.inner, address)
-    }
-
-    /// Binds this socket to the specified address.
-    ///
-    /// This function directly corresponds to the bind(2) function on Windows
-    /// and Unix.
-    pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
-        self.inner().bind(addr)
     }
 
     /// Mark a socket as ready to accept incoming connection requests using
