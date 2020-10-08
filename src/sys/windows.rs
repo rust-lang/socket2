@@ -152,6 +152,21 @@ pub(crate) fn listen(socket: SysSocket, backlog: i32) -> io::Result<()> {
     syscall!(listen(socket, backlog), PartialEq::ne, 0).map(|_| ())
 }
 
+pub(crate) fn accept(socket: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
+    // Safety: zeroed `SOCKADDR_STORAGE` is valid.
+    let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
+    let mut len = mem::size_of_val(&storage) as c_int;
+    syscall!(
+        accept(socket, &mut storage as *mut _ as *mut _, &mut len),
+        PartialEq::eq,
+        sock::INVALID_SOCKET
+    )
+    .map(|socket| {
+        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
+        (socket, addr)
+    })
+}
+
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
     pub fn set_no_inherit(&self) -> io::Result<()> {
@@ -219,21 +234,6 @@ impl Socket {
             };
             socket.set_no_inherit()?;
             Ok(socket)
-        }
-    }
-
-    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        unsafe {
-            let mut storage: SOCKADDR_STORAGE = mem::zeroed();
-            let mut len = mem::size_of_val(&storage) as c_int;
-            let socket = sock::accept(self.socket, &mut storage as *mut _ as *mut _, &mut len);
-            let socket = match socket {
-                sock::INVALID_SOCKET => return Err(last_error()),
-                socket => Socket::from_raw_socket(socket as RawSocket),
-            };
-            socket.set_no_inherit()?;
-            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, len);
-            Ok((socket, addr))
         }
     }
 

@@ -178,18 +178,20 @@ impl Socket {
 
     /// Accept a new incoming connection from this listener.
     ///
+    /// This function directly corresponds to the `accept(2)` function on
+    /// Windows and Unix.
+    ///
     /// This function will block the calling thread until a new connection is
     /// established. When established, the corresponding `Socket` and the
     /// remote peer's address will be returned.
+    ///
+    /// # Notes
+    ///
+    /// Like [`Socket::new`] this will not set any flags. If that is desirable,
+    /// e.g. setting `CLOEXEC`, [`Socket::accept4`] can be used on supported
+    /// OSes or [`Socket::set_cloexec`] can be called.
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
-        self.inner().accept().map(|(socket, addr)| {
-            (
-                Socket {
-                    inner: socket.inner(),
-                },
-                addr,
-            )
-        })
+        sys::accept(self.inner).map(|(inner, addr)| (Socket { inner }, addr))
     }
 
     /// Returns the socket address of the local half of this TCP connection.
