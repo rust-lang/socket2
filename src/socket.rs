@@ -165,15 +165,15 @@ impl Socket {
     }
 
     /// Mark a socket as ready to accept incoming connection requests using
-    /// accept()
+    /// [`Socket::accept()`].
     ///
-    /// This function directly corresponds to the listen(2) function on Windows
-    /// and Unix.
+    /// This function directly corresponds to the `listen(2)` function on
+    /// Windows and Unix.
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
-        self.inner().listen(backlog)
+        sys::listen(self.inner, backlog)
     }
 
     /// Accept a new incoming connection from this listener.
