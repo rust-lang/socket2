@@ -245,6 +245,12 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
     syscall!(socket(family, ty, protocol))
 }
 
+#[cfg(feature = "all")]
+pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<[SysSocket; 2]> {
+    let mut fds = [0, 0];
+    syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr())).map(|_| fds)
+}
+
 impl crate::Socket {
     /// Sets `CLOEXEC` on the socket.
     ///
@@ -295,22 +301,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn pair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<(Socket, Socket)> {
-        let mut fds = [0, 0];
-        syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr()))?;
-        let fds = unsafe { (Socket::from_raw_fd(fds[0]), Socket::from_raw_fd(fds[1])) };
-        set_cloexec(fds.0.as_raw_fd())?;
-        set_cloexec(fds.1.as_raw_fd())?;
-        #[cfg(any(target_os = "macos", target_os = "ios"))]
-        unsafe {
-            fds.0
-                .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-            fds.1
-                .setsockopt(libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32)?;
-        }
-        Ok(fds)
-    }
-
     pub fn bind(&self, addr: &SockAddr) -> io::Result<()> {
         syscall!(bind(self.fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
     }

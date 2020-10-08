@@ -128,23 +128,21 @@ impl Socket {
     ///
     /// This function corresponds to `socketpair(2)`.
     ///
+    /// # Notes
+    ///
+    /// Much like [`Socket::new`] this doesn't set any flags, which might be
+    /// advisable.
+    ///
     /// This function is only available on Unix.
     #[cfg(all(feature = "all", unix))]
     pub fn pair(
         domain: Domain,
-        type_: Type,
+        ty: Type,
         protocol: Option<Protocol>,
     ) -> io::Result<(Socket, Socket)> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
-        let sockets = sys::Socket::pair(domain.0, type_.0, protocol)?;
-        Ok((
-            Socket {
-                inner: sockets.0.inner(),
-            },
-            Socket {
-                inner: sockets.1.inner(),
-            },
-        ))
+        sys::socketpair(domain.0, ty.0, protocol)
+            .map(|fds| (Socket { inner: fds[0] }, Socket { inner: fds[1] }))
     }
 
     /// Initiate a connection on this socket to the specified address.
