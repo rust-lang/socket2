@@ -25,6 +25,8 @@ use std::{cmp, fmt, io, mem};
 
 use libc::{self, c_void, ssize_t};
 
+#[cfg(not(target_os = "redox"))]
+use crate::RecvFlags;
 use crate::{Domain, Type};
 
 pub use libc::c_int;
@@ -80,6 +82,10 @@ macro_rules! syscall {
         }
     }};
 }
+
+// Re-export message flags for the RecvFlags struct.
+#[cfg(not(target_os = "redox"))]
+pub(crate) use libc::{MSG_EOR, MSG_OOB, MSG_TRUNC};
 
 #[cfg(any(target_os = "android", all(target_os = "linux", target_env = "gnu")))]
 type IovLen = usize;
@@ -509,7 +515,7 @@ impl Socket {
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: c_int,
-    ) -> io::Result<(usize, bool)> {
+    ) -> io::Result<(usize, RecvFlags)> {
         let mut msg = libc::msghdr {
             msg_name: std::ptr::null_mut(),
             msg_namelen: 0,
@@ -521,8 +527,7 @@ impl Socket {
         };
 
         let n = syscall!(recvmsg(self.fd, &mut msg as *mut _, flags))?;
-        let truncated = msg.msg_flags & libc::MSG_TRUNC != 0;
-        Ok((n as usize, truncated))
+        Ok((n as usize, RecvFlags(msg.msg_flags)))
     }
 
     #[cfg(not(target_os = "redox"))]
@@ -530,7 +535,7 @@ impl Socket {
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: c_int,
-    ) -> io::Result<(usize, bool, SockAddr)> {
+    ) -> io::Result<(usize, RecvFlags, SockAddr)> {
         let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
         let mut msg = libc::msghdr {
             msg_name: &mut storage as *mut libc::sockaddr_storage as *mut c_void,
@@ -543,10 +548,9 @@ impl Socket {
         };
 
         let n = syscall!(recvmsg(self.fd, &mut msg as *mut _, flags))?;
-        let truncated = msg.msg_flags & libc::MSG_TRUNC != 0;
         let addr =
             unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, msg.msg_namelen) };
-        Ok((n as usize, truncated, addr))
+        Ok((n as usize, RecvFlags(msg.msg_flags), addr))
     }
 
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {

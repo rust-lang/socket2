@@ -30,7 +30,7 @@ use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::INFINITE;
 use winapi::um::winsock2 as sock;
 
-use crate::SockAddr;
+use crate::{RecvFlags, SockAddr};
 
 const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
 const MSG_PEEK: c_int = 0x2;
@@ -41,6 +41,9 @@ const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
 const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 
 pub use winapi::ctypes::c_int;
+
+/// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
+pub(crate) const MSG_TRUNC: c_int = sock::WSAEMSGSIZE;
 
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
@@ -342,7 +345,7 @@ impl Socket {
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: c_int,
-    ) -> io::Result<(usize, bool)> {
+    ) -> io::Result<(usize, RecvFlags)> {
         let mut nread = 0;
         let mut flags = flags as DWORD;
         let ret = unsafe {
@@ -359,12 +362,12 @@ impl Socket {
 
         let nread = nread as usize;
         if ret == 0 {
-            Ok((nread, false))
+            Ok((nread, RecvFlags(0)))
         } else {
             let error = last_error();
             match error.raw_os_error() {
-                Some(sock::WSAESHUTDOWN) => Ok((0, false)),
-                Some(sock::WSAEMSGSIZE) => Ok((nread, true)),
+                Some(sock::WSAESHUTDOWN) => Ok((0, RecvFlags(0))),
+                Some(sock::WSAEMSGSIZE) => Ok((nread, RecvFlags(MSG_TRUNC))),
                 _ => Err(error),
             }
         }
@@ -374,7 +377,7 @@ impl Socket {
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: c_int,
-    ) -> io::Result<(usize, bool, SockAddr)> {
+    ) -> io::Result<(usize, RecvFlags, SockAddr)> {
         let mut nread = 0;
         let mut flags = flags as DWORD;
         let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
@@ -393,20 +396,20 @@ impl Socket {
             )
         };
 
-        let truncated;
+        let flags;
         if ret == 0 {
-            truncated = false;
+            flags = RecvFlags(0);
         } else {
             let error = last_error();
             if error.raw_os_error() == Some(sock::WSAEMSGSIZE) {
-                truncated = true;
+                flags = RecvFlags(MSG_TRUNC)
             } else {
                 return Err(error);
             }
         }
 
         let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen) };
-        Ok((nread as usize, truncated, addr))
+        Ok((nread as usize, flags, addr))
     }
 
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
