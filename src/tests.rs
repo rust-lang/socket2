@@ -194,7 +194,7 @@ fn send_recv_vectored() {
     assert_eq!(flags.is_end_of_record(), false);
     #[cfg(all(unix, not(target_os = "redox")))]
     assert_eq!(flags.is_out_of_band(), false);
-    assert_eq!(flags.is_trunctated(), false);
+    assert_eq!(flags.is_truncated(), false);
 
     assert_eq!(&the, b"the");
     assert_eq!(&wee, b"wee");
@@ -247,7 +247,7 @@ fn send_from_recv_to_vectored() {
     assert_eq!(flags.is_end_of_record(), false);
     #[cfg(all(unix, not(target_os = "redox")))]
     assert_eq!(flags.is_out_of_band(), false);
-    assert_eq!(flags.is_trunctated(), false);
+    assert_eq!(flags.is_truncated(), false);
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
     assert_eq!(&surgeon, b"surgeon");
     assert_eq!(&has, b"has");
@@ -273,7 +273,7 @@ fn recv_vectored_truncated() {
         .recv_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
         .unwrap();
     assert_eq!(received, 24);
-    assert_eq!(flags.is_trunctated(), true);
+    assert_eq!(flags.is_truncated(), true);
     assert_eq!(&buffer, b"do not feed the gremlins");
 }
 
@@ -297,7 +297,7 @@ fn recv_from_vectored_truncated() {
         .recv_from_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
         .unwrap();
     assert_eq!(received, 24);
-    assert_eq!(flags.is_trunctated(), true);
+    assert_eq!(flags.is_truncated(), true);
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
     assert_eq!(&buffer, b"do not feed the gremlins");
 }
