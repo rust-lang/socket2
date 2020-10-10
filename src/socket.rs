@@ -266,7 +266,7 @@ impl Socket {
 
     /// Identical to [`recv_with_flags`] but reads into a slice of buffers.
     ///
-    /// In addition to the number of bytes read, this function return the flags for the received message.
+    /// In addition to the number of bytes read, this function returns the flags for the received message.
     /// See [`RecvFlags`] for more information about the flags.
     ///
     /// [`recv_with_flags`]: #method.recv_with_flags
@@ -321,7 +321,7 @@ impl Socket {
 
     /// Identical to [`recv_from_with_flags`] but reads into a slice of buffers.
     ///
-    /// In addition to the number of bytes read, this function return the flags for the received message.
+    /// In addition to the number of bytes read, this function returns the flags for the received message.
     /// See [`RecvFlags`] for more information about the flags.
     ///
     /// [`recv_from_with_flags`]: #method.recv_from_with_flags

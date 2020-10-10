@@ -290,7 +290,7 @@ impl std::fmt::Debug for RecvFlags {
         dbg.field("is_end_of_record", &self.is_end_of_record());
         #[cfg(unix)]
         dbg.field("is_out_of_band", &self.is_out_of_band());
-        dbg.field("is_trunctated", &self.is_trunctated());
+        dbg.field("is_truncated", &self.is_trunctated());
         dbg.finish()
     }
 }
