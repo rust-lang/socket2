@@ -277,7 +277,7 @@ impl RecvFlags {
     ///
     /// On Unix this corresponds to the MSG_TRUNC flag.
     /// On Windows this corresponds to the WSAEMSGSIZE error code.
-    pub fn is_trunctated(self) -> bool {
+    pub fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
     }
 }
@@ -290,7 +290,7 @@ impl std::fmt::Debug for RecvFlags {
         dbg.field("is_end_of_record", &self.is_end_of_record());
         #[cfg(unix)]
         dbg.field("is_out_of_band", &self.is_out_of_band());
-        dbg.field("is_truncated", &self.is_trunctated());
+        dbg.field("is_truncated", &self.is_truncated());
         dbg.finish()
     }
 }
