@@ -176,7 +176,7 @@ fn send_recv_vectored() {
     let mut yell = [0u8; 4];
     let mut ow = [0u8; 2];
 
-    let (received, truncated) = socket_b
+    let (received, flags) = socket_b
         .recv_vectored(
             &mut [
                 IoSliceMut::new(&mut the),
@@ -190,7 +190,11 @@ fn send_recv_vectored() {
         )
         .unwrap();
     assert_eq!(received, 23);
-    assert_eq!(truncated, false);
+    #[cfg(all(unix, not(target_os = "redox")))]
+    assert_eq!(flags.is_end_of_record(), false);
+    #[cfg(all(unix, not(target_os = "redox")))]
+    assert_eq!(flags.is_out_of_band(), false);
+    assert_eq!(flags.is_trunctated(), false);
 
     assert_eq!(&the, b"the");
     assert_eq!(&wee, b"wee");
@@ -226,7 +230,7 @@ fn send_from_recv_to_vectored() {
     let mut has = [0u8; 3];
     let mut men = [0u8; 3];
     let mut swear = [0u8; 5];
-    let (received, truncated, addr) = socket_b
+    let (received, flags, addr) = socket_b
         .recv_from_vectored(
             &mut [
                 IoSliceMut::new(&mut surgeon),
@@ -239,7 +243,11 @@ fn send_from_recv_to_vectored() {
         .unwrap();
 
     assert_eq!(received, 18);
-    assert_eq!(truncated, false);
+    #[cfg(all(unix, not(target_os = "redox")))]
+    assert_eq!(flags.is_end_of_record(), false);
+    #[cfg(all(unix, not(target_os = "redox")))]
+    assert_eq!(flags.is_out_of_band(), false);
+    assert_eq!(flags.is_trunctated(), false);
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
     assert_eq!(&surgeon, b"surgeon");
     assert_eq!(&has, b"has");
@@ -261,11 +269,11 @@ fn recv_vectored_truncated() {
 
     let mut buffer = [0u8; 24];
 
-    let (received, truncated) = socket_b
+    let (received, flags) = socket_b
         .recv_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
         .unwrap();
     assert_eq!(received, 24);
-    assert_eq!(truncated, true);
+    assert_eq!(flags.is_trunctated(), true);
     assert_eq!(&buffer, b"do not feed the gremlins");
 }
 
@@ -285,11 +293,11 @@ fn recv_from_vectored_truncated() {
 
     let mut buffer = [0u8; 24];
 
-    let (received, truncated, addr) = socket_b
+    let (received, flags, addr) = socket_b
         .recv_from_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
         .unwrap();
     assert_eq!(received, 24);
-    assert_eq!(truncated, true);
+    assert_eq!(flags.is_trunctated(), true);
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
     assert_eq!(&buffer, b"do not feed the gremlins");
 }

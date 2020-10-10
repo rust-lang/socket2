@@ -21,6 +21,8 @@ use libc::MSG_OOB;
 use winapi::um::winsock2::MSG_OOB;
 
 use crate::sys;
+#[cfg(not(target_os = "redox"))]
+use crate::RecvFlags;
 use crate::{Domain, Protocol, SockAddr, Type};
 
 /// Owned wrapper around a system socket.
@@ -264,8 +266,8 @@ impl Socket {
 
     /// Identical to [`recv_with_flags`] but reads into a slice of buffers.
     ///
-    /// In addition to the number of bytes read, this function a flag to indicate if a received datagram was truncated.
-    /// For stream sockets, the flag has no meaning.
+    /// In addition to the number of bytes read, this function return the flags for the received message.
+    /// See [`RecvFlags`] for more information about the flags.
     ///
     /// [`recv_with_flags`]: #method.recv_with_flags
     #[cfg(not(target_os = "redox"))]
@@ -273,7 +275,7 @@ impl Socket {
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: i32,
-    ) -> io::Result<(usize, bool)> {
+    ) -> io::Result<(usize, RecvFlags)> {
         self.inner().recv_vectored(bufs, flags)
     }
 
@@ -319,8 +321,8 @@ impl Socket {
 
     /// Identical to [`recv_from_with_flags`] but reads into a slice of buffers.
     ///
-    /// In addition to the number of bytes read, this function a flag to indicate if a received datagram was truncated.
-    /// For stream sockets, the flag has no meaning.
+    /// In addition to the number of bytes read, this function return the flags for the received message.
+    /// See [`RecvFlags`] for more information about the flags.
     ///
     /// [`recv_from_with_flags`]: #method.recv_from_with_flags
     #[cfg(not(target_os = "redox"))]
@@ -328,7 +330,7 @@ impl Socket {
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: i32,
-    ) -> io::Result<(usize, bool, SockAddr)> {
+    ) -> io::Result<(usize, RecvFlags, SockAddr)> {
         self.inner().recv_from_vectored(bufs, flags)
     }
 
