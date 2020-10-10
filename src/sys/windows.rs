@@ -43,7 +43,9 @@ const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 pub use winapi::ctypes::c_int;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
-pub(crate) const MSG_TRUNC: c_int = sock::WSAEMSGSIZE;
+///
+/// Value copied from Linux.
+pub(crate) const MSG_TRUNC: c_int = 0x20;
 
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
