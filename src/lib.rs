@@ -247,29 +247,6 @@ pub struct RecvFlags(c_int);
 
 #[cfg(not(target_os = "redox"))]
 impl RecvFlags {
-    /// Check if the message terminates a record.
-    ///
-    /// Not all socket types support the notion of records.
-    /// For socket types that do support it (such as [`SEQPACKET`][Type::SEQPACKET]),
-    /// a record is terminated by sending a message with the end-of-record flag set.
-    ///
-    /// On Unix this corresponds to the MSG_EOR flag.
-    #[cfg(unix)]
-    pub fn is_end_of_record(self) -> bool {
-        self.0 & sys::MSG_EOR != 0
-    }
-
-    /// Check if the message contains out-of-band data.
-    ///
-    /// This is useful for protocols where you receive out-of-band data
-    /// mixed in with the normal data stream.
-    ///
-    /// On Unix this corresponds to the MSG_OOB flag.
-    #[cfg(unix)]
-    pub fn is_out_of_band(self) -> bool {
-        self.0 & sys::MSG_OOB != 0
-    }
-
     /// Check if the message contains a truncated datagram.
     ///
     /// This flag is only used for datagram-based sockets,
@@ -279,18 +256,5 @@ impl RecvFlags {
     /// On Windows this corresponds to the WSAEMSGSIZE error code.
     pub fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
-    }
-}
-
-#[cfg(not(target_os = "redox"))]
-impl std::fmt::Debug for RecvFlags {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut dbg = f.debug_struct("RecvFlags");
-        #[cfg(unix)]
-        dbg.field("is_end_of_record", &self.is_end_of_record());
-        #[cfg(unix)]
-        dbg.field("is_out_of_band", &self.is_out_of_band());
-        dbg.field("is_truncated", &self.is_truncated());
-        dbg.finish()
     }
 }

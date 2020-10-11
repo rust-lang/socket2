@@ -85,7 +85,7 @@ macro_rules! syscall {
 
 // Re-export message flags for the RecvFlags struct.
 #[cfg(not(target_os = "redox"))]
-pub(crate) use libc::{MSG_EOR, MSG_OOB, MSG_TRUNC};
+pub(crate) use libc::MSG_TRUNC;
 
 #[cfg(any(target_os = "android", all(target_os = "linux", target_env = "gnu")))]
 type IovLen = usize;
@@ -210,6 +210,41 @@ impl_debug!(
     libc::IPPROTO_TCP,
     libc::IPPROTO_UDP,
 );
+
+/// Unix-only API.
+impl RecvFlags {
+    /// Check if the message terminates a record.
+    ///
+    /// Not all socket types support the notion of records.
+    /// For socket types that do support it (such as [`SEQPACKET`][Type::SEQPACKET]),
+    /// a record is terminated by sending a message with the end-of-record flag set.
+    ///
+    /// On Unix this corresponds to the MSG_EOR flag.
+    pub fn is_end_of_record(self) -> bool {
+        self.0 & libc::MSG_EOR != 0
+    }
+
+    /// Check if the message contains out-of-band data.
+    ///
+    /// This is useful for protocols where you receive out-of-band data
+    /// mixed in with the normal data stream.
+    ///
+    /// On Unix this corresponds to the MSG_OOB flag.
+    pub fn is_out_of_band(self) -> bool {
+        self.0 & libc::MSG_OOB != 0
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl std::fmt::Debug for RecvFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RecvFlags")
+            .field("is_end_of_record", &self.is_end_of_record())
+            .field("is_out_of_band", &self.is_out_of_band())
+            .field("is_truncated", &self.is_truncated())
+            .finish()
+    }
+}
 
 /// Unix only API.
 impl SockAddr {

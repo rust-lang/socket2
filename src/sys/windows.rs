@@ -44,8 +44,9 @@ pub use winapi::ctypes::c_int;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
 ///
-/// Value copied from Linux.
-pub(crate) const MSG_TRUNC: c_int = 0x20;
+/// The flag is enabled when a `WSARecv[From]` call returns `WSAEMSGSIZE`.
+/// The value of the flag is defined by us.
+pub(crate) const MSG_TRUNC: c_int = 0x01;
 
 // Used in `Domain`.
 pub(crate) use winapi::shared::ws2def::{AF_INET, AF_INET6};
@@ -102,6 +103,14 @@ impl_debug!(
     self::IPPROTO_TCP,
     self::IPPROTO_UDP,
 );
+
+impl std::fmt::Debug for RecvFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RecvFlags")
+            .field("is_truncated", &self.is_truncated())
+            .finish()
+    }
+}
 
 #[repr(C)]
 struct tcp_keepalive {
