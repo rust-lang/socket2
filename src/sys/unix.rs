@@ -212,6 +212,7 @@ impl_debug!(
 );
 
 /// Unix-only API.
+#[cfg(not(target_os = "redox"))]
 impl RecvFlags {
     /// Check if the message terminates a record.
     ///
