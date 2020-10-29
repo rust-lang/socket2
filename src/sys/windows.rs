@@ -882,6 +882,12 @@ impl Socket {
     }
 }
 
+impl Drop for Socket {
+    fn drop(&mut self) {
+        close(self.socket);
+    }
+}
+
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         <&Socket>::read(&mut &*self, buf)
@@ -966,9 +972,7 @@ impl IntoRawSocket for crate::Socket {
 
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
-        crate::Socket {
-            inner: Socket::from_raw_socket(socket).inner(),
-        }
+        crate::Socket { inner: socket }
     }
 }
 

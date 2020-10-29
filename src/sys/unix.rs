@@ -1018,6 +1018,12 @@ impl Socket {
     }
 }
 
+impl Drop for Socket {
+    fn drop(&mut self) {
+        close(self.fd);
+    }
+}
+
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         <&Socket>::read(&mut &*self, buf)
@@ -1085,7 +1091,7 @@ impl IntoRawFd for Socket {
 
 impl FromRawFd for Socket {
     unsafe fn from_raw_fd(fd: c_int) -> Socket {
-        Socket { fd: fd }
+        Socket { fd }
     }
 }
 
@@ -1105,9 +1111,7 @@ impl IntoRawFd for crate::Socket {
 
 impl FromRawFd for crate::Socket {
     unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
-        crate::Socket {
-            inner: Socket::from_raw_fd(fd).inner(),
-        }
+        crate::Socket { inner: fd }
     }
 }
 
