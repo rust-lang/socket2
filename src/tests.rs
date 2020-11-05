@@ -301,3 +301,13 @@ fn recv_from_vectored_truncated() {
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
     assert_eq!(&buffer, b"do not feed the gremlins");
 }
+
+#[test]
+fn keepalive_roundtrips() {
+    use std::time::Duration;
+
+    let keepalive = Some(Duration::from_secs(4));
+    let sock = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
+    sock.set_keepalive(keepalive).expect("set keepalive");
+    assert_eq!(sock.keepalive().expect("get keepalive"), keepalive);
+}
