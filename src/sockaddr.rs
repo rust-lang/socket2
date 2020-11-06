@@ -5,9 +5,13 @@ use std::ptr;
 
 #[cfg(any(unix, target_os = "redox"))]
 use libc::{
-    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
-    AF_INET6,
+    in6_addr, in_addr, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage,
+    socklen_t, AF_INET, AF_INET6,
 };
+#[cfg(windows)]
+use winapi::shared::in6addr::IN6_ADDR as in6_addr;
+#[cfg(windows)]
+use winapi::shared::inaddr::IN_ADDR as in_addr;
 #[cfg(windows)]
 use winapi::shared::ws2def::{
     ADDRESS_FAMILY as sa_family_t, AF_INET, AF_INET6, SOCKADDR as sockaddr,
@@ -168,22 +172,23 @@ impl SockAddr {
     }
 }
 
-// SocketAddrV4 and SocketAddrV6 are just wrappers around sockaddr_in and sockaddr_in6
-
-// check to make sure that the sizes at least match up
-fn _size_checks(v4: SocketAddrV4, v6: SocketAddrV6) {
-    unsafe {
-        mem::transmute::<SocketAddrV4, sockaddr_in>(v4);
-        mem::transmute::<SocketAddrV6, sockaddr_in6>(v6);
-    }
-}
-
 impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
+        let sin_addr = in_addr {
+            s_addr: u32::from_ne_bytes(addr.ip().octets()),
+        };
+
+        let sockaddr_in = sockaddr_in {
+            sin_family: AF_INET as sa_family_t,
+            sin_port: addr.port().to_be(),
+            sin_addr,
+            ..unsafe { mem::zeroed() }
+        };
+
         unsafe {
             SockAddr::from_raw_parts(
-                &addr as *const _ as *const _,
-                mem::size_of::<SocketAddrV4>() as socklen_t,
+                &sockaddr_in as *const _ as *const _,
+                mem::size_of::<sockaddr_in>() as socklen_t,
             )
         }
     }
@@ -191,10 +196,20 @@ impl From<SocketAddrV4> for SockAddr {
 
 impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
+        let sockaddr_in6 = sockaddr_in6 {
+            sin6_family: AF_INET6 as sa_family_t,
+            sin6_port: addr.port().to_be(),
+            sin6_addr: in6_addr {
+                s6_addr: addr.ip().octets(),
+            },
+            sin6_flowinfo: addr.flowinfo(),
+            sin6_scope_id: addr.scope_id(),
+            ..unsafe { mem::zeroed() }
+        };
         unsafe {
             SockAddr::from_raw_parts(
-                &addr as *const _ as *const _,
-                mem::size_of::<SocketAddrV6>() as socklen_t,
+                &sockaddr_in6 as *const _ as *const _,
+                mem::size_of::<sockaddr_in6>() as socklen_t,
             )
         }
     }
