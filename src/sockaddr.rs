@@ -183,14 +183,12 @@ impl SockAddr {
 
 impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
-        let sin_addr = in_addr {
-            s_addr: u32::from_ne_bytes(addr.ip().octets()),
-        };
-
         let sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
-            sin_addr,
+            sin_addr: in_addr {
+                s_addr: u32::from_ne_bytes(addr.ip().octets()),
+            },
             ..unsafe { mem::zeroed() }
         };
 
