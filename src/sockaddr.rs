@@ -147,18 +147,35 @@ impl SockAddr {
     pub fn as_std(&self) -> Option<SocketAddr> {
         if self.storage.ss_family == AF_INET as sa_family_t {
             let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in) };
+
+            #[cfg(unix)]
             let ip = Ipv4Addr::from(addr.sin_addr.s_addr.to_ne_bytes());
+            #[cfg(windows)]
+            let ip_bytes = unsafe { addr.sin_addr.S_un.S_un_b() };
+            #[cfg(windows)]
+            let ip = Ipv4Addr::from([ip_bytes.s_b1, ip_bytes.s_b2, ip_bytes.s_b3, ip_bytes.s_b4]);
+
             let port = u16::from_be(addr.sin_port);
             Some(SocketAddr::V4(SocketAddrV4::new(ip, port)))
         } else if self.storage.ss_family == AF_INET6 as sa_family_t {
             let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in6) };
+
+            #[cfg(unix)]
             let ip = Ipv6Addr::from(addr.sin6_addr.s6_addr);
+            #[cfg(windows)]
+            let ip = Ipv6Addr::from(*unsafe { addr.sin6_addr.u.Byte() });
+
             let port = u16::from_be(addr.sin6_port);
             Some(SocketAddr::V6(SocketAddrV6::new(
                 ip,
                 port,
                 addr.sin6_flowinfo,
+                #[cfg(unix)]
                 addr.sin6_scope_id,
+                #[cfg(windows)]
+                unsafe {
+                    *addr.u.sin6_scope_id()
+                },
             )))
         } else {
             None
@@ -185,12 +202,19 @@ impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
         let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
         let sockaddr_in = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in) };
+
+        #[cfg(unix)]
+        let sin_addr = in_addr {
+            s_addr: u32::from_ne_bytes(addr.ip().octets()),
+        };
+        #[cfg(windows)]
+        let sin_addr = in_addr {
+            S_un: unsafe { mem::transmute(u32::from_ne_bytes(addr.ip().octets())) },
+        };
         *sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
-            sin_addr: in_addr {
-                s_addr: u32::from_ne_bytes(addr.ip().octets()),
-            },
+            sin_addr,
             ..unsafe { mem::zeroed() }
         };
         SockAddr {
@@ -204,14 +228,24 @@ impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
         let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
         let sockaddr_in6 = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in6) };
+
+        #[cfg(windows)]
+        let sin6_addr = in6_addr {
+            u: unsafe { mem::transmute(addr.ip().octets()) },
+        };
+        #[cfg(unix)]
+        let sin6_addr = in6_addr {
+            s6_addr: addr.ip().octets(),
+        };
         *sockaddr_in6 = sockaddr_in6 {
             sin6_family: AF_INET6 as sa_family_t,
             sin6_port: addr.port().to_be(),
-            sin6_addr: in6_addr {
-                s6_addr: addr.ip().octets(),
-            },
+            sin6_addr,
             sin6_flowinfo: addr.flowinfo(),
+            #[cfg(unix)]
             sin6_scope_id: addr.scope_id(),
+            #[cfg(windows)]
+            u: unsafe { mem::transmute(addr.scope_id()) },
             ..unsafe { mem::zeroed() }
         };
         SockAddr {
