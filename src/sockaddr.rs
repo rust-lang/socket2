@@ -183,7 +183,9 @@ impl SockAddr {
 
 impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
-        let sockaddr_in = sockaddr_in {
+        let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
+        let sockaddr_in = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in) };
+        *sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
             sin_addr: in_addr {
@@ -191,19 +193,18 @@ impl From<SocketAddrV4> for SockAddr {
             },
             ..unsafe { mem::zeroed() }
         };
-
-        unsafe {
-            SockAddr::from_raw_parts(
-                &sockaddr_in as *const _ as *const _,
-                mem::size_of::<sockaddr_in>() as socklen_t,
-            )
+        SockAddr {
+            storage: unsafe { storage.assume_init() },
+            len: mem::size_of::<sockaddr_in>() as socklen_t,
         }
     }
 }
 
 impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
-        let sockaddr_in6 = sockaddr_in6 {
+        let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
+        let sockaddr_in6 = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in6) };
+        *sockaddr_in6 = sockaddr_in6 {
             sin6_family: AF_INET6 as sa_family_t,
             sin6_port: addr.port().to_be(),
             sin6_addr: in6_addr {
@@ -213,11 +214,9 @@ impl From<SocketAddrV6> for SockAddr {
             sin6_scope_id: addr.scope_id(),
             ..unsafe { mem::zeroed() }
         };
-        unsafe {
-            SockAddr::from_raw_parts(
-                &sockaddr_in6 as *const _ as *const _,
-                mem::size_of::<sockaddr_in6>() as socklen_t,
-            )
+        SockAddr {
+            storage: unsafe { storage.assume_init() },
+            len: mem::size_of::<sockaddr_in6>() as socklen_t,
         }
     }
 }
