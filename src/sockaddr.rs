@@ -1,6 +1,6 @@
 use std::fmt;
 use std::mem::{self, MaybeUninit};
-use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ptr;
 
 #[cfg(any(unix, target_os = "redox"))]
@@ -124,33 +124,42 @@ impl SockAddr {
         }
     }
 
-    unsafe fn as_<T>(&self, family: sa_family_t) -> Option<T> {
-        if self.storage.ss_family != family {
-            return None;
-        }
-
-        Some(mem::transmute_copy(&self.storage))
-    }
-
     /// Returns this address as a `SocketAddrV4` if it is in the `AF_INET`
     /// family.
     pub fn as_inet(&self) -> Option<SocketAddrV4> {
-        unsafe { self.as_(AF_INET as sa_family_t) }
+        match self.as_std() {
+            Some(SocketAddr::V4(addr)) => Some(addr),
+            _ => None,
+        }
     }
 
     /// Returns this address as a `SocketAddrV6` if it is in the `AF_INET6`
     /// family.
     pub fn as_inet6(&self) -> Option<SocketAddrV6> {
-        unsafe { self.as_(AF_INET6 as sa_family_t) }
+        match self.as_std() {
+            Some(SocketAddr::V6(addr)) => Some(addr),
+            _ => None,
+        }
     }
 
     /// Returns this address as a `SocketAddr` if it is in the `AF_INET`
     /// or `AF_INET6` family, otherwise returns `None`.
     pub fn as_std(&self) -> Option<SocketAddr> {
-        if let Some(addr) = self.as_inet() {
-            Some(SocketAddr::V4(addr))
-        } else if let Some(addr) = self.as_inet6() {
-            Some(SocketAddr::V6(addr))
+        if self.storage.ss_family == AF_INET as sa_family_t {
+            let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in) };
+            let ip = Ipv4Addr::from(addr.sin_addr.s_addr.to_ne_bytes());
+            let port = u16::from_be(addr.sin_port);
+            Some(SocketAddr::V4(SocketAddrV4::new(ip, port)))
+        } else if self.storage.ss_family == AF_INET6 as sa_family_t {
+            let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in6) };
+            let ip = Ipv6Addr::from(addr.sin6_addr.s6_addr);
+            let port = u16::from_be(addr.sin6_port);
+            Some(SocketAddr::V6(SocketAddrV6::new(
+                ip,
+                port,
+                addr.sin6_flowinfo,
+                addr.sin6_scope_id,
+            )))
         } else {
             None
         }
