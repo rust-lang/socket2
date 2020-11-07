@@ -212,9 +212,7 @@ impl From<SocketAddrV4> for SockAddr {
             in_addr { S_un: s_un }
         };
 
-        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
-        let sockaddr_in = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in) };
-        *sockaddr_in = sockaddr_in {
+        let sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
             sin_addr,
@@ -229,6 +227,9 @@ impl From<SocketAddrV4> for SockAddr {
             ))]
             sin_len: 0,
         };
+        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
+        // Safety: A `sockaddr_in` is memory compatible with a `sockaddr_storage`
+        unsafe { (storage.as_mut_ptr() as *mut sockaddr_in).write(sockaddr_in) };
         SockAddr {
             storage: unsafe { storage.assume_init() },
             len: mem::size_of::<sockaddr_in>() as socklen_t,
@@ -255,9 +256,7 @@ impl From<SocketAddrV6> for SockAddr {
             u
         };
 
-        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
-        let sockaddr_in6 = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in6) };
-        *sockaddr_in6 = sockaddr_in6 {
+        let sockaddr_in6 = sockaddr_in6 {
             sin6_family: AF_INET6 as sa_family_t,
             sin6_port: addr.port().to_be(),
             sin6_addr,
@@ -278,6 +277,9 @@ impl From<SocketAddrV6> for SockAddr {
             #[cfg(any(target_os = "solaris", target_os = "illumos"))]
             __sin6_src_id: 0,
         };
+        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
+        // Safety: A `sockaddr_in6` is memory compatible with a `sockaddr_storage`
+        unsafe { (storage.as_mut_ptr() as *mut sockaddr_in6).write(sockaddr_in6) };
         SockAddr {
             storage: unsafe { storage.assume_init() },
             len: mem::size_of::<sockaddr_in6>() as socklen_t,
