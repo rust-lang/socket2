@@ -216,7 +216,16 @@ impl From<SocketAddrV4> for SockAddr {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
             sin_addr,
-            ..unsafe { mem::zeroed() }
+            sin_zero: [0; 8],
+            #[cfg(any(
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "ios",
+                target_os = "macos",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            ))]
+            sin_len: 0,
         };
         SockAddr {
             storage: unsafe { storage.assume_init() },
@@ -255,7 +264,17 @@ impl From<SocketAddrV6> for SockAddr {
             sin6_scope_id: addr.scope_id(),
             #[cfg(windows)]
             u,
-            ..unsafe { mem::zeroed() }
+            #[cfg(any(
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "ios",
+                target_os = "macos",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            ))]
+            sin6_len: 0,
+            #[cfg(any(target_os = "solaris", target_os = "illumos"))]
+            __sin6_src_id: 0,
         };
         SockAddr {
             storage: unsafe { storage.assume_init() },
