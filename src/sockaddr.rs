@@ -47,10 +47,10 @@ impl fmt::Debug for SockAddr {
 impl SockAddr {
     /// Constructs a `SockAddr` from its raw components.
     pub unsafe fn from_raw_parts(addr: *const sockaddr, len: socklen_t) -> SockAddr {
-        let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
+        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
         ptr::copy_nonoverlapping(
             addr as *const _ as *const u8,
-            &mut storage as *mut _ as *mut u8,
+            storage.as_mut_ptr() as *mut u8,
             len as usize,
         );
 
@@ -212,7 +212,7 @@ impl From<SocketAddrV4> for SockAddr {
             in_addr { S_un: s_un }
         };
 
-        let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
+        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
         let sockaddr_in = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in) };
         *sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
@@ -255,7 +255,7 @@ impl From<SocketAddrV6> for SockAddr {
             u
         };
 
-        let mut storage = MaybeUninit::<sockaddr_storage>::uninit();
+        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
         let sockaddr_in6 = unsafe { &mut *(storage.as_mut_ptr() as *mut sockaddr_in6) };
         *sockaddr_in6 = sockaddr_in6 {
             sin6_family: AF_INET6 as sa_family_t,
