@@ -57,7 +57,7 @@ impl SockAddr {
         SockAddr {
             // This is safe as we written the address to `storage` above.
             storage: storage.assume_init(),
-            len: len,
+            len,
         }
     }
 
