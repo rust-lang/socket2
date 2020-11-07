@@ -146,6 +146,7 @@ impl SockAddr {
     /// or `AF_INET6` family, otherwise returns `None`.
     pub fn as_std(&self) -> Option<SocketAddr> {
         if self.storage.ss_family == AF_INET as sa_family_t {
+            // Safety: if the ss_family field is AF_INET then storage must be a sockaddr_in.
             let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in) };
 
             #[cfg(unix)]
@@ -158,6 +159,7 @@ impl SockAddr {
             let port = u16::from_be(addr.sin_port);
             Some(SocketAddr::V4(SocketAddrV4::new(ip, port)))
         } else if self.storage.ss_family == AF_INET6 as sa_family_t {
+            // Safety: if the ss_family field is AF_INET6 then storage must be a sockaddr_in6.
             let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in6) };
 
             #[cfg(unix)]
