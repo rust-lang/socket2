@@ -615,13 +615,12 @@ impl Socket {
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
         unsafe {
             let imr_interface: IN_ADDR = self.getsockopt(IPPROTO_IP, IP_MULTICAST_IF)?;
-            Ok(from_s_addr(imr_interface.S_un))
+            Ok(from_in_addr(imr_interface))
         }
     }
 
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        let interface = to_s_addr(interface);
-        let imr_interface = IN_ADDR { S_un: interface };
+        let imr_interface = to_in_addr(interface);
 
         unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, imr_interface) }
     }
@@ -655,11 +654,9 @@ impl Socket {
     }
 
     pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let multiaddr = to_s_addr(multiaddr);
-        let interface = to_s_addr(interface);
         let mreq = IP_MREQ {
-            imr_multiaddr: IN_ADDR { S_un: multiaddr },
-            imr_interface: IN_ADDR { S_un: interface },
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_interface: to_in_addr(interface),
         };
         unsafe { self.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq) }
     }
@@ -674,11 +671,9 @@ impl Socket {
     }
 
     pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let multiaddr = to_s_addr(multiaddr);
-        let interface = to_s_addr(interface);
         let mreq = IP_MREQ {
-            imr_multiaddr: IN_ADDR { S_un: multiaddr },
-            imr_interface: IN_ADDR { S_un: interface },
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_interface: to_in_addr(interface),
         };
         unsafe { self.setsockopt(IPPROTO_IP, IP_DROP_MEMBERSHIP, mreq) }
     }
@@ -1050,24 +1045,28 @@ fn ms2dur(raw: DWORD) -> Option<Duration> {
     }
 }
 
-fn to_s_addr(addr: &Ipv4Addr) -> in_addr_S_un {
-    let octets = addr.octets();
-    let res = u32::from_ne_bytes(octets);
-    let mut new_addr: in_addr_S_un = unsafe { mem::zeroed() };
-    unsafe { *(new_addr.S_addr_mut()) = res };
-    new_addr
+pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
+    let mut s_un: in_addr_S_un = unsafe { mem::zeroed() };
+    // `S_un` is stored as BE on all machines, and the array is in BE order.
+    // So the native endian conversion method is used so that it's never swapped.
+    unsafe { *(s_un.S_addr_mut()) = u32::from_ne_bytes(addr.octets()) };
+    IN_ADDR { S_un: s_un }
 }
 
-fn from_s_addr(in_addr: in_addr_S_un) -> Ipv4Addr {
-    unsafe { *in_addr.S_addr() }.to_be().into()
+pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
+    Ipv4Addr::from(unsafe { *in_addr.S_un.S_addr() }.to_ne_bytes())
 }
 
-fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
+pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
     let mut ret_addr: in6_addr_u = unsafe { mem::zeroed() };
     unsafe { *(ret_addr.Byte_mut()) = addr.octets() };
     let mut ret: in6_addr = unsafe { mem::zeroed() };
     ret.u = ret_addr;
     ret
+}
+
+pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
+    Ipv6Addr::from(*unsafe { in6_addr.u.Byte() })
 }
 
 fn linger2dur(linger_opt: sock::linger) -> Option<Duration> {
@@ -1092,16 +1091,38 @@ fn dur2linger(dur: Option<Duration>) -> sock::linger {
 }
 
 #[test]
-fn test_ip() {
+fn test_ipv4() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
-    assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
+    assert_eq!(ip, from_in_addr(to_in_addr(&ip)));
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
     let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
-    assert_eq!(unsafe { *to_s_addr(&ip).S_addr() }, want);
+    assert_eq!(unsafe { *to_in_addr(&ip).S_un.S_addr() }, want);
     let mut addr: in_addr_S_un = unsafe { mem::zeroed() };
     unsafe { *(addr.S_addr_mut()) = want };
-    assert_eq!(from_s_addr(addr), ip);
+    assert_eq!(from_in_addr(IN_ADDR { S_un: addr }), ip);
+}
+
+#[test]
+fn test_ipv6() {
+    let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
+    assert_eq!(ip, from_in6_addr(to_in6_addr(&ip)));
+
+    let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
+    let want = [
+        0x2000u16.to_be(),
+        1u16.to_be(),
+        2u16.to_be(),
+        3u16.to_be(),
+        4u16.to_be(),
+        5u16.to_be(),
+        6u16.to_be(),
+        7u16.to_be(),
+    ];
+    assert_eq!(unsafe { *to_in6_addr(&ip).u.Word() }, want);
+    let mut addr: in6_addr_u = unsafe { mem::zeroed() };
+    unsafe { *(addr.Word_mut()) = want };
+    assert_eq!(from_in6_addr(IN6_ADDR { u: addr }), ip);
 }
 
 #[test]
