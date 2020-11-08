@@ -23,7 +23,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{cmp, fmt, io, mem};
 
-use libc::{self, c_void, ssize_t};
+use libc::{self, c_void, in6_addr, in_addr, ssize_t};
 
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
@@ -787,13 +787,12 @@ impl Socket {
         unsafe {
             let imr_interface: libc::in_addr =
                 self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF)?;
-            Ok(from_s_addr(imr_interface.s_addr))
+            Ok(from_in_addr(imr_interface))
         }
     }
 
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        let interface = to_s_addr(interface);
-        let imr_interface = libc::in_addr { s_addr: interface };
+        let imr_interface = to_in_addr(interface);
 
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface) }
     }
@@ -833,11 +832,9 @@ impl Socket {
     }
 
     pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let multiaddr = to_s_addr(multiaddr);
-        let interface = to_s_addr(interface);
         let mreq = libc::ip_mreq {
-            imr_multiaddr: libc::in_addr { s_addr: multiaddr },
-            imr_interface: libc::in_addr { s_addr: interface },
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_interface: to_in_addr(interface),
         };
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_ADD_MEMBERSHIP, mreq) }
     }
@@ -852,11 +849,9 @@ impl Socket {
     }
 
     pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let multiaddr = to_s_addr(multiaddr);
-        let interface = to_s_addr(interface);
         let mreq = libc::ip_mreq {
-            imr_multiaddr: libc::in_addr { s_addr: multiaddr },
-            imr_interface: libc::in_addr { s_addr: interface },
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_interface: to_in_addr(interface),
         };
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_DROP_MEMBERSHIP, mreq) }
     }
@@ -1248,19 +1243,26 @@ fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
     }
 }
 
-fn to_s_addr(addr: &Ipv4Addr) -> libc::in_addr_t {
-    let octets = addr.octets();
-    u32::from_ne_bytes(octets)
+pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
+    // `s_addr` is stored as BE on all machines, and the array is in BE order.
+    // So the native endian conversion method is used so that it's never swapped.
+    in_addr {
+        s_addr: u32::from_ne_bytes(addr.octets()),
+    }
 }
 
-fn from_s_addr(in_addr: libc::in_addr_t) -> Ipv4Addr {
-    in_addr.to_be().into()
+pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
+    Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
 }
 
-fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
+pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
     let mut ret: libc::in6_addr = unsafe { mem::zeroed() };
     ret.s6_addr = addr.octets();
     return ret;
+}
+
+pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
+    Ipv6Addr::from(in6_addr.s6_addr)
 }
 
 #[cfg(target_os = "android")]
@@ -1297,12 +1299,12 @@ fn dur2linger(dur: Option<Duration>) -> libc::linger {
 #[test]
 fn test_ip() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
-    assert_eq!(ip, from_s_addr(to_s_addr(&ip)));
+    assert_eq!(ip, from_in_addr(to_in_addr(&ip)));
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
     let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
-    assert_eq!(to_s_addr(&ip), want);
-    assert_eq!(from_s_addr(want), ip);
+    assert_eq!(to_in_addr(&ip).s_addr, want);
+    assert_eq!(from_in_addr(in_addr { s_addr: want }), ip);
 }
 
 #[test]
