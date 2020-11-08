@@ -201,3 +201,29 @@ impl fmt::Debug for SockAddr {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::{Ipv4Addr, Ipv6Addr};
+
+    #[test]
+    fn conversion_v4() {
+        let addr = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+        let sockaddr = SockAddr::from(addr);
+        assert_eq!(sockaddr.family(), AF_INET as sa_family_t);
+        assert!(sockaddr.as_inet6().is_none());
+        assert_eq!(sockaddr.as_inet(), Some(addr));
+        assert_eq!(sockaddr.as_std(), Some(SocketAddr::V4(addr)));
+    }
+
+    #[test]
+    fn conversion_v6() {
+        let addr = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+        let sockaddr = SockAddr::from(addr);
+        assert_eq!(sockaddr.family(), AF_INET6 as sa_family_t);
+        assert!(sockaddr.as_inet().is_none());
+        assert_eq!(sockaddr.as_inet6(), Some(addr));
+        assert_eq!(sockaddr.as_std(), Some(SocketAddr::V6(addr)));
+    }
+}
