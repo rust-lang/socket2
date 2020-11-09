@@ -20,7 +20,6 @@ use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::path::Path;
 #[cfg(feature = "all")]
 use std::ptr;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{cmp, fmt, io};
 
@@ -346,6 +345,10 @@ pub(crate) fn getpeername(fd: SysSocket) -> io::Result<SockAddr> {
         .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
+pub(crate) fn try_clone(fd: SysSocket) -> io::Result<SysSocket> {
+    syscall!(fcntl(fd, libc::F_DUPFD_CLOEXEC, 0))
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -408,6 +411,7 @@ impl crate::Socket {
     }
 }
 
+/// Add `flag` to the current set flags of `F_GETFD`.
 fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
     let previous = syscall!(fcntl(fd, libc::F_GETFD))?;
     let new = previous | flag;
@@ -441,35 +445,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn try_clone(&self) -> io::Result<Socket> {
-        // implementation lifted from libstd
-        #[cfg(any(target_os = "android", target_os = "haiku"))]
-        use libc::F_DUPFD as F_DUPFD_CLOEXEC;
-        #[cfg(not(any(target_os = "android", target_os = "haiku")))]
-        use libc::F_DUPFD_CLOEXEC;
-
-        static CLOEXEC_FAILED: AtomicBool = AtomicBool::new(false);
-        if !CLOEXEC_FAILED.load(Ordering::Relaxed) {
-            match syscall!(fcntl(self.fd, F_DUPFD_CLOEXEC, 0)) {
-                Ok(fd) => {
-                    let fd = unsafe { Socket::from_raw_fd(fd) };
-                    if cfg!(target_os = "linux") {
-                        set_cloexec(fd.as_raw_fd())?;
-                    }
-                    return Ok(fd);
-                }
-                Err(ref e) if e.raw_os_error() == Some(libc::EINVAL) => {
-                    CLOEXEC_FAILED.store(true, Ordering::Relaxed);
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        let fd = syscall!(fcntl(self.fd, libc::F_DUPFD, 0))?;
-        let fd = unsafe { Socket::from_raw_fd(fd) };
-        set_cloexec(fd.as_raw_fd())?;
-        Ok(fd)
-    }
-
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_ERROR)?;
@@ -1189,15 +1164,6 @@ fn max_len() -> usize {
     } else {
         <ssize_t>::max_value() as usize
     }
-}
-
-fn set_cloexec(fd: c_int) -> io::Result<()> {
-    let previous = syscall!(fcntl(fd, libc::F_GETFD))?;
-    let new = previous | libc::FD_CLOEXEC;
-    if new != previous {
-        syscall!(fcntl(fd, libc::F_SETFD, new))?;
-    }
-    Ok(())
 }
 
 fn dur2timeval(dur: Option<Duration>) -> io::Result<libc::timeval> {

@@ -10,7 +10,7 @@ use std::cmp;
 use std::fmt;
 use std::io;
 use std::io::{IoSlice, IoSliceMut, Read, Write};
-use std::mem::{self, size_of_val};
+use std::mem::{self, size_of_val, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::windows::prelude::*;
@@ -36,13 +36,11 @@ use winapi::um::winsock2 as sock;
 
 use crate::{RecvFlags, SockAddr};
 
-const HANDLE_FLAG_INHERIT: DWORD = 0x00000001;
 const MSG_PEEK: c_int = 0x2;
 const SD_BOTH: c_int = 2;
 const SD_RECEIVE: c_int = 0;
 const SD_SEND: c_int = 1;
 const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
-const WSA_FLAG_OVERLAPPED: DWORD = 0x01;
 
 pub use winapi::ctypes::c_int;
 
@@ -151,7 +149,7 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
             protocol,
             ptr::null_mut(),
             0,
-            WSA_FLAG_OVERLAPPED,
+            sock::WSA_FLAG_OVERLAPPED,
         ),
         PartialEq::eq,
         sock::INVALID_SOCKET
@@ -209,6 +207,30 @@ pub(crate) fn getpeername(socket: SysSocket) -> io::Result<SockAddr> {
     .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
+pub(crate) fn try_clone(socket: SysSocket) -> io::Result<SysSocket> {
+    let mut info: MaybeUninit<sock::WSAPROTOCOL_INFOW> = MaybeUninit::uninit();
+    syscall!(
+        WSADuplicateSocketW(socket, GetCurrentProcessId(), info.as_mut_ptr()),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )?;
+    // Safety: `WSADuplicateSocketW` intialised `info` for us.
+    let mut info = unsafe { info.assume_init() };
+
+    syscall!(
+        WSASocketW(
+            info.iAddressFamily,
+            info.iSocketType,
+            info.iProtocol,
+            &mut info,
+            0,
+            sock::WSA_FLAG_OVERLAPPED | sock::WSA_FLAG_NO_HANDLE_INHERIT,
+        ),
+        PartialEq::eq,
+        sock::INVALID_SOCKET
+    )
+}
+
 /// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
@@ -233,30 +255,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn try_clone(&self) -> io::Result<Socket> {
-        unsafe {
-            let mut info: sock::WSAPROTOCOL_INFOW = mem::zeroed();
-            let r = sock::WSADuplicateSocketW(self.socket, GetCurrentProcessId(), &mut info);
-            if r != 0 {
-                return Err(io::Error::last_os_error());
-            }
-            let socket = sock::WSASocketW(
-                info.iAddressFamily,
-                info.iSocketType,
-                info.iProtocol,
-                &mut info,
-                0,
-                WSA_FLAG_OVERLAPPED,
-            );
-            let socket = match socket {
-                sock::INVALID_SOCKET => return Err(last_error()),
-                n => Socket::from_raw_socket(n as RawSocket),
-            };
-            socket.set_no_inherit()?;
-            Ok(socket)
-        }
-    }
-
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
         unsafe {
             let raw: c_int = self.getsockopt(SOL_SOCKET, SO_ERROR)?;
@@ -841,17 +839,6 @@ impl Socket {
             Ok(slot)
         } else {
             Err(last_error())
-        }
-    }
-
-    fn set_no_inherit(&self) -> io::Result<()> {
-        unsafe {
-            let r = SetHandleInformation(self.socket as HANDLE, HANDLE_FLAG_INHERIT, 0);
-            if r == 0 {
-                Err(io::Error::last_os_error())
-            } else {
-                Ok(())
-            }
         }
     }
 
