@@ -265,7 +265,7 @@ impl Socket {
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        self.inner().shutdown(how)
+        sys::shutdown(self.inner, how)
     }
 
     /// Receives data on the socket from the remote address to which it is
