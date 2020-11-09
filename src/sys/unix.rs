@@ -331,6 +331,7 @@ pub(crate) fn accept(fd: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
     })
 }
 
+/// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
     ///
@@ -381,8 +382,12 @@ impl crate::Socket {
         fcntl_add(self.inner, libc::FD_CLOEXEC)
     }
 
-    /// Sets `SO_NOSIGPIPE` to one.
-    #[cfg(target_vendor = "apple")]
+    /// Sets `SO_NOSIGPIPE` on the socket.
+    ///
+    /// # Notes
+    ///
+    /// Only supported on Apple platforms (`target_vendor = "apple"`).
+    #[cfg(all(feature = "all", target_vendor = "apple"))]
     pub fn set_nosigpipe(&self) -> io::Result<()> {
         unsafe { setsockopt(self.inner, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32) }
     }
@@ -399,7 +404,7 @@ fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
     }
 }
 
-#[cfg(target_vendor = "apple")]
+#[cfg(all(feature = "all", target_vendor = "apple"))]
 unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()>
 where
     T: Copy,
