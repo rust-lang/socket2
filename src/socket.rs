@@ -58,6 +58,10 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// #[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))]
 /// let ty = ty.cloexec();
 ///
+/// // On windows set `WSA_FLAG_NO_HANDLE_INHERIT`.
+/// #[cfg(windows)]
+/// let ty = ty.no_inherit();
+///
 /// let socket = Socket::new(domain, ty, Some(protocol))?;
 ///
 /// // On platforms that don't support `SOCK_CLOEXEC`, use `FD_CLOEXEC`.
@@ -68,9 +72,6 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// #[cfg(target_vendor = "apple")]
 /// socket.set_nosigpipe()?;
 ///
-/// // On windows set `HANDLE_FLAG_INHERIT`.
-/// #[cfg(windows)]
-/// socket.set_no_inherit()?;
 /// # drop(socket);
 /// # Ok(())
 /// # }

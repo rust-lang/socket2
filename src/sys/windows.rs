@@ -10,7 +10,7 @@ use std::cmp;
 use std::fmt;
 use std::io;
 use std::io::{IoSlice, IoSliceMut, Read, Write};
-use std::mem::{self, size_of_val, MaybeUninit};
+use std::mem::{self, size_of, size_of_val, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::windows::prelude::*;
@@ -34,7 +34,7 @@ use winapi::um::winbase;
 use winapi::um::winbase::INFINITE;
 use winapi::um::winsock2 as sock;
 
-use crate::{RecvFlags, SockAddr};
+use crate::{RecvFlags, SockAddr, Type};
 
 const MSG_PEEK: c_int = 0x2;
 const SD_BOTH: c_int = 2;
@@ -89,6 +89,19 @@ impl_debug!(
     ws2def::AF_UNSPEC, // = 0.
 );
 
+/// Windows only API.
+impl Type {
+    /// Our custom flag to set `WSA_FLAG_NO_HANDLE_INHERIT` on socket creation.
+    /// Trying to mimic `Type::cloexec` on windows.
+    const NO_INHERIT: c_int = 1 << (size_of::<c_int>());
+
+    /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
+    #[cfg(feature = "all")]
+    pub const fn no_inherit(self) -> Type {
+        Type(self.0 | Type::NO_INHERIT)
+    }
+}
+
 impl_debug!(
     crate::Type,
     ws2def::SOCK_STREAM,
@@ -139,8 +152,16 @@ fn last_error() -> io::Error {
 // TODO: rename to `Socket` once the struct `Socket` is no longer used.
 pub(crate) type SysSocket = sock::SOCKET;
 
-pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<SysSocket> {
+pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Result<SysSocket> {
     init();
+
+    // Check if we set our custom flag.
+    let flags = if ty & Type::NO_INHERIT != 0 {
+        ty = ty & !Type::NO_INHERIT;
+        sock::WSA_FLAG_NO_HANDLE_INHERIT
+    } else {
+        0
+    };
 
     syscall!(
         WSASocketW(
@@ -149,7 +170,7 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Sy
             protocol,
             ptr::null_mut(),
             0,
-            sock::WSA_FLAG_OVERLAPPED,
+            sock::WSA_FLAG_OVERLAPPED | flags,
         ),
         PartialEq::eq,
         sock::INVALID_SOCKET
