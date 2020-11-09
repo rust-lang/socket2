@@ -173,6 +173,13 @@ impl Socket {
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
+    ///
+    /// # Notes
+    ///
+    /// When using a non-blocking connect (by setting the socket into
+    /// non-blocking mode before calling this function), socket option can't be
+    /// set *while connecting*. This will cause errors on Windows. Socket
+    /// options can be safely set before and after connecting the socket.
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
         sys::connect(self.inner, address)
     }
