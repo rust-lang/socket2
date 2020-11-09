@@ -223,14 +223,19 @@ impl Socket {
 
     /// Creates a new independently owned handle to the underlying socket.
     ///
-    /// The returned `TcpStream` is a reference to the same stream that this
-    /// object references. Both handles will read and write the same stream of
-    /// data, and options set on one stream will be propagated to the other
-    /// stream.
+    /// # Notes
+    ///
+    /// On Unix this uses `F_DUPFD_CLOEXEC` and thus sets the `FD_CLOEXEC` on
+    /// the returned socket.
+    ///
+    /// On Windows this uses `WSA_FLAG_NO_HANDLE_INHERIT` setting inheriting to
+    /// false.
+    ///
+    /// On Windows this can **not** be used function cannot be used on a
+    /// QOS-enabled socket, see
+    /// https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw.
     pub fn try_clone(&self) -> io::Result<Socket> {
-        self.inner()
-            .try_clone()
-            .map(|s| Socket { inner: s.inner() })
+        sys::try_clone(self.inner).map(|inner| Socket { inner })
     }
 
     /// Get the value of the `SO_ERROR` option on this socket.
