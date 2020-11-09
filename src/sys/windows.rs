@@ -193,6 +193,18 @@ pub(crate) fn getsockname(socket: SysSocket) -> io::Result<SockAddr> {
     .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
+pub(crate) fn getpeername(socket: SysSocket) -> io::Result<SockAddr> {
+    // Safety: zeroed `SOCKADDR_STORAGE` is valid.
+    let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
+    let mut len = size_of_val(&storage) as c_int;
+    syscall!(
+        getpeername(socket, &mut storage as *mut _ as *mut _, &mut len),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
+}
+
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
     pub fn set_no_inherit(&self) -> io::Result<()> {
@@ -211,20 +223,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn peer_addr(&self) -> io::Result<SockAddr> {
-        unsafe {
-            let mut storage: SOCKADDR_STORAGE = mem::zeroed();
-            let mut len = mem::size_of_val(&storage) as c_int;
-            if sock::getpeername(self.socket, &mut storage as *mut _ as *mut _, &mut len) != 0 {
-                return Err(last_error());
-            }
-            Ok(SockAddr::from_raw_parts(
-                &storage as *const _ as *const _,
-                len,
-            ))
-        }
-    }
-
     pub fn try_clone(&self) -> io::Result<Socket> {
         unsafe {
             let mut info: sock::WSAPROTOCOL_INFOW = mem::zeroed();
@@ -895,7 +893,7 @@ impl fmt::Debug for Socket {
         if let Ok(addr) = getsockname(self.socket) {
             f.field("local_addr", &addr);
         }
-        if let Ok(addr) = self.peer_addr() {
+        if let Ok(addr) = getpeername(self.socket) {
             f.field("peer_addr", &addr);
         }
         f.finish()
