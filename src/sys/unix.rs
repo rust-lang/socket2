@@ -339,6 +339,13 @@ pub(crate) fn getsockname(fd: SysSocket) -> io::Result<SockAddr> {
         .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
+pub(crate) fn getpeername(fd: SysSocket) -> io::Result<SockAddr> {
+    let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    let mut len = size_of_val(&storage) as libc::socklen_t;
+    syscall!(getpeername(fd, &mut storage as *mut _ as *mut _, &mut len,))
+        .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -434,17 +441,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn peer_addr(&self) -> io::Result<SockAddr> {
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut len = mem::size_of_val(&storage) as libc::socklen_t;
-        syscall!(getpeername(
-            self.fd,
-            &mut storage as *mut _ as *mut _,
-            &mut len,
-        ))?;
-        Ok(unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
-    }
-
     pub fn try_clone(&self) -> io::Result<Socket> {
         // implementation lifted from libstd
         #[cfg(any(target_os = "android", target_os = "haiku"))]
@@ -1052,7 +1048,7 @@ impl fmt::Debug for Socket {
         if let Ok(addr) = getsockname(self.fd) {
             f.field("local_addr", &addr);
         }
-        if let Ok(addr) = self.peer_addr() {
+        if let Ok(addr) = getpeername(self.fd) {
             f.field("peer_addr", &addr);
         }
         f.finish()
