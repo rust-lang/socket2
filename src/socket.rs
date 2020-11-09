@@ -250,10 +250,14 @@ impl Socket {
 
     /// Moves this TCP stream into or out of nonblocking mode.
     ///
-    /// On Unix this corresponds to calling fcntl, and on Windows this
-    /// corresponds to calling ioctlsocket.
+    /// # Notes
+    ///
+    /// On Unix this corresponds to calling `fcntl` (un)setting `O_NONBLOCK`.
+    ///
+    /// On Windows this corresponds to calling `ioctlsocket` (un)setting
+    /// `FIONBIO`.
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        self.inner().set_nonblocking(nonblocking)
+        sys::set_nonblocking(self.inner, nonblocking)
     }
 
     /// Shuts down the read, write, or both halves of this connection.

@@ -18,7 +18,7 @@ use std::ptr;
 use std::sync::Once;
 use std::time::Duration;
 
-use winapi::ctypes::{c_char, c_ulong};
+use winapi::ctypes::{c_char, c_long, c_ulong};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
@@ -32,7 +32,7 @@ use winapi::um::processthreadsapi::GetCurrentProcessId;
 #[cfg(feature = "all")]
 use winapi::um::winbase;
 use winapi::um::winbase::INFINITE;
-use winapi::um::winsock2 as sock;
+use winapi::um::winsock2::{self as sock, u_long};
 
 use crate::{RecvFlags, SockAddr, Type};
 
@@ -261,6 +261,12 @@ pub(crate) fn take_error(socket: SysSocket) -> io::Result<Option<io::Error>> {
     }
 }
 
+pub(crate) fn set_nonblocking(socket: SysSocket, nonblocking: bool) -> io::Result<()> {
+    let mut nonblocking = nonblocking as u_long;
+    ioctlsocket(socket, sock::FIONBIO, &mut nonblocking)
+}
+
+/// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
     let mut len = mem::size_of::<T>() as c_int;
@@ -274,6 +280,15 @@ unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result
         // Safety: `getsockopt` initialised `payload` for us.
         payload.assume_init()
     })
+}
+
+fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Result<()> {
+    syscall!(
+        ioctlsocket(socket, cmd, payload),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| ())
 }
 
 /// Windows only API.
@@ -300,18 +315,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        unsafe {
-            let mut nonblocking = nonblocking as c_ulong;
-            let r = sock::ioctlsocket(self.socket, sock::FIONBIO as c_int, &mut nonblocking);
-            if r == 0 {
-                Ok(())
-            } else {
-                Err(io::Error::last_os_error())
-            }
-        }
-    }
-
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         let how = match how {
             Shutdown::Write => SD_SEND,
