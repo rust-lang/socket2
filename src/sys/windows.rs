@@ -32,14 +32,11 @@ use winapi::um::processthreadsapi::GetCurrentProcessId;
 #[cfg(feature = "all")]
 use winapi::um::winbase;
 use winapi::um::winbase::INFINITE;
-use winapi::um::winsock2::{self as sock, u_long};
+use winapi::um::winsock2::{self as sock, u_long, SD_BOTH, SD_RECEIVE, SD_SEND};
 
 use crate::{RecvFlags, SockAddr, Type};
 
 const MSG_PEEK: c_int = 0x2;
-const SD_BOTH: c_int = 2;
-const SD_RECEIVE: c_int = 0;
-const SD_SEND: c_int = 1;
 const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
 
 pub use winapi::ctypes::c_int;
@@ -266,6 +263,15 @@ pub(crate) fn set_nonblocking(socket: SysSocket, nonblocking: bool) -> io::Resul
     ioctlsocket(socket, sock::FIONBIO, &mut nonblocking)
 }
 
+pub(crate) fn shutdown(socket: SysSocket, how: Shutdown) -> io::Result<()> {
+    let how = match how {
+        Shutdown::Write => SD_SEND,
+        Shutdown::Read => SD_RECEIVE,
+        Shutdown::Both => SD_BOTH,
+    };
+    syscall!(shutdown(socket, how), PartialEq::eq, sock::SOCKET_ERROR).map(|_| ())
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -315,19 +321,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        let how = match how {
-            Shutdown::Write => SD_SEND,
-            Shutdown::Read => SD_RECEIVE,
-            Shutdown::Both => SD_BOTH,
-        };
-        if unsafe { sock::shutdown(self.socket, how) == 0 } {
-            Ok(())
-        } else {
-            Err(last_error())
-        }
-    }
-
     pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
         unsafe {
             let n = {
