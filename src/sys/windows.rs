@@ -22,11 +22,15 @@ use winapi::ctypes::{c_char, c_ulong};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
+#[cfg(feature = "all")]
 use winapi::shared::ntdef::HANDLE;
 use winapi::shared::ws2def::{self, *};
 use winapi::shared::ws2ipdef::*;
+#[cfg(feature = "all")]
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
+#[cfg(feature = "all")]
+use winapi::um::winbase;
 use winapi::um::winbase::INFINITE;
 use winapi::um::winsock2 as sock;
 
@@ -205,12 +209,18 @@ pub(crate) fn getpeername(socket: SysSocket) -> io::Result<SockAddr> {
     .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
+/// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
+    #[cfg(feature = "all")]
     pub fn set_no_inherit(&self) -> io::Result<()> {
-        let r = unsafe { SetHandleInformation(self.inner as HANDLE, HANDLE_FLAG_INHERIT, 0) };
-        if r == 0 {
-            Err(last_error())
+        // NOTE: can't use `syscall!` because it expects the function in the
+        // `sock::` path.
+        let res =
+            unsafe { SetHandleInformation(self.inner as HANDLE, winbase::HANDLE_FLAG_INHERIT, 0) };
+        if res == 0 {
+            // Zero means error.
+            Err(io::Error::last_os_error())
         } else {
             Ok(())
         }
