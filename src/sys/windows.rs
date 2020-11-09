@@ -10,7 +10,7 @@ use std::cmp;
 use std::fmt;
 use std::io;
 use std::io::{IoSlice, IoSliceMut, Read, Write};
-use std::mem;
+use std::mem::{self, size_of_val};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 use std::os::windows::prelude::*;
@@ -169,7 +169,7 @@ pub(crate) fn listen(socket: SysSocket, backlog: i32) -> io::Result<()> {
 pub(crate) fn accept(socket: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
     // Safety: zeroed `SOCKADDR_STORAGE` is valid.
     let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
-    let mut len = mem::size_of_val(&storage) as c_int;
+    let mut len = size_of_val(&storage) as c_int;
     syscall!(
         accept(socket, &mut storage as *mut _ as *mut _, &mut len),
         PartialEq::eq,
@@ -179,6 +179,18 @@ pub(crate) fn accept(socket: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
         let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
         (socket, addr)
     })
+}
+
+pub(crate) fn getsockname(socket: SysSocket) -> io::Result<SockAddr> {
+    // Safety: zeroed `SOCKADDR_STORAGE` is valid.
+    let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
+    let mut len = size_of_val(&storage) as c_int;
+    syscall!(
+        getsockname(socket, &mut storage as *mut _ as *mut _, &mut len),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
 impl crate::Socket {
@@ -199,20 +211,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn local_addr(&self) -> io::Result<SockAddr> {
-        unsafe {
-            let mut storage: SOCKADDR_STORAGE = mem::zeroed();
-            let mut len = mem::size_of_val(&storage) as c_int;
-            if sock::getsockname(self.socket, &mut storage as *mut _ as *mut _, &mut len) != 0 {
-                return Err(last_error());
-            }
-            Ok(SockAddr::from_raw_parts(
-                &storage as *const _ as *const _,
-                len,
-            ))
-        }
-    }
-
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
         unsafe {
             let mut storage: SOCKADDR_STORAGE = mem::zeroed();
@@ -894,7 +892,7 @@ impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut f = f.debug_struct("Socket");
         f.field("socket", &self.socket);
-        if let Ok(addr) = self.local_addr() {
+        if let Ok(addr) = getsockname(self.socket) {
             f.field("local_addr", &addr);
         }
         if let Ok(addr) = self.peer_addr() {
