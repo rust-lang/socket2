@@ -9,7 +9,7 @@
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::io::{Read, Write};
-use std::mem::{self, size_of_val};
+use std::mem::{self, size_of_val, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "all")]
@@ -349,6 +349,14 @@ pub(crate) fn try_clone(fd: SysSocket) -> io::Result<SysSocket> {
     syscall!(fcntl(fd, libc::F_DUPFD_CLOEXEC, 0))
 }
 
+pub(crate) fn take_error(fd: SysSocket) -> io::Result<Option<io::Error>> {
+    match unsafe { getsockopt::<c_int>(fd, libc::SOL_SOCKET, libc::SO_ERROR) } {
+        Ok(0) => Ok(None),
+        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
+        Err(err) => Err(err),
+    }
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -423,6 +431,25 @@ fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
     }
 }
 
+/// Caller must ensure `T` is the correct type for `opt` and `val`.
+unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
+    let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
+    let mut len = mem::size_of::<T>() as libc::socklen_t;
+    syscall!(getsockopt(
+        fd,
+        opt,
+        val,
+        payload.as_mut_ptr().cast(),
+        &mut len,
+    ))
+    .map(|_| {
+        debug_assert_eq!(len as usize, mem::size_of::<T>());
+        // Safety: `getsockopt` initialised `payload` for us.
+        payload.assume_init()
+    })
+}
+
+/// Caller must ensure `T` is the correct type for `opt` and `val`.
 #[cfg(all(feature = "all", target_vendor = "apple"))]
 unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()>
 where
@@ -435,8 +462,8 @@ where
         val,
         payload,
         mem::size_of::<T>() as libc::socklen_t,
-    ))?;
-    Ok(())
+    ))
+    .map(|_| ())
 }
 
 #[repr(transparent)] // Required during rewriting.
@@ -445,17 +472,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_ERROR)?;
-            if raw == 0 {
-                Ok(None)
-            } else {
-                Ok(Some(io::Error::from_raw_os_error(raw as i32)))
-            }
-        }
-    }
-
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         let previous = syscall!(fcntl(self.fd, libc::F_GETFL))?;
         let new = if nonblocking {
