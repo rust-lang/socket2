@@ -43,40 +43,6 @@ use crate::{Domain, Protocol, SockAddr, Type};
 ///
 /// # Examples
 ///
-/// Creating a new socket setting all advisable flags.
-///
-#[cfg_attr(feature = "all", doc = "```")] // Protocol::cloexec requires the `all` feature.
-#[cfg_attr(not(feature = "all"), doc = "```ignore")]
-/// # fn main() -> std::io::Result<()> {
-/// use socket2::{Protocol, Domain, Type, Socket};
-///
-/// let domain = Domain::IPV4;
-/// let ty = Type::STREAM;
-/// let protocol = Protocol::TCP;
-///
-/// // On platforms that support it set `SOCK_CLOEXEC`.
-/// #[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))]
-/// let ty = ty.cloexec();
-///
-/// // On windows set `WSA_FLAG_NO_HANDLE_INHERIT`.
-/// #[cfg(windows)]
-/// let ty = ty.no_inherit();
-///
-/// let socket = Socket::new(domain, ty, Some(protocol))?;
-///
-/// // On platforms that don't support `SOCK_CLOEXEC`, use `FD_CLOEXEC`.
-/// #[cfg(all(not(windows), not(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))))]
-/// socket.set_cloexec()?;
-///
-/// // On macOS and iOS set `NOSIGPIPE`.
-/// #[cfg(target_vendor = "apple")]
-/// socket.set_nosigpipe()?;
-///
-/// # drop(socket);
-/// # Ok(())
-/// # }
-/// ```
-///
 /// ```no_run
 /// # fn main() -> std::io::Result<()> {
 /// use std::net::{SocketAddr, TcpListener};
@@ -105,6 +71,55 @@ impl Socket {
     /// Creates a new socket ready to be configured.
     ///
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
+    /// Windows and creates a new socket. Unlike `Socket::new_raw` this sets the
+    /// most commonly used flags in the fastest possible way.
+    ///
+    /// On Unix this sets the `CLOEXEC` flag. Furthermore on macOS and iOS
+    /// `NOSIGPIPE` is set.
+    ///
+    /// On Windows the `HANDLE_FLAG_INHERIT` is set to zero.
+    pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
+        // On platforms that support it set `SOCK_CLOEXEC`.
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ))]
+        let ty = ty.cloexec();
+
+        // On windows set `WSA_FLAG_NO_HANDLE_INHERIT`.
+        #[cfg(windows)]
+        let ty = ty.no_inherit();
+
+        let socket = Socket::new_raw(domain, ty, protocol)?;
+
+        // On platforms that don't support `SOCK_CLOEXEC`, use `FD_CLOEXEC`.
+        #[cfg(all(
+            not(windows),
+            not(any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            ))
+        ))]
+        socket.set_cloexec()?;
+
+        // On macOS and iOS set `NOSIGPIPE`.
+        #[cfg(target_vendor = "apple")]
+        socket._set_nosigpipe()?;
+
+        Ok(socket)
+    }
+
+    /// Creates a new socket ready to be configured.
+    ///
+    /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
     /// Windows and simply creates a new socket, no other configuration is done
     /// and further functions must be invoked to configure this socket.
     ///
@@ -124,7 +139,7 @@ impl Socket {
     ///
     /// See the `Socket` documentation for a full example of setting all the
     /// above mentioned flags.
-    pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
+    pub fn new_raw(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         sys::socket(domain.0, ty.0, protocol).map(|inner| Socket { inner })
     }

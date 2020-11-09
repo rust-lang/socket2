@@ -432,6 +432,13 @@ impl crate::Socket {
     /// Only supported on Apple platforms (`target_vendor = "apple"`).
     #[cfg(all(feature = "all", target_vendor = "apple"))]
     pub fn set_nosigpipe(&self) -> io::Result<()> {
+        self._set_nosigpipe()
+    }
+
+    // Because `set_nosigpipe` is behind the `all` feature flag we need a
+    // private version for `Socket::new`, which is always enabled.
+    #[cfg(target_vendor = "apple")]
+    pub(crate) fn _set_nosigpipe(&self) -> io::Result<()> {
         unsafe { setsockopt(self.inner, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32) }
     }
 }
@@ -479,7 +486,7 @@ unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> 
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
-#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[cfg(target_vendor = "apple")]
 unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()>
 where
     T: Copy,
