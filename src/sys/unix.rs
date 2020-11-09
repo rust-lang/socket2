@@ -9,6 +9,7 @@
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::io::{Read, Write};
+use std::mem::{self, size_of_val};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "all")]
@@ -21,7 +22,7 @@ use std::path::Path;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
-use std::{cmp, fmt, io, mem};
+use std::{cmp, fmt, io};
 
 use libc::{self, c_void, in6_addr, in_addr, ssize_t};
 
@@ -324,11 +325,18 @@ pub(crate) fn listen(fd: SysSocket, backlog: i32) -> io::Result<()> {
 pub(crate) fn accept(fd: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
     // Safety: zeroed `sockaddr_storage` is valid.
     let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-    let mut len = mem::size_of_val(&storage) as socklen_t;
+    let mut len = size_of_val(&storage) as socklen_t;
     syscall!(accept(fd, &mut storage as *mut _ as *mut _, &mut len)).map(|fd| {
         let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
         (fd, addr)
     })
+}
+
+pub(crate) fn getsockname(fd: SysSocket) -> io::Result<SockAddr> {
+    let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    let mut len = size_of_val(&storage) as libc::socklen_t;
+    syscall!(getsockname(fd, &mut storage as *mut _ as *mut _, &mut len,))
+        .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
 }
 
 /// Unix only API.
@@ -426,17 +434,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn local_addr(&self) -> io::Result<SockAddr> {
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut len = mem::size_of_val(&storage) as libc::socklen_t;
-        syscall!(getsockname(
-            self.fd,
-            &mut storage as *mut _ as *mut _,
-            &mut len,
-        ))?;
-        Ok(unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
-    }
-
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
         let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
         let mut len = mem::size_of_val(&storage) as libc::socklen_t;
@@ -1052,7 +1049,7 @@ impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut f = f.debug_struct("Socket");
         f.field("fd", &self.fd);
-        if let Ok(addr) = self.local_addr() {
+        if let Ok(addr) = getsockname(self.fd) {
             f.field("local_addr", &addr);
         }
         if let Ok(addr) = self.peer_addr() {
