@@ -357,6 +357,14 @@ pub(crate) fn take_error(fd: SysSocket) -> io::Result<Option<io::Error>> {
     }
 }
 
+pub(crate) fn set_nonblocking(fd: SysSocket, nonblocking: bool) -> io::Result<()> {
+    if nonblocking {
+        fcntl_add(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
+    } else {
+        fcntl_remove(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
+    }
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -405,7 +413,7 @@ impl crate::Socket {
     ///
     /// On supported platforms you can use [`Protocol::cloexec`].
     pub fn set_cloexec(&self) -> io::Result<()> {
-        fcntl_add(self.inner, libc::FD_CLOEXEC)
+        fcntl_add(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
@@ -420,11 +428,23 @@ impl crate::Socket {
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
-fn fcntl_add(fd: SysSocket, flag: c_int) -> io::Result<()> {
-    let previous = syscall!(fcntl(fd, libc::F_GETFD))?;
+fn fcntl_add(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
+    let previous = syscall!(fcntl(fd, get_cmd))?;
     let new = previous | flag;
     if new != previous {
-        syscall!(fcntl(fd, libc::F_SETFD, new)).map(|_| ())
+        syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
+    } else {
+        // Flag was already set.
+        Ok(())
+    }
+}
+
+/// Remove `flag` to the current set flags of `F_GETFD`.
+fn fcntl_remove(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
+    let previous = syscall!(fcntl(fd, get_cmd))?;
+    let new = previous & !flag;
+    if new != previous {
+        syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
     } else {
         // Flag was already set.
         Ok(())
@@ -472,19 +492,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        let previous = syscall!(fcntl(self.fd, libc::F_GETFL))?;
-        let new = if nonblocking {
-            previous | libc::O_NONBLOCK
-        } else {
-            previous & !libc::O_NONBLOCK
-        };
-        if new != previous {
-            syscall!(fcntl(self.fd, libc::F_SETFL, new))?;
-        }
-        Ok(())
-    }
-
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         let how = match how {
             Shutdown::Write => libc::SHUT_WR,
