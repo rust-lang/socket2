@@ -1,20 +1,33 @@
 [package]
-name = "socket2"
-version = "0.4.0-dev"
-authors = ["Alex Crichton <alex@alexcrichton.com>"]
-license = "MIT/Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/alexcrichton/socket2-rs"
-homepage = "https://github.com/alexcrichton/socket2-rs"
+name          = "socket2"
+version       = "0.4.0-dev"
+authors       = ["Alex Crichton <alex@alexcrichton.com>"]
+license       = "MIT/Apache-2.0"
+readme        = "README.md"
+repository    = "https://github.com/rust-lang/socket2-rs"
+homepage      = "https://github.com/rust-lang/socket2-rs"
+documentation = "https://docs.rs/socket2"
 description = """
 Utilities for handling networking sockets with a maximal amount of configuration
 possible intended.
 """
-edition = "2018"
+keywords      = ["io", "socket", "network"]
+categories    = ["api-bindings", "network-programming", "web-programming"]
+edition       = "2018"
+include       = [
+  "Cargo.toml",
+  "LICENSE-APACHE",
+  "LICENSE-MIT",
+  "README.md",
+  "src/**/*.rs",
+]
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.playground]
+features = ["all"]
 
 [target."cfg(windows)".dependencies.winapi]
 version = "0.3.3"
