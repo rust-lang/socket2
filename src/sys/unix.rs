@@ -365,6 +365,15 @@ pub(crate) fn set_nonblocking(fd: SysSocket, nonblocking: bool) -> io::Result<()
     }
 }
 
+pub(crate) fn shutdown(fd: SysSocket, how: Shutdown) -> io::Result<()> {
+    let how = match how {
+        Shutdown::Write => libc::SHUT_WR,
+        Shutdown::Read => libc::SHUT_RD,
+        Shutdown::Both => libc::SHUT_RDWR,
+    };
+    syscall!(shutdown(fd, how)).map(|_| ())
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -492,16 +501,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        let how = match how {
-            Shutdown::Write => libc::SHUT_WR,
-            Shutdown::Read => libc::SHUT_RD,
-            Shutdown::Both => libc::SHUT_RDWR,
-        };
-        syscall!(shutdown(self.fd, how))?;
-        Ok(())
-    }
-
     pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
         let n = syscall!(recv(
             self.fd,
