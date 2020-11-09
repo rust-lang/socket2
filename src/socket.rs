@@ -245,7 +245,7 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        self.inner().take_error()
+        sys::take_error(self.inner)
     }
 
     /// Moves this TCP stream into or out of nonblocking mode.

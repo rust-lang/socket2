@@ -72,6 +72,7 @@ pub(crate) use winapi::um::ws2tcpip::socklen_t;
 /// Helper macro to execute a system call that returns an `io::Result`.
 macro_rules! syscall {
     ($fn: ident ( $($arg: expr),* $(,)* ), $err_test: path, $err_value: expr) => {{
+        #[allow(unused_unsafe)]
         let res = unsafe { sock::$fn($($arg, )*) };
         if $err_test(&res, &$err_value) {
             Err(io::Error::last_os_error())
@@ -252,6 +253,29 @@ pub(crate) fn try_clone(socket: SysSocket) -> io::Result<SysSocket> {
     )
 }
 
+pub(crate) fn take_error(socket: SysSocket) -> io::Result<Option<io::Error>> {
+    match unsafe { getsockopt::<c_int>(socket, SOL_SOCKET, SO_ERROR) } {
+        Ok(0) => Ok(None),
+        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
+        Err(err) => Err(err),
+    }
+}
+
+unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
+    let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
+    let mut len = mem::size_of::<T>() as c_int;
+    syscall!(
+        getsockopt(socket, opt, val, payload.as_mut_ptr().cast(), &mut len,),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| {
+        debug_assert_eq!(len as usize, mem::size_of::<T>());
+        // Safety: `getsockopt` initialised `payload` for us.
+        payload.assume_init()
+    })
+}
+
 /// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
@@ -276,17 +300,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        unsafe {
-            let raw: c_int = self.getsockopt(SOL_SOCKET, SO_ERROR)?;
-            if raw == 0 {
-                Ok(None)
-            } else {
-                Ok(Some(io::Error::from_raw_os_error(raw as i32)))
-            }
-        }
-    }
-
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
         unsafe {
             let mut nonblocking = nonblocking as c_ulong;
