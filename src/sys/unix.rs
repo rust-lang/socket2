@@ -421,8 +421,12 @@ impl crate::Socket {
     /// # Notes
     ///
     /// On supported platforms you can use [`Protocol::cloexec`].
-    pub fn set_cloexec(&self) -> io::Result<()> {
-        fcntl_add(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
+    pub fn set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {
+        if close_on_exec {
+            fcntl_add(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
+        } else {
+            fcntl_remove(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
+        }
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
