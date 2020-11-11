@@ -177,17 +177,14 @@ fn send_recv_vectored() {
     let mut ow = [0u8; 2];
 
     let (received, flags) = socket_b
-        .recv_vectored(
-            &mut [
-                IoSliceMut::new(&mut the),
-                IoSliceMut::new(&mut wee),
-                IoSliceMut::new(&mut knight),
-                IoSliceMut::new(&mut would),
-                IoSliceMut::new(&mut yell),
-                IoSliceMut::new(&mut ow),
-            ],
-            0,
-        )
+        .recv_vectored(&mut [
+            IoSliceMut::new(&mut the),
+            IoSliceMut::new(&mut wee),
+            IoSliceMut::new(&mut knight),
+            IoSliceMut::new(&mut would),
+            IoSliceMut::new(&mut yell),
+            IoSliceMut::new(&mut ow),
+        ])
         .unwrap();
     assert_eq!(received, 23);
     #[cfg(all(unix, not(target_os = "redox")))]
@@ -270,7 +267,7 @@ fn recv_vectored_truncated() {
     let mut buffer = [0u8; 24];
 
     let (received, flags) = socket_b
-        .recv_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
+        .recv_vectored(&mut [IoSliceMut::new(&mut buffer)])
         .unwrap();
     assert_eq!(received, 24);
     assert_eq!(flags.is_truncated(), true);

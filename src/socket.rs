@@ -307,19 +307,34 @@ impl Socket {
         sys::recv(self.inner, buf, flags)
     }
 
-    /// Identical to [`recv_with_flags`] but reads into a slice of buffers.
+    /// Receives data on the socket from the remote address to which it is
+    /// connected. Unlike [`recv`] that allows passing multiple buffers.
     ///
-    /// In addition to the number of bytes read, this function returns the flags for the received message.
-    /// See [`RecvFlags`] for more information about the flags.
+    /// The [`connect`] method will connect this socket to a remote address.
+    /// This method might fail if the socket is not connected.
     ///
-    /// [`recv_with_flags`]: #method.recv_with_flags
+    /// In addition to the number of bytes read, this function returns the flags
+    /// for the received message. See [`RecvFlags`] for more information about
+    /// the returned flags.
+    ///
+    /// [`recv`]: Socket::recv
+    /// [`connect`]: Socket::connect
     #[cfg(not(target_os = "redox"))]
-    pub fn recv_vectored(
+    pub fn recv_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<(usize, RecvFlags)> {
+        self.recv_vectored_with_flags(bufs, 0)
+    }
+
+    /// Identical to [`recv_vectored`] but allows for specification of arbitrary
+    /// flags to the underlying `recvmsg`/`WSARecv` call.
+    ///
+    /// [`recv_vectored`]: Socket::recv_vectored
+    #[cfg(not(target_os = "redox"))]
+    pub fn recv_vectored_with_flags(
         &self,
         bufs: &mut [IoSliceMut<'_>],
         flags: i32,
     ) -> io::Result<(usize, RecvFlags)> {
-        self.inner().recv_vectored(bufs, flags)
+        sys::recv_vectored(self.inner, bufs, flags)
     }
 
     /// Receives data on the socket from the remote adress to which it is

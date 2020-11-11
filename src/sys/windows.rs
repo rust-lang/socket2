@@ -290,6 +290,38 @@ pub(crate) fn recv(socket: SysSocket, buf: &mut [u8], flags: c_int) -> io::Resul
     }
 }
 
+pub(crate) fn recv_vectored(
+    socket: SysSocket,
+    bufs: &mut [IoSliceMut<'_>],
+    flags: c_int,
+) -> io::Result<(usize, RecvFlags)> {
+    let mut nread = 0;
+    let mut flags = flags as DWORD;
+    let res = syscall!(
+        WSARecv(
+            socket,
+            bufs.as_mut_ptr().cast(),
+            min(bufs.len(), DWORD::max_value() as usize) as DWORD,
+            &mut nread,
+            &mut flags,
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    );
+    match res {
+        Ok(_) => Ok((nread as usize, RecvFlags(0))),
+        Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => {
+            Ok((0, RecvFlags(0)))
+        }
+        Err(ref err) if err.raw_os_error() == Some(sock::WSAEMSGSIZE as i32) => {
+            Ok((nread as usize, RecvFlags(MSG_TRUNC)))
+        }
+        Err(err) => Err(err),
+    }
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -387,38 +419,6 @@ impl Socket {
             };
             let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
             Ok((n, addr))
-        }
-    }
-
-    pub fn recv_vectored(
-        &self,
-        bufs: &mut [IoSliceMut<'_>],
-        flags: c_int,
-    ) -> io::Result<(usize, RecvFlags)> {
-        let mut nread = 0;
-        let mut flags = flags as DWORD;
-        let ret = unsafe {
-            sock::WSARecv(
-                self.socket,
-                bufs.as_mut_ptr() as *mut WSABUF,
-                bufs.len().min(DWORD::MAX as usize) as DWORD,
-                &mut nread,
-                &mut flags,
-                ptr::null_mut(),
-                None,
-            )
-        };
-
-        let nread = nread as usize;
-        if ret == 0 {
-            Ok((nread, RecvFlags(0)))
-        } else {
-            let error = last_error();
-            match error.raw_os_error() {
-                Some(sock::WSAESHUTDOWN) => Ok((0, RecvFlags(0))),
-                Some(sock::WSAEMSGSIZE) => Ok((nread, RecvFlags(MSG_TRUNC))),
-                _ => Err(error),
-            }
         }
     }
 
