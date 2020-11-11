@@ -9,7 +9,7 @@
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::io::{Read, Write};
-use std::mem::{self, size_of_val, MaybeUninit};
+use std::mem::{self, size_of, size_of_val, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "all")]
@@ -435,8 +435,15 @@ impl crate::Socket {
     ///
     /// Only supported on Apple platforms (`target_vendor = "apple"`).
     #[cfg(all(feature = "all", target_vendor = "apple"))]
-    pub fn set_nosigpipe(&self) -> io::Result<()> {
-        unsafe { setsockopt(self.inner, libc::SOL_SOCKET, libc::SO_NOSIGPIPE, 1i32) }
+    pub fn set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt::<c_int>(
+                self.inner,
+                libc::SOL_SOCKET,
+                libc::SO_NOSIGPIPE,
+                nosigpipe as _,
+            )
+        }
     }
 }
 
@@ -467,7 +474,7 @@ fn fcntl_remove(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> i
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
-    let mut len = mem::size_of::<T>() as libc::socklen_t;
+    let mut len = size_of::<T>() as libc::socklen_t;
     syscall!(getsockopt(
         fd,
         opt,
@@ -476,7 +483,7 @@ unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> 
         &mut len,
     ))
     .map(|_| {
-        debug_assert_eq!(len as usize, mem::size_of::<T>());
+        debug_assert_eq!(len as usize, size_of::<T>());
         // Safety: `getsockopt` initialised `payload` for us.
         payload.assume_init()
     })
@@ -484,10 +491,7 @@ unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> 
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 #[cfg(all(feature = "all", target_vendor = "apple"))]
-unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()>
-where
-    T: Copy,
-{
+unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()> {
     let payload = &payload as *const T as *const c_void;
     syscall!(setsockopt(
         fd,
@@ -498,6 +502,15 @@ where
     ))
     .map(|_| ())
 }
+
+/*
+            setsockopt::<c_int>(
+                self.inner,
+                libc::SOL_SOCKET,
+                libc::SO_NOSIGPIPE,
+                nosigpipe as _,
+            )
+*/
 
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {

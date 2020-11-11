@@ -78,7 +78,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 ///
 /// // On macOS and iOS set `NOSIGPIPE`.
 /// #[cfg(target_vendor = "apple")]
-/// socket.set_nosigpipe()?;
+/// socket.set_nosigpipe(true)?;
 ///
 /// # drop(socket);
 /// # Ok(())
