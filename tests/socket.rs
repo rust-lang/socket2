@@ -63,6 +63,24 @@ fn set_cloexec() {
     assert_close_on_exec(&socket, false);
 }
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )
+))]
+#[test]
+fn type_cloexec() {
+    let ty = Type::Stream.cloexec();
+    let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
+    assert_close_on_exec(&socket, true);
+}
+
 /// Assert that `CLOEXEC` is set on `socket`.
 #[cfg(unix)]
 pub fn assert_close_on_exec<S>(socket: &S, want: bool)
