@@ -407,6 +407,20 @@ pub(crate) fn recv_from_vectored(
     }
 }
 
+pub(crate) fn send(socket: SysSocket, buf: &[u8], flags: c_int) -> io::Result<usize> {
+    syscall!(
+        send(
+            socket,
+            buf.as_ptr().cast(),
+            min(buf.len(), MAX_BUF_LEN) as c_int,
+            flags,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|n| n as usize)
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -460,24 +474,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
-        unsafe {
-            let n = {
-                sock::send(
-                    self.socket,
-                    buf.as_ptr() as *const c_char,
-                    clamp(buf.len()),
-                    flags,
-                )
-            };
-            if n == sock::SOCKET_ERROR {
-                Err(last_error())
-            } else {
-                Ok(n as usize)
-            }
-        }
-    }
-
     pub fn send_to(&self, buf: &[u8], flags: c_int, addr: &SockAddr) -> io::Result<usize> {
         unsafe {
             let n = {
@@ -896,7 +892,7 @@ impl Write for Socket {
 
 impl<'a> Write for &'a Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.send(buf, 0)
+        send(self.socket, buf, 0)
     }
 
     fn flush(&mut self) -> io::Result<()> {
