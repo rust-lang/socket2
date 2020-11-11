@@ -12,7 +12,7 @@ Utilities for handling networking sockets with a maximal amount of configuration
 possible intended.
 """
 keywords      = ["io", "socket", "network"]
-categories    = ["api-bindings", "network-programming", "web-programming"]
+categories    = ["api-bindings", "network-programming"]
 edition       = "2018"
 include       = [
   "Cargo.toml",
