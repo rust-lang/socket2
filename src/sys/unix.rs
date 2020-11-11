@@ -431,16 +431,48 @@ pub(crate) fn recv_vectored(
     bufs: &mut [IoSliceMut<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
+    recvmsg(fd, ptr::null_mut(), bufs, flags).map(|(n, _, recv_flags)| (n, recv_flags))
+}
+
+#[cfg(not(target_os = "redox"))]
+pub fn recv_from_vectored(
+    fd: SysSocket,
+    bufs: &mut [IoSliceMut<'_>],
+    flags: c_int,
+) -> io::Result<(usize, RecvFlags, SockAddr)> {
+    let mut storage: MaybeUninit<libc::sockaddr_storage> = MaybeUninit::zeroed();
+    recvmsg(fd, storage.as_mut_ptr(), bufs, flags).map(|(n, addrlen, recv_flags)| {
+        // Safety: `recvmsg` wrote an address of `addrlen` bytes for us. The
+        // remaining bytes are initialised to zero (which is valid for
+        // `sockaddr_storage`).
+        let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+        (n as usize, recv_flags, addr)
+    })
+}
+
+/// Returns the (bytes received, sending address len, `RecvFlags`).
+fn recvmsg(
+    fd: SysSocket,
+    msg_name: *mut sockaddr_storage,
+    bufs: &mut [IoSliceMut<'_>],
+    flags: c_int,
+) -> io::Result<(usize, libc::socklen_t, RecvFlags)> {
+    let msg_namelen = if msg_name.is_null() {
+        0
+    } else {
+        size_of::<libc::sockaddr_storage>() as libc::socklen_t
+    };
     let mut msg = libc::msghdr {
-        msg_name: ptr::null_mut(),
-        msg_namelen: 0,
+        msg_name: msg_name.cast(),
+        msg_namelen,
         msg_iov: bufs.as_mut_ptr().cast(),
         msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
         msg_control: ptr::null_mut(),
         msg_controllen: 0,
         msg_flags: 0,
     };
-    syscall!(recvmsg(fd, &mut msg as *mut _, flags)).map(|n| (n as usize, RecvFlags(msg.msg_flags)))
+    syscall!(recvmsg(fd, &mut msg as *mut _, flags))
+        .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
 }
 
 /// Unix only API.
@@ -578,29 +610,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    #[cfg(not(target_os = "redox"))]
-    pub fn recv_from_vectored(
-        &self,
-        bufs: &mut [IoSliceMut<'_>],
-        flags: c_int,
-    ) -> io::Result<(usize, RecvFlags, SockAddr)> {
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut msg = libc::msghdr {
-            msg_name: &mut storage as *mut libc::sockaddr_storage as *mut c_void,
-            msg_namelen: mem::size_of_val(&storage) as socklen_t,
-            msg_iov: bufs.as_mut_ptr().cast(),
-            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
-            msg_control: std::ptr::null_mut(),
-            msg_controllen: 0,
-            msg_flags: 0,
-        };
-
-        let n = syscall!(recvmsg(self.fd, &mut msg as *mut _, flags))?;
-        let addr =
-            unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, msg.msg_namelen) };
-        Ok((n as usize, RecvFlags(msg.msg_flags), addr))
-    }
-
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         let n = syscall!(send(
             self.fd,

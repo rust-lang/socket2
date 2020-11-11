@@ -228,15 +228,12 @@ fn send_from_recv_to_vectored() {
     let mut men = [0u8; 3];
     let mut swear = [0u8; 5];
     let (received, flags, addr) = socket_b
-        .recv_from_vectored(
-            &mut [
-                IoSliceMut::new(&mut surgeon),
-                IoSliceMut::new(&mut has),
-                IoSliceMut::new(&mut men),
-                IoSliceMut::new(&mut swear),
-            ],
-            0,
-        )
+        .recv_from_vectored(&mut [
+            IoSliceMut::new(&mut surgeon),
+            IoSliceMut::new(&mut has),
+            IoSliceMut::new(&mut men),
+            IoSliceMut::new(&mut swear),
+        ])
         .unwrap();
 
     assert_eq!(received, 18);
@@ -291,7 +288,7 @@ fn recv_from_vectored_truncated() {
     let mut buffer = [0u8; 24];
 
     let (received, flags, addr) = socket_b
-        .recv_from_vectored(&mut [IoSliceMut::new(&mut buffer)], 0)
+        .recv_from_vectored(&mut [IoSliceMut::new(&mut buffer)])
         .unwrap();
     assert_eq!(received, 24);
     assert_eq!(flags.is_truncated(), true);

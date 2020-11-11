@@ -361,6 +361,52 @@ pub(crate) fn recv_from(
     }
 }
 
+pub(crate) fn recv_from_vectored(
+    socket: SysSocket,
+    bufs: &mut [IoSliceMut<'_>],
+    flags: c_int,
+) -> io::Result<(usize, RecvFlags, SockAddr)> {
+    let mut storage: MaybeUninit<SOCKADDR_STORAGE> = MaybeUninit::zeroed();
+    let mut addrlen = size_of_val(&storage) as socklen_t;
+    let mut nread = 0;
+    let mut flags = flags as DWORD;
+    let res = syscall!(
+        WSARecvFrom(
+            socket,
+            bufs.as_mut_ptr().cast(),
+            min(bufs.len(), DWORD::max_value() as usize) as DWORD,
+            &mut nread,
+            &mut flags,
+            storage.as_mut_ptr().cast(),
+            &mut addrlen,
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    );
+    match res {
+        Ok(_) => {
+            // Safety: `WSARecvFrom` wrote an address of `addrlen` bytes for us.
+            // The remaining bytes are initialised to zero (which is valid for
+            // `sockaddr_storage`).
+            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+            Ok((nread as usize, RecvFlags(0), addr))
+        }
+        Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => {
+            // Safety: see above.
+            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+            Ok((nread as usize, RecvFlags(0), addr))
+        }
+        Err(ref err) if err.raw_os_error() == Some(sock::WSAEMSGSIZE as i32) => {
+            // Safety: see above.
+            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+            Ok((nread as usize, RecvFlags(MSG_TRUNC), addr))
+        }
+        Err(err) => Err(err),
+    }
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -414,45 +460,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn recv_from_vectored(
-        &self,
-        bufs: &mut [IoSliceMut<'_>],
-        flags: c_int,
-    ) -> io::Result<(usize, RecvFlags, SockAddr)> {
-        let mut nread = 0;
-        let mut flags = flags as DWORD;
-        let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
-        let mut addrlen = mem::size_of_val(&storage) as c_int;
-        let ret = unsafe {
-            sock::WSARecvFrom(
-                self.socket,
-                bufs.as_mut_ptr() as *mut WSABUF,
-                bufs.len().min(DWORD::MAX as usize) as DWORD,
-                &mut nread,
-                &mut flags,
-                &mut storage as *mut SOCKADDR_STORAGE as *mut SOCKADDR,
-                &mut addrlen,
-                ptr::null_mut(),
-                None,
-            )
-        };
-
-        let flags;
-        if ret == 0 {
-            flags = RecvFlags(0);
-        } else {
-            let error = last_error();
-            if error.raw_os_error() == Some(sock::WSAEMSGSIZE) {
-                flags = RecvFlags(MSG_TRUNC)
-            } else {
-                return Err(error);
-            }
-        }
-
-        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen) };
-        Ok((nread as usize, flags, addr))
-    }
-
     pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         unsafe {
             let n = {
