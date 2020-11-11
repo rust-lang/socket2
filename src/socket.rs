@@ -15,11 +15,6 @@ use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::time::Duration;
 
-#[cfg(all(unix, feature = "all", not(target_os = "redox")))]
-use libc::MSG_OOB;
-#[cfg(all(windows, feature = "all"))]
-use winapi::um::winsock2::MSG_OOB;
-
 use crate::sys;
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
@@ -303,7 +298,7 @@ impl Socket {
     /// [`out_of_band_inline`]: Socket::out_of_band_inline
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.recv_with_flags(buf, MSG_OOB)
+        self.recv_with_flags(buf, sys::MSG_OOB)
     }
 
     /// Identical to [`recv`] but allows for specification of arbitrary flags to
@@ -351,7 +346,7 @@ impl Socket {
     /// Successive calls return the same data. This is accomplished by passing
     /// `MSG_PEEK` as a flag to the underlying `recv` system call.
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner().peek(buf)
+        self.recv_with_flags(buf, sys::MSG_PEEK)
     }
 
     /// Receives data from the socket. On success, returns the number of bytes
@@ -433,7 +428,7 @@ impl Socket {
     /// [`out_of_band_inline`]: #method.out_of_band_inline
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner().send(buf, MSG_OOB)
+        self.inner().send(buf, sys::MSG_OOB)
     }
 
     /// Sends data on the socket to the given address. On success, returns the
