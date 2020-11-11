@@ -437,6 +437,8 @@ pub(crate) fn send_vectored(
             //
             // Tracking issue: https://github.com/rust-lang/socket2-rs/issues/129.
             //
+            // NOTE: `send_to_vectored` has the same problem.
+            //
             // [1] https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasend
             bufs.as_ptr() as *mut _,
             min(bufs.len(), DWORD::max_value() as usize) as DWORD,
@@ -470,6 +472,32 @@ pub(crate) fn send_to(
         sock::SOCKET_ERROR
     )
     .map(|n| n as usize)
+}
+
+pub(crate) fn send_to_vectored(
+    socket: SysSocket,
+    bufs: &[IoSlice<'_>],
+    addr: &SockAddr,
+    flags: c_int,
+) -> io::Result<usize> {
+    let mut nsent = 0;
+    syscall!(
+        WSASendTo(
+            socket,
+            // FIXME: Same problem as in `send_vectored`.
+            bufs.as_ptr() as *mut _,
+            bufs.len().min(DWORD::MAX as usize) as DWORD,
+            &mut nsent,
+            flags as DWORD,
+            addr.as_ptr(),
+            addr.len(),
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| nsent as usize)
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
@@ -525,34 +553,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn send_to_vectored(
-        &self,
-        bufs: &[IoSlice<'_>],
-        flags: c_int,
-        addr: &SockAddr,
-    ) -> io::Result<usize> {
-        let mut nsent = 0;
-        let ret = unsafe {
-            sock::WSASendTo(
-                self.socket,
-                bufs.as_ptr() as *mut WSABUF,
-                bufs.len().min(DWORD::MAX as usize) as DWORD,
-                &mut nsent,
-                flags as DWORD,
-                addr.as_ptr(),
-                addr.len(),
-                std::ptr::null_mut(),
-                None,
-            )
-        };
-        match ret {
-            0 => Ok(nsent as usize),
-            _ => Err(last_error()),
-        }
-    }
-
-    // ================================================
-
     pub fn ttl(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(IPPROTO_IP, IP_TTL)?;

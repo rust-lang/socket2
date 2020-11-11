@@ -493,20 +493,7 @@ pub(crate) fn send_vectored(
     bufs: &[IoSlice<'_>],
     flags: c_int,
 ) -> io::Result<usize> {
-    let mut msg = libc::msghdr {
-        msg_name: ptr::null_mut(),
-        msg_namelen: 0,
-        // Safety: we're creating a `*mut` pointer from a reference, which is UB
-        // once actually used. However the OS should not write to it in the
-        // `sendmsg` system call.
-        msg_iov: bufs.as_ptr() as *mut _,
-        msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
-        msg_control: ptr::null_mut(),
-        msg_controllen: 0,
-        msg_flags: 0,
-    };
-
-    syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
+    sendmsg(fd, ptr::null(), 0, bufs, flags)
 }
 
 pub(crate) fn send_to(
@@ -524,6 +511,40 @@ pub(crate) fn send_to(
         addr.len(),
     ))
     .map(|n| n as usize)
+}
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn send_to_vectored(
+    fd: SysSocket,
+    bufs: &[IoSlice<'_>],
+    addr: &SockAddr,
+    flags: c_int,
+) -> io::Result<usize> {
+    sendmsg(fd, addr.as_storage_ptr(), addr.len(), bufs, flags)
+}
+
+/// Returns the (bytes received, sending address len, `RecvFlags`).
+fn sendmsg(
+    fd: SysSocket,
+    msg_name: *const sockaddr_storage,
+    msg_namelen: socklen_t,
+    bufs: &[IoSlice<'_>],
+    flags: c_int,
+) -> io::Result<usize> {
+    let mut msg = libc::msghdr {
+        // Safety: we're creating a `*mut` pointer from a reference, which is UB
+        // once actually used. However the OS should not write to it in the
+        // `sendmsg` system call.
+        msg_name: (msg_name as *mut sockaddr_storage).cast(),
+        msg_namelen,
+        // Safety: Same as above about `*const` -> `*mut`.
+        msg_iov: bufs.as_ptr() as *mut _,
+        msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
+        msg_control: ptr::null_mut(),
+        msg_controllen: 0,
+        msg_flags: 0,
+    };
+    syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
 /// Unix only API.
@@ -661,27 +682,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    #[cfg(not(target_os = "redox"))]
-    pub fn send_to_vectored(
-        &self,
-        bufs: &[IoSlice<'_>],
-        flags: c_int,
-        addr: &SockAddr,
-    ) -> io::Result<usize> {
-        let mut msg = libc::msghdr {
-            msg_name: addr.as_ptr() as *mut c_void,
-            msg_namelen: addr.len(),
-            msg_iov: bufs.as_ptr() as *mut libc::iovec,
-            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
-            msg_control: std::ptr::null_mut(),
-            msg_controllen: 0,
-            msg_flags: 0,
-        };
-
-        let n = syscall!(sendmsg(self.fd, &mut msg as *mut libc::msghdr, flags))?;
-        Ok(n as usize)
-    }
-
     pub fn ttl(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_TTL)?;

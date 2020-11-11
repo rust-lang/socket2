@@ -215,7 +215,6 @@ fn send_from_recv_to_vectored() {
                 IoSlice::new(b"menswear"),
             ],
             &addr_b,
-            0,
         )
         .unwrap();
     assert_eq!(sent, 18);

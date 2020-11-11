@@ -458,20 +458,26 @@ impl Socket {
         sys::send_to(self.inner, buf, addr, flags)
     }
 
-    /// Identical to [`send_with_flags`] but writes from a slice of buffers.
-    ///
-    /// [`send_with_flags`]: #method.send_with_flags
+    /// Send data to a peer listening on `addr`. Returns the amount of bytes
+    /// written.
     #[cfg(not(target_os = "redox"))]
-    pub fn send_to_vectored(
+    pub fn send_to_vectored(&self, bufs: &[IoSlice<'_>], addr: &SockAddr) -> io::Result<usize> {
+        self.send_to_vectored_with_flags(bufs, addr, 0)
+    }
+
+    /// Identical to [`send_to_vectored`] but allows for specification of
+    /// arbitrary flags to the underlying `sendmsg`/`WSASendTo` call.
+    ///
+    /// [`send_to_vectored`]: Socket::send_to_vectored
+    #[cfg(not(target_os = "redox"))]
+    pub fn send_to_vectored_with_flags(
         &self,
         bufs: &[IoSlice<'_>],
         addr: &SockAddr,
         flags: i32,
     ) -> io::Result<usize> {
-        self.inner().send_to_vectored(bufs, flags, addr)
+        sys::send_to_vectored(self.inner, bufs, addr, flags)
     }
-
-    // ================================================
 
     /// Gets the value of the `IP_TTL` option for this socket.
     ///

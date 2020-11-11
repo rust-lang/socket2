@@ -59,6 +59,12 @@ impl SockAddr {
         &self.storage as *const _ as *const _
     }
 
+    /// Returns a raw pointer to the address storage.
+    #[cfg(unix)]
+    pub(crate) fn as_storage_ptr(&self) -> *const sockaddr_storage {
+        &self.storage
+    }
+
     /// Returns this address as a `SocketAddr` if it is in the `AF_INET` (IP v4)
     /// or `AF_INET6` (IP v6) family, otherwise returns `None`.
     pub fn as_std(&self) -> Option<SocketAddr> {
