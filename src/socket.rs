@@ -390,7 +390,7 @@ impl Socket {
     /// On success, returns the number of bytes peeked and the address from
     /// whence the data came.
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.inner().peek_from(buf)
+        self.recv_from_with_flags(buf, sys::MSG_PEEK)
     }
 
     /// Sends data on the socket to a connected peer.

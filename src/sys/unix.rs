@@ -578,10 +578,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        recv_from(self.fd, buf, libc::MSG_PEEK)
-    }
-
     #[cfg(not(target_os = "redox"))]
     pub fn recv_from_vectored(
         &self,
