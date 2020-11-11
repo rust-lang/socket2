@@ -33,7 +33,6 @@ use winapi::um::winsock2::{self as sock, u_long, SD_BOTH, SD_RECEIVE, SD_SEND};
 
 use crate::{RecvFlags, SockAddr, Type};
 
-const MSG_PEEK: c_int = 0x2;
 const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
 
 pub use winapi::ctypes::c_int;
@@ -62,6 +61,10 @@ pub(crate) use winapi::shared::ws2def::{
 };
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
+// Used in `Socket`.
+#[cfg(all(windows, feature = "all"))]
+pub(crate) use winapi::um::winsock2::MSG_OOB;
+pub(crate) use winapi::um::winsock2::MSG_PEEK;
 
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
 const MAX_BUF_LEN: usize = <c_int>::max_value() as usize;
@@ -375,24 +378,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        unsafe {
-            let n = {
-                sock::recv(
-                    self.socket,
-                    buf.as_mut_ptr() as *mut c_char,
-                    clamp(buf.len()),
-                    MSG_PEEK,
-                )
-            };
-            match n {
-                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
-                sock::SOCKET_ERROR => Err(last_error()),
-                n => Ok(n as usize),
-            }
-        }
-    }
-
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recv_from(buf, MSG_PEEK)
     }

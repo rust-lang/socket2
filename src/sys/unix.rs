@@ -42,6 +42,13 @@ pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 pub(crate) use libc::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
 };
+// Used in `RecvFlags`.
+#[cfg(not(target_os = "redox"))]
+pub(crate) use libc::MSG_TRUNC;
+// Used in `Socket`.
+#[cfg(all(unix, feature = "all", not(target_os = "redox")))]
+pub(crate) use libc::MSG_OOB;
+pub(crate) use libc::MSG_PEEK;
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -81,10 +88,6 @@ macro_rules! syscall {
         }
     }};
 }
-
-// Re-export message flags for the RecvFlags struct.
-#[cfg(not(target_os = "redox"))]
-pub(crate) use libc::MSG_TRUNC;
 
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
 #[cfg(not(target_vendor = "apple"))]
@@ -550,16 +553,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let n = syscall!(recv(
-            self.fd,
-            buf.as_mut_ptr() as *mut c_void,
-            cmp::min(buf.len(), max_len()),
-            libc::MSG_PEEK,
-        ))?;
-        Ok(n as usize)
-    }
-
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recv_from(buf, libc::MSG_PEEK)
     }
