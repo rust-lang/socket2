@@ -345,19 +345,19 @@ impl Socket {
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
     pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.inner().recv_from(buf, 0)
+        self.recv_from_with_flags(buf, 0)
     }
 
-    /// Identical to [`recv_from`] but allows for specification of arbitrary flags to the underlying
-    /// `recvfrom` call.
+    /// Identical to [`recv_from`] but allows for specification of arbitrary
+    /// flags to the underlying `recvfrom` call.
     ///
-    /// [`recv_from`]: #method.recv_from
+    /// [`recv_from`]: Socket::recv_from
     pub fn recv_from_with_flags(
         &self,
         buf: &mut [u8],
         flags: i32,
     ) -> io::Result<(usize, SockAddr)> {
-        self.inner().recv_from(buf, flags)
+        sys::recv_from(self.inner, buf, flags)
     }
 
     /// Identical to [`recv_from_with_flags`] but reads into a slice of buffers.

@@ -390,6 +390,7 @@ pub(crate) fn shutdown(fd: SysSocket, how: Shutdown) -> io::Result<()> {
     };
     syscall!(shutdown(fd, how)).map(|_| ())
 }
+
 pub(crate) fn recv(fd: SysSocket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
     syscall!(recv(
         fd,
@@ -398,6 +399,30 @@ pub(crate) fn recv(fd: SysSocket, buf: &mut [u8], flags: c_int) -> io::Result<us
         flags,
     ))
     .map(|n| n as usize)
+}
+
+pub(crate) fn recv_from(
+    fd: SysSocket,
+    buf: &mut [u8],
+    flags: c_int,
+) -> io::Result<(usize, SockAddr)> {
+    let mut storage: MaybeUninit<libc::sockaddr_storage> = MaybeUninit::zeroed();
+    let mut addrlen = size_of_val(&storage) as socklen_t;
+    syscall!(recvfrom(
+        fd,
+        buf.as_mut_ptr().cast(),
+        min(buf.len(), MAX_BUF_LEN),
+        flags,
+        storage.as_mut_ptr().cast(),
+        &mut addrlen,
+    ))
+    .map(|n| {
+        // Safety: `recvfrom` wrote an address of `addrlen` bytes for us. The
+        // remaining bytes are initialised to zero (which is valid for
+        // `sockaddr_storage`).
+        let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+        (n as usize, addr)
+    })
 }
 
 #[cfg(not(target_os = "redox"))]
@@ -554,23 +579,7 @@ pub struct Socket {
 
 impl Socket {
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.recv_from(buf, libc::MSG_PEEK)
-    }
-
-    pub fn recv_from(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut addrlen = mem::size_of_val(&storage) as socklen_t;
-
-        let n = syscall!(recvfrom(
-            self.fd,
-            buf.as_mut_ptr() as *mut c_void,
-            cmp::min(buf.len(), max_len()),
-            flags,
-            &mut storage as *mut _ as *mut _,
-            &mut addrlen,
-        ))?;
-        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen) };
-        Ok((n as usize, addr))
+        recv_from(self.fd, buf, libc::MSG_PEEK)
     }
 
     #[cfg(not(target_os = "redox"))]

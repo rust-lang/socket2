@@ -325,6 +325,42 @@ pub(crate) fn recv_vectored(
     }
 }
 
+pub(crate) fn recv_from(
+    socket: SysSocket,
+    buf: &mut [u8],
+    flags: c_int,
+) -> io::Result<(usize, SockAddr)> {
+    let mut storage: MaybeUninit<SOCKADDR_STORAGE> = MaybeUninit::zeroed();
+    let mut addrlen = size_of_val(&storage) as socklen_t;
+    let res = syscall!(
+        recvfrom(
+            socket,
+            buf.as_mut_ptr().cast(),
+            min(buf.len(), MAX_BUF_LEN) as c_int,
+            flags,
+            storage.as_mut_ptr().cast(),
+            &mut addrlen,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    );
+    match res {
+        Ok(n) => {
+            // Safety: `recvfrom` wrote an address of `addrlen` bytes for us. The
+            // remaining bytes are initialised to zero (which is valid for
+            // `sockaddr_storage`).
+            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+            Ok((n as usize, addr))
+        }
+        Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => {
+            // Safety: see above.
+            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
+            Ok((0, addr))
+        }
+        Err(err) => Err(err),
+    }
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -379,32 +415,7 @@ pub struct Socket {
 
 impl Socket {
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        self.recv_from(buf, MSG_PEEK)
-    }
-
-    pub fn recv_from(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
-        unsafe {
-            let mut storage: SOCKADDR_STORAGE = mem::zeroed();
-            let mut addrlen = mem::size_of_val(&storage) as c_int;
-
-            let n = {
-                sock::recvfrom(
-                    self.socket,
-                    buf.as_mut_ptr() as *mut c_char,
-                    clamp(buf.len()),
-                    flags,
-                    &mut storage as *mut _ as *mut _,
-                    &mut addrlen,
-                )
-            };
-            let n = match n {
-                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => 0,
-                sock::SOCKET_ERROR => return Err(last_error()),
-                n => n as usize,
-            };
-            let addr = SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen);
-            Ok((n, addr))
-        }
+        recv_from(self.socket, buf, MSG_PEEK)
     }
 
     pub fn recv_from_vectored(
