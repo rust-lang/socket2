@@ -39,6 +39,11 @@ impl SockAddr {
         }
     }
 
+    /// Constructs a `SockAddr` from its raw components.
+    pub(crate) const fn from_raw(storage: sockaddr_storage, len: socklen_t) -> SockAddr {
+        SockAddr { storage, len }
+    }
+
     /// Returns this address's family.
     pub fn family(&self) -> sa_family_t {
         self.storage.ss_family
