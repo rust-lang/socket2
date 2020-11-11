@@ -1,4 +1,4 @@
-#[cfg(windows)]
+#[cfg(any(windows, all(feature = "all", target_vendor = "apple")))]
 use std::io;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
@@ -141,4 +141,44 @@ where
         !want,
         "FLAG_INHERIT option"
     );
+}
+
+#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[test]
+fn set_nosigpipe() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    assert_flag_no_sigpipe(&socket, false);
+
+    socket.set_nosigpipe(true).unwrap();
+    assert_flag_no_sigpipe(&socket, true);
+
+    socket.set_nosigpipe(false).unwrap();
+    assert_flag_no_sigpipe(&socket, false);
+}
+
+/// Assert that `SO_NOSIGPIPE` is set on `socket`.
+#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[track_caller]
+pub fn assert_flag_no_sigpipe<S>(socket: &S, want: bool)
+where
+    S: AsRawFd,
+{
+    use std::mem::size_of;
+    let mut flags: libc::c_int = 0;
+    let mut length = size_of::<libc::c_int>() as libc::socklen_t;
+    let res = unsafe {
+        libc::getsockopt(
+            socket.as_raw_fd(),
+            libc::SOL_SOCKET,
+            libc::SO_NOSIGPIPE,
+            &mut flags as *mut _ as *mut _,
+            &mut length,
+        )
+    };
+    if res != 0 {
+        let err = io::Error::last_os_error();
+        panic!("unexpected error: {}", err);
+    }
+    assert_eq!(length as usize, size_of::<libc::c_int>());
+    assert_eq!(flags, want as _, "non-blocking option");
 }
