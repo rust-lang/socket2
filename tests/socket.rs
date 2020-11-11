@@ -15,6 +15,24 @@ fn set_nonblocking() {
     assert_non_blocking(&socket, false);
 }
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )
+))]
+#[test]
+fn type_nonblocking() {
+    let ty = Type::Stream.nonblocking();
+    let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
+    assert_non_blocking(&socket, true);
+}
+
 /// Assert that `NONBLOCK` is set on `socket`.
 #[cfg(unix)]
 #[track_caller]
