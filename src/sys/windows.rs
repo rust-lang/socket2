@@ -9,7 +9,7 @@
 use std::cmp::{self, min};
 use std::fmt;
 use std::io;
-use std::io::{IoSlice, IoSliceMut, Read, Write};
+use std::io::{IoSlice, IoSliceMut, Write};
 use std::mem::{self, size_of, size_of_val, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -881,18 +881,6 @@ impl Socket {
 
     pub fn from_inner(socket: SysSocket) -> Socket {
         Socket { socket }
-    }
-}
-
-impl Read for Socket {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        <&Socket>::read(&mut &*self, buf)
-    }
-}
-
-impl<'a> Read for &'a Socket {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        recv(self.socket, buf, 0)
     }
 }
 

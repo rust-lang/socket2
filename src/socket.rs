@@ -906,13 +906,21 @@ impl Socket {
 
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner().read(buf)
+        self.recv(buf)
+    }
+
+    fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
+        self.recv_vectored(bufs).map(|(n, _)| n)
     }
 }
 
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner().read(buf)
+        self.recv(buf)
+    }
+
+    fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
+        self.recv_vectored(bufs).map(|(n, _)| n)
     }
 }
 
