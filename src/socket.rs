@@ -74,7 +74,7 @@ use crate::{Domain, Protocol, SockAddr, Type};
 ///
 /// // On platforms that don't support `SOCK_CLOEXEC`, use `FD_CLOEXEC`.
 /// #[cfg(all(not(windows), not(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))))]
-/// socket.set_cloexec()?;
+/// socket.set_cloexec(true)?;
 ///
 /// // On macOS and iOS set `NOSIGPIPE`.
 /// #[cfg(target_vendor = "apple")]
