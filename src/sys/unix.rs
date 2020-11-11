@@ -221,7 +221,7 @@ impl RecvFlags {
     /// a record is terminated by sending a message with the end-of-record flag set.
     ///
     /// On Unix this corresponds to the MSG_EOR flag.
-    pub fn is_end_of_record(self) -> bool {
+    pub const fn is_end_of_record(self) -> bool {
         self.0 & libc::MSG_EOR != 0
     }
 
@@ -231,7 +231,7 @@ impl RecvFlags {
     /// mixed in with the normal data stream.
     ///
     /// On Unix this corresponds to the MSG_OOB flag.
-    pub fn is_out_of_band(self) -> bool {
+    pub const fn is_out_of_band(self) -> bool {
         self.0 & libc::MSG_OOB != 0
     }
 }
