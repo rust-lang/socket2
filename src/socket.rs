@@ -41,6 +41,14 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// [`TcpStream`]: std::net::TcpStream
 /// [`UdpSocket`]: std::net::UdpSocket
 ///
+/// # Notes
+///
+/// Some methods that set options on `Socket` require two system calls to set
+/// there options without overwriting previously set options. We do this by
+/// first getting the current settings, applying the desired changes and than
+/// updating the settings. This means that the operation is **not** atomic. This
+/// can lead to a data race when two threads are changing options in parallel.
+///
 /// # Examples
 ///
 /// Creating a new socket setting all advisable flags.
@@ -234,7 +242,7 @@ impl Socket {
     ///
     /// On Windows this can **not** be used function cannot be used on a
     /// QOS-enabled socket, see
-    /// https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw.
+    /// <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw>.
     pub fn try_clone(&self) -> io::Result<Socket> {
         sys::try_clone(self.inner).map(|inner| Socket { inner })
     }
