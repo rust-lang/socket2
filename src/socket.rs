@@ -50,41 +50,6 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// can lead to a data race when two threads are changing options in parallel.
 ///
 /// # Examples
-///
-/// Creating a new socket setting all advisable flags.
-///
-#[cfg_attr(feature = "all", doc = "```")] // Protocol::cloexec requires the `all` feature.
-#[cfg_attr(not(feature = "all"), doc = "```ignore")]
-/// # fn main() -> std::io::Result<()> {
-/// use socket2::{Protocol, Domain, Type, Socket};
-///
-/// let domain = Domain::IPV4;
-/// let ty = Type::STREAM;
-/// let protocol = Protocol::TCP;
-///
-/// // On platforms that support it set `SOCK_CLOEXEC`.
-/// #[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))]
-/// let ty = ty.cloexec();
-///
-/// // On windows set `WSA_FLAG_NO_HANDLE_INHERIT`.
-/// #[cfg(windows)]
-/// let ty = ty.no_inherit();
-///
-/// let socket = Socket::new(domain, ty, Some(protocol))?;
-///
-/// // On platforms that don't support `SOCK_CLOEXEC`, use `FD_CLOEXEC`.
-/// #[cfg(all(not(windows), not(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))))]
-/// socket.set_cloexec(true)?;
-///
-/// // On macOS and iOS set `NOSIGPIPE`.
-/// #[cfg(target_vendor = "apple")]
-/// socket.set_nosigpipe(true)?;
-///
-/// # drop(socket);
-/// # Ok(())
-/// # }
-/// ```
-///
 /// ```no_run
 /// # fn main() -> std::io::Result<()> {
 /// use std::net::{SocketAddr, TcpListener};
@@ -112,27 +77,51 @@ pub struct Socket {
 impl Socket {
     /// Creates a new socket ready to be configured.
     ///
+    /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on Windows.
+    ///
+    /// # Notes
+    ///
+    /// On Unix-like systems, the close-on-exec flag is set on the new socket.
+    /// Additionally, on macOS X and iOS the `SOCK_NOSIGPIPE` option is set.
+    /// On Windows, the socket handle is made non-inheritable.
+    ///
+    /// If possible, the close-on-exec flag will be set atomically when the socket is created.
+    /// However, on some platforms the flag is to be set with a separate syscall,
+    /// which leaves a small window for race conditions.
+    ///
+    /// Use [`Socket::new_raw`] if you don't want these flags and options to be set.
+    pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
+        // On platforms that support it set `SOCK_CLOEXEC` atomically.
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))]
+        let ty = ty._cloexec();
+
+        // On windows set `NO_HANDLE_INHERIT` atomically.
+        #[cfg(windows)]
+        let ty = ty._no_inherit();
+
+        set_common_flags(Socket::new_raw(domain, ty, protocol)?)
+    }
+
+    /// Creates a new socket ready to be configured.
+    ///
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
     /// Windows and simply creates a new socket, no other configuration is done
     /// and further functions must be invoked to configure this socket.
     ///
     /// # Notes
     ///
-    /// The standard library sets the `CLOEXEC` flag on Unix on sockets, this
-    /// function does **not** do this, but its advisable. On supported platforms
-    /// [`Type::cloexec`] can be used for this, or by using
-    /// [`Socket::set_cloexec`].
-    ///
-    /// Furthermore on macOS and iOS `NOSIGPIPE` is not set, this can be done
-    /// using [`Socket::set_nosigpipe`].
-    ///
-    /// Similarly on Windows the `HANDLE_FLAG_INHERIT` is **not** set to zero,
-    /// but again in most cases its advisable to do so. This can be doing using
-    /// [`Socket::set_no_inherit`].
-    ///
-    /// See the `Socket` documentation for a full example of setting all the
-    /// above mentioned flags.
-    pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
+    /// This function does not set the close-on-exec flag or the `SOCK_SIGNOPIPE` option
+    /// for the created socket. On Windows, the created socket handle will be inheritable.
+    /// You should normally use [`Socket::new`], which creates sockets with the advised
+    /// flags and options for the current platform.
+    pub fn new_raw(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         sys::socket(domain.0, ty.0, protocol).map(|inner| Socket { inner })
     }
@@ -143,12 +132,52 @@ impl Socket {
     ///
     /// # Notes
     ///
-    /// Much like [`Socket::new`] this doesn't set any flags, which might be
-    /// advisable.
+    /// On Unix-like systems, the close-on-exec flag is set on the new sockets.
+    /// Additionally, on macOS X and iOS the `SOCK_NOSIGPIPE` option is set.
+    /// On Windows, the socket handles are made non-inheritable.
+    ///
+    /// If possible, the close-on-exec flag will be set atomically when the socket is created.
+    /// However, on some platforms the flag is to be set with a separate syscall,
+    /// which leaves a small window for race conditions.
+    ///
+    /// Use [`Socket::pair_raw`] if you don't want these flags and options to be set.
     ///
     /// This function is only available on Unix.
     #[cfg(all(feature = "all", unix))]
     pub fn pair(
+        domain: Domain,
+        ty: Type,
+        protocol: Option<Protocol>,
+    ) -> io::Result<(Socket, Socket)> {
+        // On platforms that support it set `SOCK_CLOEXEC` atomically.
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))]
+        let ty = ty._cloexec();
+
+        let (a, b) = Socket::pair_raw(domain, ty, protocol)?;
+        Ok((set_common_flags(a)?, set_common_flags(b)?))
+    }
+
+    /// Creates a pair of sockets which are connected to each other.
+    ///
+    /// This function corresponds to `socketpair(2)`.
+    ///
+    /// # Notes
+    ///
+    /// This function does not set the close-on-exec flag or the `SOCK_SIGNOPIPE` option
+    /// for the created sockets. You should normally use [`Socket::pair`],
+    /// which creates sockets with the advised
+    /// flags and options for the current platform.
+    ///
+    /// This function is only available on Unix.
+    #[cfg(all(feature = "all", unix))]
+    pub fn pair_raw(
         domain: Domain,
         ty: Type,
         protocol: Option<Protocol>,
@@ -198,6 +227,50 @@ impl Socket {
 
     /// Accept a new incoming connection from this listener.
     ///
+    /// This function corresponds to the `accept(2)` function on
+    /// Windows and Unix.
+    ///
+    /// # Notes
+    ///
+    /// On Unix-like systems, the close-on-exec flag is set on the new socket.
+    /// Additionally, on macOS X and iOS the `SOCK_NOSIGPIPE` option is set.
+    /// On Windows, the socket handle is made non-inheritable.
+    ///
+    /// If possible, the close-on-exec flag will be set atomically when the socket is created.
+    /// However, on some platforms the flag is to be set with a separate syscall,
+    /// which leaves a small window for race conditions.
+    ///
+    /// Use [`Socket::accept_raw`] if you don't want these flags and options to be set.
+    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
+        // On platforms that support it set `SOCK_CLOEXEC` atomically.
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))]
+        let (sock, addr) = self._accept4(libc::SOCK_CLOEXEC)?;
+
+        #[cfg(not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        )))]
+        let (sock, addr) = self.accept_raw()?;
+
+        #[cfg(windows)]
+        sock._set_no_inherit(true)?;
+
+        Ok((sock, addr))
+    }
+
+    /// Accept a new incoming connection from this listener.
+    ///
     /// This function directly corresponds to the `accept(2)` function on
     /// Windows and Unix.
     ///
@@ -207,10 +280,11 @@ impl Socket {
     ///
     /// # Notes
     ///
-    /// Like [`Socket::new`] this will not set any flags. If that is desirable,
-    /// e.g. setting `CLOEXEC`, [`Socket::accept4`] can be used on supported
-    /// OSes or [`Socket::set_cloexec`] can be called.
-    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
+    /// This function does not set the close-on-exec flag or the `SOCK_SIGNOPIPE` option
+    /// for the created socket. On Windows, the created socket handle will be inheritable.
+    /// You should normally use [`Socket::accept_raw`], which creates sockets with the advisable
+    /// flags and options for the current platform.
+    pub fn accept_raw(&self) -> io::Result<(Socket, SockAddr)> {
         sys::accept(self.inner).map(|(inner, addr)| (Socket { inner }, addr))
     }
 
@@ -1015,6 +1089,30 @@ impl Drop for Socket {
     fn drop(&mut self) {
         sys::close(self.inner);
     }
+}
+
+/// Fix-up a socket after creation by setting common platform specific flags.
+#[allow(unused)]
+fn set_common_flags(mut sock: Socket) -> io::Result<Socket> {
+    // On unix platforms that can't set CLOEXEC atomically, set it here.
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))
+    ))]
+    sock._set_cloexec(true)?;
+
+    // On Apple platforms, set the NOSIGPIPE socket option.
+    #[cfg(target_vendor = "apple")]
+    sock._set_nosigpipe(true)?;
+
+    Ok(sock)
 }
 
 #[cfg(test)]

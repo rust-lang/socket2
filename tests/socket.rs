@@ -61,17 +61,17 @@ pub fn assert_nonblocking<S>(_: &S, _: bool) {
     // No way to get this information...
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, feature = "all"))]
 #[test]
 fn set_cloexec() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_close_on_exec(&socket, false);
-
-    socket.set_cloexec(true).unwrap();
     assert_close_on_exec(&socket, true);
 
     socket.set_cloexec(false).unwrap();
     assert_close_on_exec(&socket, false);
+
+    socket.set_cloexec(true).unwrap();
+    assert_close_on_exec(&socket, true);
 }
 
 #[cfg(all(
@@ -103,17 +103,17 @@ where
     assert_eq!(flags & libc::FD_CLOEXEC != 0, want, "CLOEXEC option");
 }
 
-#[cfg(windows)]
+#[cfg(all(windows, feature = "all"))]
 #[test]
 fn set_no_inherit() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_flag_no_inherit(&socket, false);
-
-    socket.set_no_inherit(true).unwrap();
     assert_flag_no_inherit(&socket, true);
 
     socket.set_no_inherit(false).unwrap();
     assert_flag_no_inherit(&socket, false);
+
+    socket.set_no_inherit(true).unwrap();
+    assert_flag_no_inherit(&socket, true);
 }
 
 #[cfg(all(feature = "all", windows))]
@@ -147,13 +147,13 @@ where
 #[test]
 fn set_nosigpipe() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_flag_no_sigpipe(&socket, false);
-
-    socket.set_nosigpipe(true).unwrap();
     assert_flag_no_sigpipe(&socket, true);
 
     socket.set_nosigpipe(false).unwrap();
     assert_flag_no_sigpipe(&socket, false);
+
+    socket.set_nosigpipe(true).unwrap();
+    assert_flag_no_sigpipe(&socket, true);
 }
 
 /// Assert that `SO_NOSIGPIPE` is set on `socket`.
