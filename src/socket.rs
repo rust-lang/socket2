@@ -279,20 +279,32 @@ impl Socket {
     /// Receives data on the socket from the remote address to which it is
     /// connected.
     ///
-    /// The [`connect`] method will connect this socket to a remote address. This
-    /// method will fail if the socket is not connected.
+    /// The [`connect`] method will connect this socket to a remote address.
+    /// This method might fail if the socket is not connected.
     ///
-    /// [`connect`]: #method.connect
+    /// [`connect`]: Socket::connect
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner().recv(buf, 0)
+        self.recv_with_flags(buf, 0)
     }
 
-    /// Identical to [`recv`] but allows for specification of arbitrary flags to the underlying
-    /// `recv` call.
+    /// Receives out-of-band (OOB) data on the socket from the remote address to
+    /// which it is connected by setting the `MSG_OOB` flag for this call.
     ///
-    /// [`recv`]: #method.recv
-    pub fn recv_with_flags(&self, buf: &mut [u8], flags: i32) -> io::Result<usize> {
-        self.inner().recv(buf, flags)
+    /// For more information, see [`recv`], [`out_of_band_inline`].
+    ///
+    /// [`recv`]: Socket::recv
+    /// [`out_of_band_inline`]: Socket::out_of_band_inline
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.recv_with_flags(buf, MSG_OOB)
+    }
+
+    /// Identical to [`recv`] but allows for specification of arbitrary flags to
+    /// the underlying `recv` call.
+    ///
+    /// [`recv`]: Socket::recv
+    pub fn recv_with_flags(&self, buf: &mut [u8], flags: sys::c_int) -> io::Result<usize> {
+        sys::recv(self.inner, buf, flags)
     }
 
     /// Identical to [`recv_with_flags`] but reads into a slice of buffers.
@@ -308,18 +320,6 @@ impl Socket {
         flags: i32,
     ) -> io::Result<(usize, RecvFlags)> {
         self.inner().recv_vectored(bufs, flags)
-    }
-
-    /// Receives out-of-band (OOB) data on the socket from the remote address to
-    /// which it is connected by setting the `MSG_OOB` flag for this call.
-    ///
-    /// For more information, see [`recv`], [`out_of_band_inline`].
-    ///
-    /// [`recv`]: #method.recv
-    /// [`out_of_band_inline`]: #method.out_of_band_inline
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
-    pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner().recv(buf, MSG_OOB)
     }
 
     /// Receives data on the socket from the remote adress to which it is

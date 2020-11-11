@@ -6,6 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use std::cmp::min;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::io::{Read, Write};
@@ -87,6 +88,21 @@ macro_rules! syscall {
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::MSG_TRUNC;
 
+/// Maximum size of a buffer passed to system call like `recv` and `send`.
+#[cfg(not(target_vendor = "apple"))]
+const MAX_BUF_LEN: usize = <ssize_t>::max_value() as usize;
+
+// The maximum read limit on most posix-like systems is `SSIZE_MAX`, with the
+// man page quoting that if the count of bytes to read is greater than
+// `SSIZE_MAX` the result is "unspecified".
+//
+// On macOS, however, apparently the 64-bit libc is either buggy or
+// intentionally showing odd behavior by rejecting any read with a size larger
+// than or equal to INT_MAX. To handle both of these the read size is capped on
+// both platforms.
+#[cfg(target_vendor = "apple")]
+const MAX_BUF_LEN: usize = <c_int>::max_value() as usize - 1;
+
 #[cfg(any(target_os = "android", all(target_os = "linux", target_env = "gnu")))]
 type IovLen = usize;
 
@@ -94,7 +110,7 @@ type IovLen = usize;
     target_os = "dragonfly",
     target_os = "freebsd",
     target_os = "ios",
-    all(target_os = "linux", target_env = "musl",),
+    all(target_os = "linux", target_env = "musl"),
     target_os = "macos",
     target_os = "netbsd",
     target_os = "openbsd",
@@ -373,6 +389,15 @@ pub(crate) fn shutdown(fd: SysSocket, how: Shutdown) -> io::Result<()> {
     };
     syscall!(shutdown(fd, how)).map(|_| ())
 }
+pub(crate) fn recv(fd: SysSocket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+    syscall!(recv(
+        fd,
+        buf.as_mut_ptr().cast(),
+        min(buf.len(), MAX_BUF_LEN),
+        flags,
+    ))
+    .map(|n| n as usize)
+}
 
 /// Unix only API.
 impl crate::Socket {
@@ -503,31 +528,12 @@ unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io
     .map(|_| ())
 }
 
-/*
-            setsockopt::<c_int>(
-                self.inner,
-                libc::SOL_SOCKET,
-                libc::SO_NOSIGPIPE,
-                nosigpipe as _,
-            )
-*/
-
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     fd: SysSocket,
 }
 
 impl Socket {
-    pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
-        let n = syscall!(recv(
-            self.fd,
-            buf.as_mut_ptr() as *mut c_void,
-            cmp::min(buf.len(), max_len()),
-            flags,
-        ))?;
-        Ok(n as usize)
-    }
-
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         let n = syscall!(recv(
             self.fd,
