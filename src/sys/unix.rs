@@ -11,10 +11,11 @@ use std::cmp::min;
 use std::io::{IoSlice, IoSliceMut};
 use std::mem::{self, size_of, size_of_val, MaybeUninit};
 use std::net::Shutdown;
-use std::net::{self, Ipv4Addr, Ipv6Addr};
+use std::net::{Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "all")]
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
+#[cfg(feature = "all")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
@@ -975,7 +976,10 @@ impl Socket {
         }
     }
 
-    #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "solaris", target_os = "illumos"))
+    ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT)?;
@@ -983,7 +987,10 @@ impl Socket {
         }
     }
 
-    #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "solaris", target_os = "illumos"))
+    ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
@@ -1032,10 +1039,6 @@ impl Socket {
 
     pub fn inner(self) -> SysSocket {
         self.fd
-    }
-
-    pub fn from_inner(fd: SysSocket) -> Socket {
-        Socket { fd }
     }
 }
 
@@ -1095,75 +1098,51 @@ impl FromRawFd for crate::Socket {
     }
 }
 
-impl From<Socket> for net::TcpStream {
-    fn from(socket: Socket) -> net::TcpStream {
-        unsafe { net::TcpStream::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
-impl From<Socket> for net::TcpListener {
-    fn from(socket: Socket) -> net::TcpListener {
-        unsafe { net::TcpListener::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
-impl From<Socket> for net::UdpSocket {
-    fn from(socket: Socket) -> net::UdpSocket {
-        unsafe { net::UdpSocket::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
-impl From<Socket> for UnixStream {
-    fn from(socket: Socket) -> UnixStream {
+#[cfg(feature = "all")]
+impl From<crate::Socket> for UnixStream {
+    fn from(socket: crate::Socket) -> UnixStream {
         unsafe { UnixStream::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-impl From<Socket> for UnixListener {
-    fn from(socket: Socket) -> UnixListener {
+#[cfg(feature = "all")]
+impl From<crate::Socket> for UnixListener {
+    fn from(socket: crate::Socket) -> UnixListener {
         unsafe { UnixListener::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-impl From<Socket> for UnixDatagram {
-    fn from(socket: Socket) -> UnixDatagram {
+#[cfg(feature = "all")]
+impl From<crate::Socket> for UnixDatagram {
+    fn from(socket: crate::Socket) -> UnixDatagram {
         unsafe { UnixDatagram::from_raw_fd(socket.into_raw_fd()) }
     }
 }
 
-impl From<net::TcpStream> for Socket {
-    fn from(socket: net::TcpStream) -> Socket {
-        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+#[cfg(feature = "all")]
+impl From<UnixStream> for crate::Socket {
+    fn from(socket: UnixStream) -> crate::Socket {
+        crate::Socket {
+            inner: socket.into_raw_fd(),
+        }
     }
 }
 
-impl From<net::TcpListener> for Socket {
-    fn from(socket: net::TcpListener) -> Socket {
-        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+#[cfg(feature = "all")]
+impl From<UnixListener> for crate::Socket {
+    fn from(socket: UnixListener) -> crate::Socket {
+        crate::Socket {
+            inner: socket.into_raw_fd(),
+        }
     }
 }
 
-impl From<net::UdpSocket> for Socket {
-    fn from(socket: net::UdpSocket) -> Socket {
-        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
-impl From<UnixStream> for Socket {
-    fn from(socket: UnixStream) -> Socket {
-        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
-impl From<UnixListener> for Socket {
-    fn from(socket: UnixListener) -> Socket {
-        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
-impl From<UnixDatagram> for Socket {
-    fn from(socket: UnixDatagram) -> Socket {
-        unsafe { Socket::from_raw_fd(socket.into_raw_fd()) }
+#[cfg(feature = "all")]
+impl From<UnixDatagram> for crate::Socket {
+    fn from(socket: UnixDatagram) -> crate::Socket {
+        crate::Socket {
+            inner: socket.into_raw_fd(),
+        }
     }
 }
 
