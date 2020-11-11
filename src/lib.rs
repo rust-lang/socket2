@@ -138,7 +138,7 @@ impl Domain {
     pub const IPV6: Domain = Domain(sys::AF_INET6);
 
     /// Returns the correct domain for `address`.
-    pub fn for_address(address: SocketAddr) -> Domain {
+    pub const fn for_address(address: SocketAddr) -> Domain {
         match address {
             SocketAddr::V4(_) => Domain::IPV4,
             SocketAddr::V6(_) => Domain::IPV6,
@@ -254,7 +254,7 @@ impl RecvFlags {
     ///
     /// On Unix this corresponds to the MSG_TRUNC flag.
     /// On Windows this corresponds to the WSAEMSGSIZE error code.
-    pub fn is_truncated(self) -> bool {
+    pub const fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
     }
 }
