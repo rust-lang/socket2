@@ -6,17 +6,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::cmp::{self, min};
-use std::fmt;
-use std::io;
-use std::io::{IoSlice, IoSliceMut, Write};
+use std::cmp::min;
+use std::io::{self, IoSlice, IoSliceMut, Write};
 use std::mem::{self, size_of, size_of_val, MaybeUninit};
-use std::net::Shutdown;
-use std::net::{self, Ipv4Addr, Ipv6Addr};
+use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
-use std::ptr;
 use std::sync::Once;
 use std::time::Duration;
+use std::{fmt, ptr};
 
 use winapi::ctypes::{c_char, c_long, c_ulong};
 use winapi::shared::in6addr::*;
@@ -39,8 +36,8 @@ pub use winapi::ctypes::c_int;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
 ///
-/// The flag is enabled when a `WSARecv[From]` call returns `WSAEMSGSIZE`.
-/// The value of the flag is defined by us.
+/// The flag is enabled when a `WSARecv[From]` call returns `WSAEMSGSIZE`. The
+/// value of the flag is defined by us.
 pub(crate) const MSG_TRUNC: c_int = 0x01;
 
 // Used in `Domain`.
@@ -454,6 +451,27 @@ pub(crate) fn send_vectored(
     .map(|_| nsent as usize)
 }
 
+pub(crate) fn send_to(
+    socket: SysSocket,
+    buf: &[u8],
+    addr: &SockAddr,
+    flags: c_int,
+) -> io::Result<usize> {
+    syscall!(
+        sendto(
+            socket,
+            buf.as_ptr().cast(),
+            min(buf.len(), MAX_BUF_LEN) as c_int,
+            flags,
+            addr.as_ptr(),
+            addr.len(),
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|n| n as usize)
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -507,26 +525,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn send_to(&self, buf: &[u8], flags: c_int, addr: &SockAddr) -> io::Result<usize> {
-        unsafe {
-            let n = {
-                sock::sendto(
-                    self.socket,
-                    buf.as_ptr() as *const c_char,
-                    clamp(buf.len()),
-                    flags,
-                    addr.as_ptr(),
-                    addr.len(),
-                )
-            };
-            if n == sock::SOCKET_ERROR {
-                Err(last_error())
-            } else {
-                Ok(n as usize)
-            }
-        }
-    }
-
     pub fn send_to_vectored(
         &self,
         bufs: &[IoSlice<'_>],
@@ -1012,10 +1010,6 @@ pub(crate) fn close(socket: SysSocket) {
     unsafe {
         let _ = sock::closesocket(socket);
     }
-}
-
-fn clamp(input: usize) -> c_int {
-    cmp::min(input, <c_int>::max_value() as usize) as c_int
 }
 
 fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {
