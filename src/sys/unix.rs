@@ -471,7 +471,7 @@ fn recvmsg(
         msg_controllen: 0,
         msg_flags: 0,
     };
-    syscall!(recvmsg(fd, &mut msg as *mut _, flags))
+    syscall!(recvmsg(fd, &mut msg, flags))
         .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
 }
 
@@ -483,6 +483,28 @@ pub(crate) fn send(fd: SysSocket, buf: &[u8], flags: c_int) -> io::Result<usize>
         flags,
     ))
     .map(|n| n as usize)
+}
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn send_vectored(
+    fd: SysSocket,
+    bufs: &[IoSlice<'_>],
+    flags: c_int,
+) -> io::Result<usize> {
+    let mut msg = libc::msghdr {
+        msg_name: ptr::null_mut(),
+        msg_namelen: 0,
+        // Safety: we're creating a `*mut` pointer from a reference, which is UB
+        // once actually used. However the OS should not write to it in the
+        // `sendmsg` system call.
+        msg_iov: bufs.as_ptr() as *mut _,
+        msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
+        msg_control: ptr::null_mut(),
+        msg_controllen: 0,
+        msg_flags: 0,
+    };
+
+    syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
 /// Unix only API.
@@ -629,22 +651,6 @@ impl Socket {
             addr.as_ptr(),
             addr.len(),
         ))?;
-        Ok(n as usize)
-    }
-
-    #[cfg(not(target_os = "redox"))]
-    pub fn send_vectored(&self, bufs: &[IoSlice<'_>], flags: c_int) -> io::Result<usize> {
-        let mut msg = libc::msghdr {
-            msg_name: std::ptr::null_mut(),
-            msg_namelen: 0,
-            msg_iov: bufs.as_ptr() as *mut libc::iovec,
-            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
-            msg_control: std::ptr::null_mut(),
-            msg_controllen: 0,
-            msg_flags: 0,
-        };
-
-        let n = syscall!(sendmsg(self.fd, &mut msg as *mut libc::msghdr, flags))?;
         Ok(n as usize)
     }
 
