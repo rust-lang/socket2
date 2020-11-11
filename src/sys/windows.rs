@@ -842,6 +842,7 @@ impl Socket {
         }
     }
 
+    #[cfg(feature = "all")]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(SOL_SOCKET, SO_OOBINLINE)?;
@@ -849,6 +850,7 @@ impl Socket {
         }
     }
 
+    #[cfg(feature = "all")]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         unsafe { self.setsockopt(SOL_SOCKET, SO_OOBINLINE, oob_inline as c_int) }
     }
@@ -885,10 +887,6 @@ impl Socket {
 
     pub fn inner(self) -> SysSocket {
         self.socket
-    }
-
-    pub fn from_inner(socket: SysSocket) -> Socket {
-        Socket { socket }
     }
 }
 
@@ -947,42 +945,6 @@ impl FromRawSocket for crate::Socket {
         crate::Socket {
             inner: Socket::from_raw_socket(socket).inner(),
         }
-    }
-}
-
-impl From<Socket> for net::TcpStream {
-    fn from(socket: Socket) -> net::TcpStream {
-        unsafe { net::TcpStream::from_raw_socket(socket.into_raw_socket()) }
-    }
-}
-
-impl From<Socket> for net::TcpListener {
-    fn from(socket: Socket) -> net::TcpListener {
-        unsafe { net::TcpListener::from_raw_socket(socket.into_raw_socket()) }
-    }
-}
-
-impl From<Socket> for net::UdpSocket {
-    fn from(socket: Socket) -> net::UdpSocket {
-        unsafe { net::UdpSocket::from_raw_socket(socket.into_raw_socket()) }
-    }
-}
-
-impl From<net::TcpStream> for Socket {
-    fn from(socket: net::TcpStream) -> Socket {
-        unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
-    }
-}
-
-impl From<net::TcpListener> for Socket {
-    fn from(socket: net::TcpListener) -> Socket {
-        unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
-    }
-}
-
-impl From<net::UdpSocket> for Socket {
-    fn from(socket: net::UdpSocket) -> Socket {
-        unsafe { Socket::from_raw_socket(socket.into_raw_socket()) }
     }
 }
 
@@ -1124,6 +1086,7 @@ fn test_ipv6() {
 }
 
 #[test]
+#[cfg(feature = "all")]
 fn test_out_of_band_inline() {
     let tcp = Socket {
         socket: socket(AF_INET, SOCK_STREAM, 0).unwrap(),

@@ -11,8 +11,10 @@ use std::io::{self, Read, Write};
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-#[cfg(all(feature = "all", unix))]
-use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
+#[cfg(unix)]
+use std::os::unix::io::{FromRawFd, IntoRawFd};
+#[cfg(windows)]
+use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
 use crate::sys;
@@ -971,93 +973,53 @@ impl fmt::Debug for Socket {
     }
 }
 
+/// Macro to convert from one network type to another.
+macro_rules! from_raw {
+    ($ty: ty, $socket: expr) => {{
+        #[cfg(unix)]
+        unsafe {
+            <$ty>::from_raw_fd($socket.into_raw_fd())
+        }
+        #[cfg(windows)]
+        unsafe {
+            <$ty>::from_raw_socket($socket.into_raw_socket())
+        }
+    }};
+}
+
 impl From<net::TcpStream> for Socket {
     fn from(socket: net::TcpStream) -> Socket {
-        Socket {
-            inner: sys::Socket::from(socket).inner(),
-        }
+        from_raw!(Socket, socket)
     }
 }
 
 impl From<net::TcpListener> for Socket {
     fn from(socket: net::TcpListener) -> Socket {
-        Socket {
-            inner: sys::Socket::from(socket).inner(),
-        }
+        from_raw!(Socket, socket)
     }
 }
 
 impl From<net::UdpSocket> for Socket {
     fn from(socket: net::UdpSocket) -> Socket {
-        Socket {
-            inner: sys::Socket::from(socket).inner(),
-        }
-    }
-}
-
-#[cfg(all(feature = "all", unix))]
-impl From<UnixStream> for Socket {
-    fn from(socket: UnixStream) -> Socket {
-        Socket {
-            inner: sys::Socket::from(socket).inner(),
-        }
-    }
-}
-
-#[cfg(all(feature = "all", unix))]
-impl From<UnixListener> for Socket {
-    fn from(socket: UnixListener) -> Socket {
-        Socket {
-            inner: sys::Socket::from(socket).inner(),
-        }
-    }
-}
-
-#[cfg(all(feature = "all", unix))]
-impl From<UnixDatagram> for Socket {
-    fn from(socket: UnixDatagram) -> Socket {
-        Socket {
-            inner: sys::Socket::from(socket).inner(),
-        }
+        from_raw!(Socket, socket)
     }
 }
 
 impl From<Socket> for net::TcpStream {
     fn from(socket: Socket) -> net::TcpStream {
-        sys::Socket::from_inner(socket.inner).into()
+        from_raw!(net::TcpStream, socket)
     }
 }
 
 impl From<Socket> for net::TcpListener {
     fn from(socket: Socket) -> net::TcpListener {
-        sys::Socket::from_inner(socket.inner).into()
+        from_raw!(net::TcpListener, socket)
     }
 }
 
 impl From<Socket> for net::UdpSocket {
     fn from(socket: Socket) -> net::UdpSocket {
-        sys::Socket::from_inner(socket.inner).into()
-    }
-}
-
-#[cfg(all(feature = "all", unix))]
-impl From<Socket> for UnixStream {
-    fn from(socket: Socket) -> UnixStream {
-        sys::Socket::from_inner(socket.inner).into()
-    }
-}
-
-#[cfg(all(feature = "all", unix))]
-impl From<Socket> for UnixListener {
-    fn from(socket: Socket) -> UnixListener {
-        sys::Socket::from_inner(socket.inner).into()
-    }
-}
-
-#[cfg(all(feature = "all", unix))]
-impl From<Socket> for UnixDatagram {
-    fn from(socket: Socket) -> UnixDatagram {
-        sys::Socket::from_inner(socket.inner).into()
+        from_raw!(net::UdpSocket, socket)
     }
 }
 
