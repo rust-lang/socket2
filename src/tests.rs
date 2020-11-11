@@ -157,15 +157,12 @@ fn send_recv_vectored() {
     let (socket_a, socket_b) = udp_pair_connected();
 
     let sent = socket_a
-        .send_vectored(
-            &[
-                IoSlice::new(b"the"),
-                IoSlice::new(b"weeknight"),
-                IoSlice::new(b"would"),
-                IoSlice::new(b"yellow"),
-            ],
-            0,
-        )
+        .send_vectored(&[
+            IoSlice::new(b"the"),
+            IoSlice::new(b"weeknight"),
+            IoSlice::new(b"would"),
+            IoSlice::new(b"yellow"),
+        ])
         .unwrap();
     assert_eq!(sent, 23);
 

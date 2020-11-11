@@ -421,6 +421,39 @@ pub(crate) fn send(socket: SysSocket, buf: &[u8], flags: c_int) -> io::Result<us
     .map(|n| n as usize)
 }
 
+pub(crate) fn send_vectored(
+    socket: SysSocket,
+    bufs: &[IoSlice<'_>],
+    flags: c_int,
+) -> io::Result<usize> {
+    let mut nsent = 0;
+    syscall!(
+        WSASend(
+            socket,
+            // FIXME: From the `WSASend` docs [1]:
+            // > For a Winsock application, once the WSASend function is called,
+            // > the system owns these buffers and the application may not
+            // > access them.
+            //
+            // So what we're doing is actually UB as `bufs` needs to be `&mut
+            // [IoSlice<'_>]`.
+            //
+            // Tracking issue: https://github.com/rust-lang/socket2-rs/issues/129.
+            //
+            // [1] https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasend
+            bufs.as_ptr() as *mut _,
+            min(bufs.len(), DWORD::max_value() as usize) as DWORD,
+            &mut nsent,
+            flags as DWORD,
+            std::ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| nsent as usize)
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -491,25 +524,6 @@ impl Socket {
             } else {
                 Ok(n as usize)
             }
-        }
-    }
-
-    pub fn send_vectored(&self, bufs: &[IoSlice<'_>], flags: c_int) -> io::Result<usize> {
-        let mut nsent = 0;
-        let ret = unsafe {
-            sock::WSASend(
-                self.socket,
-                bufs.as_ptr() as *mut WSABUF,
-                bufs.len().min(DWORD::MAX as usize) as DWORD,
-                &mut nsent,
-                flags as DWORD,
-                std::ptr::null_mut(),
-                None,
-            )
-        };
-        match ret {
-            0 => Ok(nsent as usize),
-            _ => Err(last_error()),
         }
     }
 

@@ -422,12 +422,19 @@ impl Socket {
         sys::send(self.inner, buf, flags)
     }
 
-    /// Identical to [`send_with_flags`] but writes from a slice of buffers.
-    ///
-    /// [`send_with_flags`]: #method.send_with_flags
+    /// Send data to the connected peer. Returns the amount of bytes written.
     #[cfg(not(target_os = "redox"))]
-    pub fn send_vectored(&self, bufs: &[IoSlice<'_>], flags: i32) -> io::Result<usize> {
-        self.inner().send_vectored(bufs, flags)
+    pub fn send_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+        self.send_vectored_with_flags(bufs, 0)
+    }
+
+    /// Identical to [`send_vectored`] but allows for specification of arbitrary
+    /// flags to the underlying `sendmsg`/`WSASend` call.
+    ///
+    /// [`send_vectored`]: Socket::send_vectored
+    #[cfg(not(target_os = "redox"))]
+    pub fn send_vectored_with_flags(&self, bufs: &[IoSlice<'_>], flags: i32) -> io::Result<usize> {
+        sys::send_vectored(self.inner, bufs, flags)
     }
 
     /// Sends out-of-band (OOB) data on the socket to connected peer
@@ -909,6 +916,7 @@ impl Read for Socket {
         self.recv(buf)
     }
 
+    #[cfg(not(target_os = "redox"))]
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         self.recv_vectored(bufs).map(|(n, _)| n)
     }
@@ -919,6 +927,7 @@ impl<'a> Read for &'a Socket {
         self.recv(buf)
     }
 
+    #[cfg(not(target_os = "redox"))]
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         self.recv_vectored(bufs).map(|(n, _)| n)
     }
