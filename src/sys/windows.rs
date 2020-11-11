@@ -22,14 +22,11 @@ use winapi::ctypes::{c_char, c_long, c_ulong};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
-#[cfg(feature = "all")]
 use winapi::shared::ntdef::HANDLE;
 use winapi::shared::ws2def::{self, *};
 use winapi::shared::ws2ipdef::*;
-#[cfg(feature = "all")]
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
-#[cfg(feature = "all")]
 use winapi::um::winbase;
 use winapi::um::winbase::INFINITE;
 use winapi::um::winsock2::{self as sock, u_long, SD_BOTH, SD_RECEIVE, SD_SEND};
@@ -91,7 +88,7 @@ impl_debug!(
 impl Type {
     /// Our custom flag to set `WSA_FLAG_NO_HANDLE_INHERIT` on socket creation.
     /// Trying to mimic `Type::cloexec` on windows.
-    const NO_INHERIT: c_int = 1 << (size_of::<c_int>());
+    const NO_INHERIT: c_int = 1 << ((size_of::<c_int>() * 8) - 1); // Last bit.
 
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
@@ -300,12 +297,16 @@ fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Resu
 /// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
-    #[cfg(feature = "all")]
-    pub fn set_no_inherit(&self) -> io::Result<()> {
+    pub fn set_no_inherit(&self, no_inherit: bool) -> io::Result<()> {
         // NOTE: can't use `syscall!` because it expects the function in the
         // `sock::` path.
-        let res =
-            unsafe { SetHandleInformation(self.inner as HANDLE, winbase::HANDLE_FLAG_INHERIT, 0) };
+        let res = unsafe {
+            SetHandleInformation(
+                self.inner as HANDLE,
+                winbase::HANDLE_FLAG_INHERIT,
+                !no_inherit as _,
+            )
+        };
         if res == 0 {
             // Zero means error.
             Err(io::Error::last_os_error())
