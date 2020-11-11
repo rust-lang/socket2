@@ -445,18 +445,17 @@ impl Socket {
     /// Sends data on the socket to the given address. On success, returns the
     /// number of bytes written.
     ///
-    /// This is typically used on UDP or datagram-oriented sockets. On success
-    /// returns the number of bytes that were sent.
+    /// This is typically used on UDP or datagram-oriented sockets.
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
-        self.inner().send_to(buf, 0, addr)
+        self.send_to_with_flags(buf, addr, 0)
     }
 
-    /// Identical to [`send_to`] but allows for specification of arbitrary flags to the underlying
-    /// `sendto` call.
+    /// Identical to [`send_to`] but allows for specification of arbitrary flags
+    /// to the underlying `sendto` call.
     ///
-    /// [`send_to`]: #method.send_to
+    /// [`send_to`]: Socket::send_to
     pub fn send_to_with_flags(&self, buf: &[u8], addr: &SockAddr, flags: i32) -> io::Result<usize> {
-        self.inner().send_to(buf, flags, addr)
+        sys::send_to(self.inner, buf, addr, flags)
     }
 
     /// Identical to [`send_with_flags`] but writes from a slice of buffers.

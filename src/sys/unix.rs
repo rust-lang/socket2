@@ -20,9 +20,11 @@ use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
 use std::time::Duration;
-use std::{cmp, fmt, io, ptr};
+use std::{fmt, io, ptr};
 
-use libc::{self, c_void, in6_addr, in_addr, ssize_t};
+#[cfg(not(target_vendor = "apple"))]
+use libc::ssize_t;
+use libc::{c_void, in6_addr, in_addr};
 
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
@@ -507,6 +509,23 @@ pub(crate) fn send_vectored(
     syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
+pub(crate) fn send_to(
+    fd: SysSocket,
+    buf: &[u8],
+    addr: &SockAddr,
+    flags: c_int,
+) -> io::Result<usize> {
+    syscall!(sendto(
+        fd,
+        buf.as_ptr().cast(),
+        min(buf.len(), MAX_BUF_LEN),
+        flags,
+        addr.as_ptr(),
+        addr.len(),
+    ))
+    .map(|n| n as usize)
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -642,18 +661,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn send_to(&self, buf: &[u8], flags: c_int, addr: &SockAddr) -> io::Result<usize> {
-        let n = syscall!(sendto(
-            self.fd,
-            buf.as_ptr() as *const c_void,
-            cmp::min(buf.len(), max_len()),
-            flags,
-            addr.as_ptr(),
-            addr.len(),
-        ))?;
-        Ok(n as usize)
-    }
-
     #[cfg(not(target_os = "redox"))]
     pub fn send_to_vectored(
         &self,
@@ -1184,22 +1191,6 @@ impl From<UnixDatagram> for Socket {
 pub(crate) fn close(fd: SysSocket) {
     unsafe {
         let _ = libc::close(fd);
-    }
-}
-
-fn max_len() -> usize {
-    // The maximum read limit on most posix-like systems is `SSIZE_MAX`,
-    // with the man page quoting that if the count of bytes to read is
-    // greater than `SSIZE_MAX` the result is "unspecified".
-    //
-    // On macOS, however, apparently the 64-bit libc is either buggy or
-    // intentionally showing odd behavior by rejecting any read with a size
-    // larger than or equal to INT_MAX. To handle both of these the read
-    // size is capped on both platforms.
-    if cfg!(target_os = "macos") {
-        <c_int>::max_value() as usize - 1
-    } else {
-        <ssize_t>::max_value() as usize
     }
 }
 
