@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::cmp;
+use std::cmp::{self, min};
 use std::fmt;
 use std::io;
 use std::io::{IoSlice, IoSliceMut, Read, Write};
@@ -62,6 +62,9 @@ pub(crate) use winapi::shared::ws2def::{
 };
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
+
+/// Maximum size of a buffer passed to system call like `recv` and `send`.
+const MAX_BUF_LEN: usize = <c_int>::max_value() as usize;
 
 /// Helper macro to execute a system call that returns an `io::Result`.
 macro_rules! syscall {
@@ -269,6 +272,24 @@ pub(crate) fn shutdown(socket: SysSocket, how: Shutdown) -> io::Result<()> {
     syscall!(shutdown(socket, how), PartialEq::eq, sock::SOCKET_ERROR).map(|_| ())
 }
 
+pub(crate) fn recv(socket: SysSocket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+    let res = syscall!(
+        recv(
+            socket,
+            buf.as_mut_ptr().cast(),
+            min(buf.len(), MAX_BUF_LEN) as c_int,
+            flags,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    );
+    match res {
+        Ok(n) => Ok(n as usize),
+        Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => Ok(0),
+        Err(err) => Err(err),
+    }
+}
+
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
@@ -322,24 +343,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn recv(&self, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
-        unsafe {
-            let n = {
-                sock::recv(
-                    self.socket,
-                    buf.as_mut_ptr() as *mut c_char,
-                    clamp(buf.len()),
-                    flags,
-                )
-            };
-            match n {
-                sock::SOCKET_ERROR if sock::WSAGetLastError() == sock::WSAESHUTDOWN as i32 => Ok(0),
-                sock::SOCKET_ERROR => Err(last_error()),
-                n => Ok(n as usize),
-            }
-        }
-    }
-
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         unsafe {
             let n = {
@@ -890,7 +893,7 @@ impl Read for Socket {
 
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.recv(buf, 0)
+        recv(self.socket, buf, 0)
     }
 }
 

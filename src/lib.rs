@@ -252,8 +252,8 @@ impl RecvFlags {
     /// This flag is only used for datagram-based sockets,
     /// not for stream sockets.
     ///
-    /// On Unix this corresponds to the MSG_TRUNC flag.
-    /// On Windows this corresponds to the WSAEMSGSIZE error code.
+    /// On Unix this corresponds to the `MSG_TRUNC` flag.
+    /// On Windows this corresponds to the `WSAEMSGSIZE` error code.
     pub const fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
     }
