@@ -19,10 +19,8 @@ use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
-#[cfg(feature = "all")]
-use std::ptr;
 use std::time::Duration;
-use std::{cmp, fmt, io};
+use std::{cmp, fmt, io, ptr};
 
 use libc::{self, c_void, in6_addr, in_addr, ssize_t};
 
@@ -399,6 +397,24 @@ pub(crate) fn recv(fd: SysSocket, buf: &mut [u8], flags: c_int) -> io::Result<us
     .map(|n| n as usize)
 }
 
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn recv_vectored(
+    fd: SysSocket,
+    bufs: &mut [IoSliceMut<'_>],
+    flags: c_int,
+) -> io::Result<(usize, RecvFlags)> {
+    let mut msg = libc::msghdr {
+        msg_name: ptr::null_mut(),
+        msg_namelen: 0,
+        msg_iov: bufs.as_mut_ptr().cast(),
+        msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
+        msg_control: ptr::null_mut(),
+        msg_controllen: 0,
+        msg_flags: 0,
+    };
+    syscall!(recvmsg(fd, &mut msg as *mut _, flags)).map(|n| (n as usize, RecvFlags(msg.msg_flags)))
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -562,26 +578,6 @@ impl Socket {
         ))?;
         let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, addrlen) };
         Ok((n as usize, addr))
-    }
-
-    #[cfg(not(target_os = "redox"))]
-    pub fn recv_vectored(
-        &self,
-        bufs: &mut [IoSliceMut<'_>],
-        flags: c_int,
-    ) -> io::Result<(usize, RecvFlags)> {
-        let mut msg = libc::msghdr {
-            msg_name: std::ptr::null_mut(),
-            msg_namelen: 0,
-            msg_iov: bufs.as_mut_ptr().cast(),
-            msg_iovlen: bufs.len().min(IovLen::MAX as usize) as IovLen,
-            msg_control: std::ptr::null_mut(),
-            msg_controllen: 0,
-            msg_flags: 0,
-        };
-
-        let n = syscall!(recvmsg(self.fd, &mut msg as *mut _, flags))?;
-        Ok((n as usize, RecvFlags(msg.msg_flags)))
     }
 
     #[cfg(not(target_os = "redox"))]
