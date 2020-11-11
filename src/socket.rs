@@ -404,7 +404,7 @@ impl Socket {
     ///
     /// On success returns the number of bytes that were sent.
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner().send(buf, 0)
+        self.send_with_flags(buf, 0)
     }
 
     /// Identical to [`send`] but allows for specification of arbitrary flags to the underlying
@@ -412,7 +412,7 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     pub fn send_with_flags(&self, buf: &[u8], flags: i32) -> io::Result<usize> {
-        self.inner().send(buf, flags)
+        sys::send(self.inner, buf, flags)
     }
 
     /// Identical to [`send_with_flags`] but writes from a slice of buffers.
@@ -432,7 +432,7 @@ impl Socket {
     /// [`out_of_band_inline`]: #method.out_of_band_inline
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
-        self.inner().send(buf, sys::MSG_OOB)
+        self.send_with_flags(buf, sys::MSG_OOB)
     }
 
     /// Sends data on the socket to the given address. On success, returns the

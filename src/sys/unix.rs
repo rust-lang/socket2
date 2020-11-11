@@ -435,7 +435,7 @@ pub(crate) fn recv_vectored(
 }
 
 #[cfg(not(target_os = "redox"))]
-pub fn recv_from_vectored(
+pub(crate) fn recv_from_vectored(
     fd: SysSocket,
     bufs: &mut [IoSliceMut<'_>],
     flags: c_int,
@@ -473,6 +473,16 @@ fn recvmsg(
     };
     syscall!(recvmsg(fd, &mut msg as *mut _, flags))
         .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
+}
+
+pub(crate) fn send(fd: SysSocket, buf: &[u8], flags: c_int) -> io::Result<usize> {
+    syscall!(send(
+        fd,
+        buf.as_ptr().cast(),
+        min(buf.len(), MAX_BUF_LEN),
+        flags,
+    ))
+    .map(|n| n as usize)
 }
 
 /// Unix only API.
@@ -610,16 +620,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn send(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
-        let n = syscall!(send(
-            self.fd,
-            buf.as_ptr() as *const c_void,
-            cmp::min(buf.len(), max_len()),
-            flags,
-        ))?;
-        Ok(n as usize)
-    }
-
     pub fn send_to(&self, buf: &[u8], flags: c_int, addr: &SockAddr) -> io::Result<usize> {
         let n = syscall!(sendto(
             self.fd,
@@ -1039,7 +1039,7 @@ impl Write for Socket {
 
 impl<'a> Write for &'a Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.send(buf, 0)
+        send(self.fd, buf, 0)
     }
 
     fn flush(&mut self) -> io::Result<()> {
