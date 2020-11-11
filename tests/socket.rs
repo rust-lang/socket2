@@ -107,13 +107,13 @@ where
 #[test]
 fn set_no_inherit() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_flag_inherit(&socket, false);
+    assert_flag_no_inherit(&socket, false);
 
     socket.set_no_inherit(true).unwrap();
-    assert_flag_inherit(&socket, true);
+    assert_flag_no_inherit(&socket, true);
 
     socket.set_no_inherit(false).unwrap();
-    assert_flag_inherit(&socket, false);
+    assert_flag_no_inherit(&socket, false);
 }
 
 #[cfg(all(feature = "all", windows))]
@@ -121,13 +121,13 @@ fn set_no_inherit() {
 fn type_no_inherit() {
     let ty = Type::STREAM.no_inherit();
     let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
-    assert_flag_inherit(&socket, true);
+    assert_flag_no_inherit(&socket, true);
 }
 
-/// Assert that `FLAG_INHERIT` is set on `socket`.
+/// Assert that `FLAG_INHERIT` is not set on `socket`.
 #[cfg(windows)]
 #[track_caller]
-pub fn assert_flag_inherit<S>(socket: &S, want: bool)
+pub fn assert_flag_no_inherit<S>(socket: &S, want: bool)
 where
     S: AsRawSocket,
 {
@@ -138,7 +138,7 @@ where
     }
     assert_eq!(
         flags & HANDLE_FLAG_INHERIT != 0,
-        want,
+        !want,
         "FLAG_INHERIT option"
     );
 }
