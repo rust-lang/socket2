@@ -7,7 +7,6 @@
 // except according to those terms.
 
 use std::cmp::min;
-use std::io::Write;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::mem::{self, size_of, size_of_val, MaybeUninit};
@@ -1037,26 +1036,6 @@ impl Socket {
 
     pub fn from_inner(fd: SysSocket) -> Socket {
         Socket { fd }
-    }
-}
-
-impl Write for Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        <&Socket>::write(&mut &*self, buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        <&Socket>::flush(&mut &*self)
-    }
-}
-
-impl<'a> Write for &'a Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        send(self.fd, buf, 0)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
     }
 }
 

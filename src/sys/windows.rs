@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use std::cmp::min;
-use std::io::{self, IoSlice, IoSliceMut, Write};
+use std::io::{self, IoSlice, IoSliceMut};
 use std::mem::{self, size_of, size_of_val, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
@@ -889,26 +889,6 @@ impl Socket {
 
     pub fn from_inner(socket: SysSocket) -> Socket {
         Socket { socket }
-    }
-}
-
-impl Write for Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        <&Socket>::write(&mut &*self, buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        <&Socket>::flush(&mut &*self)
-    }
-}
-
-impl<'a> Write for &'a Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        send(self.socket, buf, 0)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
     }
 }
 
