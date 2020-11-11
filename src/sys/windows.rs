@@ -414,10 +414,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
-        recv_from(self.socket, buf, MSG_PEEK)
-    }
-
     pub fn recv_from_vectored(
         &self,
         bufs: &mut [IoSliceMut<'_>],
