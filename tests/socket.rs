@@ -1,4 +1,4 @@
-#[cfg(any(windows, all(feature = "all", target_vendor = "apple")))]
+#[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
@@ -24,6 +24,28 @@ fn set_nonblocking() {
 
     socket.set_nonblocking(false).unwrap();
     assert_nonblocking(&socket, false);
+}
+
+#[test]
+fn default_flags() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    #[cfg(unix)]
+    assert_close_on_exec(&socket, true);
+    #[cfg(target_vendor = "apple")]
+    assert_flag_no_sigpipe(&socket, true);
+    #[cfg(windows)]
+    assert_flag_no_inherit(&socket, true);
+}
+
+#[test]
+fn no_default_flags() {
+    let socket = Socket::new_raw(Domain::IPV4, Type::STREAM, None).unwrap();
+    #[cfg(unix)]
+    assert_close_on_exec(&socket, false);
+    #[cfg(target_vendor = "apple")]
+    assert_flag_no_sigpipe(&socket, false);
+    #[cfg(windows)]
+    assert_flag_no_inherit(&socket, false);
 }
 
 #[cfg(all(
@@ -157,7 +179,7 @@ fn set_nosigpipe() {
 }
 
 /// Assert that `SO_NOSIGPIPE` is set on `socket`.
-#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[cfg(target_vendor = "apple")]
 #[track_caller]
 pub fn assert_flag_no_sigpipe<S>(socket: &S, want: bool)
 where
