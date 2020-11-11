@@ -145,7 +145,7 @@ impl Type {
             target_os = "openbsd"
         )
     ))]
-    pub const fn non_blocking(self) -> Type {
+    pub const fn nonblocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
     }
 
