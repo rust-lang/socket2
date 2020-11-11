@@ -47,41 +47,6 @@ use crate::{Domain, Protocol, SockAddr, Type};
 /// can lead to a data race when two threads are changing options in parallel.
 ///
 /// # Examples
-///
-/// Creating a new socket setting all advisable flags.
-///
-#[cfg_attr(feature = "all", doc = "```")] // Protocol::cloexec requires the `all` feature.
-#[cfg_attr(not(feature = "all"), doc = "```ignore")]
-/// # fn main() -> std::io::Result<()> {
-/// use socket2::{Protocol, Domain, Type, Socket};
-///
-/// let domain = Domain::IPV4;
-/// let ty = Type::STREAM;
-/// let protocol = Protocol::TCP;
-///
-/// // On platforms that support it set `SOCK_CLOEXEC`.
-/// #[cfg(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))]
-/// let ty = ty.cloexec();
-///
-/// // On windows set `WSA_FLAG_NO_HANDLE_INHERIT`.
-/// #[cfg(windows)]
-/// let ty = ty.no_inherit();
-///
-/// let socket = Socket::new(domain, ty, Some(protocol))?;
-///
-/// // On platforms that don't support `SOCK_CLOEXEC`, use `FD_CLOEXEC`.
-/// #[cfg(all(not(windows), not(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd", target_os = "linux", target_os = "netbsd", target_os = "openbsd"))))]
-/// socket.set_cloexec(true)?;
-///
-/// // On macOS and iOS set `NOSIGPIPE`.
-/// #[cfg(target_vendor = "apple")]
-/// socket.set_nosigpipe(true)?;
-///
-/// # drop(socket);
-/// # Ok(())
-/// # }
-/// ```
-///
 /// ```no_run
 /// # fn main() -> std::io::Result<()> {
 /// use std::net::{SocketAddr, TcpListener};
@@ -107,29 +72,26 @@ pub struct Socket {
 }
 
 impl Socket {
+    /// Creates a new socket and sets common flags.
+    ///
+    /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
+    /// Windows.
+    ///
+    /// On Unix-like systems, the close-on-exec flag is set on the new socket.
+    /// Additionally, on Apple platforms `SOCK_NOSIGPIPE` is set. On Windows,
+    /// the socket is made non-inheritable.
+    ///
+    /// [`Socket::new_raw`] can be used if you don't want these flags to be set.
+    pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
+        let ty = set_common_type(ty);
+        Socket::new_raw(domain, ty, protocol).and_then(set_common_flags)
+    }
+
     /// Creates a new socket ready to be configured.
     ///
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
-    /// Windows and simply creates a new socket, no other configuration is done
-    /// and further functions must be invoked to configure this socket.
-    ///
-    /// # Notes
-    ///
-    /// The standard library sets the `CLOEXEC` flag on Unix on sockets, this
-    /// function does **not** do this, but its advisable. On supported platforms
-    /// [`Type::cloexec`] can be used for this, or by using
-    /// [`Socket::set_cloexec`].
-    ///
-    /// Furthermore on macOS and iOS `NOSIGPIPE` is not set, this can be done
-    /// using [`Socket::set_nosigpipe`].
-    ///
-    /// Similarly on Windows the `HANDLE_FLAG_INHERIT` is **not** set to zero,
-    /// but again in most cases its advisable to do so. This can be doing using
-    /// [`Socket::set_no_inherit`].
-    ///
-    /// See the `Socket` documentation for a full example of setting all the
-    /// above mentioned flags.
-    pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
+    /// Windows and simply creates a new socket, no other configuration is done.
+    pub fn new_raw(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         sys::socket(domain.0, ty.0, protocol).map(|inner| Socket { inner })
     }
@@ -138,14 +100,34 @@ impl Socket {
     ///
     /// This function corresponds to `socketpair(2)`.
     ///
-    /// # Notes
+    /// This function sets the same flags as in done for [`Socket::new`],
+    /// [`Socket::pair_raw`] can be used if you don't want to set those flags.
     ///
-    /// Much like [`Socket::new`] this doesn't set any flags, which might be
-    /// advisable.
+    /// # Notes
     ///
     /// This function is only available on Unix.
     #[cfg(all(feature = "all", unix))]
     pub fn pair(
+        domain: Domain,
+        ty: Type,
+        protocol: Option<Protocol>,
+    ) -> io::Result<(Socket, Socket)> {
+        let ty = set_common_type(ty);
+        let (a, b) = Socket::pair_raw(domain, ty, protocol)?;
+        let a = set_common_flags(a)?;
+        let b = set_common_flags(b)?;
+        Ok((a, b))
+    }
+
+    /// Creates a pair of sockets which are connected to each other.
+    ///
+    /// This function corresponds to `socketpair(2)`.
+    ///
+    /// # Notes
+    ///
+    /// This function is only available on Unix.
+    #[cfg(all(feature = "all", unix))]
+    pub fn pair_raw(
         domain: Domain,
         ty: Type,
         protocol: Option<Protocol>,
@@ -188,19 +170,43 @@ impl Socket {
 
     /// Accept a new incoming connection from this listener.
     ///
+    /// This function uses `accept4(2)` on platforms that support it and
+    /// `accept(2)` platforms that do not.
+    ///
+    /// This function sets the same flags as in done for [`Socket::new`],
+    /// [`Socket::accept_raw`] can be used if you don't want to set those flags.
+    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
+        // Use `accept4` on platforms that support it.
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))]
+        return self._accept4(libc::SOCK_CLOEXEC);
+
+        // Fall back to `accept` on platforms that do not support `accept4`.
+        #[cfg(not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        )))]
+        {
+            let (socket, addr) = self.accept_raw()?;
+            set_common_flags(socket).map(|socket| (socket, addr))
+        }
+    }
+
+    /// Accept a new incoming connection from this listener.
+    ///
     /// This function directly corresponds to the `accept(2)` function on
     /// Windows and Unix.
-    ///
-    /// This function will block the calling thread until a new connection is
-    /// established. When established, the corresponding `Socket` and the
-    /// remote peer's address will be returned.
-    ///
-    /// # Notes
-    ///
-    /// Like [`Socket::new`] this will not set any flags. If that is desirable,
-    /// e.g. setting `CLOEXEC`, [`Socket::accept4`] can be used on supported
-    /// OSes or [`Socket::set_cloexec`] can be called.
-    pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
+    pub fn accept_raw(&self) -> io::Result<(Socket, SockAddr)> {
         sys::accept(self.inner).map(|(inner, addr)| (Socket { inner }, addr))
     }
 
@@ -909,6 +915,52 @@ impl Socket {
         // `repr(transparent)` attribute.
         unsafe { &*(&self.inner as *const sys::SysSocket as *const sys::Socket) }
     }
+}
+
+/// Set `SOCK_CLOEXEC` and `NO_HANDLE_INHERIT` on the `ty`pe on platforms that
+/// support it.
+#[inline(always)]
+fn set_common_type(ty: Type) -> Type {
+    // On platforms that support it set `SOCK_CLOEXEC`.
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    ))]
+    let ty = ty._cloexec();
+
+    // On windows set `NO_HANDLE_INHERIT`.
+    #[cfg(windows)]
+    let ty = ty._no_inherit();
+
+    ty
+}
+
+/// Set `FD_CLOEXEC` and `NOSIGPIPE` on the `socket` for platforms that need it.
+#[inline(always)]
+fn set_common_flags(socket: Socket) -> io::Result<Socket> {
+    // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))
+    ))]
+    socket._set_cloexec(true)?;
+
+    // On Apple platforms set `NOSIGPIPE`.
+    #[cfg(target_vendor = "apple")]
+    socket._set_nosigpipe(true)?;
+
+    Ok(socket)
 }
 
 impl Read for Socket {
