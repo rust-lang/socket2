@@ -7,9 +7,9 @@
 // except according to those terms.
 
 use std::cmp::min;
+use std::io::Write;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
-use std::io::{Read, Write};
 use std::mem::{self, size_of, size_of_val, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{self, Ipv4Addr, Ipv6Addr};
@@ -1024,23 +1024,6 @@ impl Socket {
 
     pub fn from_inner(fd: SysSocket) -> Socket {
         Socket { fd }
-    }
-}
-
-impl Read for Socket {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        <&Socket>::read(&mut &*self, buf)
-    }
-}
-
-impl<'a> Read for &'a Socket {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let n = syscall!(read(
-            self.fd,
-            buf.as_mut_ptr() as *mut c_void,
-            cmp::min(buf.len(), max_len()),
-        ))?;
-        Ok(n as usize)
     }
 }
 
