@@ -186,6 +186,18 @@ impl Type {
         )
     ))]
     pub const fn cloexec(self) -> Type {
+        self._cloexec()
+    }
+
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    pub(crate) const fn _cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
     }
 }
@@ -569,24 +581,32 @@ impl crate::Socket {
         )
     ))]
     pub fn accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
+        self._accept4(flags)
+    }
+
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "illumos",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    pub(crate) fn _accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
+        // Safety: zeroed `sockaddr_storage` is valid.
         let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
         let mut len = mem::size_of_val(&storage) as socklen_t;
-
-        let res = syscall!(accept4(
+        syscall!(accept4(
             self.inner,
             &mut storage as *mut _ as *mut _,
             &mut len,
-            flags,
-        ));
-        match res {
-            Ok(inner) => {
-                let socket = crate::Socket { inner };
-                let addr =
-                    unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
-                Ok((socket, addr))
-            }
-            Err(e) => Err(e),
-        }
+            flags
+        ))
+        .map(|inner| {
+            let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
+            (crate::Socket { inner }, addr)
+        })
     }
 
     /// Sets `CLOEXEC` on the socket.
@@ -594,7 +614,12 @@ impl crate::Socket {
     /// # Notes
     ///
     /// On supported platforms you can use [`Protocol::cloexec`].
+    #[cfg(feature = "all")]
     pub fn set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {
+        self._set_cloexec(close_on_exec)
+    }
+
+    pub(crate) fn _set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {
         if close_on_exec {
             fcntl_add(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
         } else {
@@ -609,12 +634,17 @@ impl crate::Socket {
     /// Only supported on Apple platforms (`target_vendor = "apple"`).
     #[cfg(all(feature = "all", target_vendor = "apple"))]
     pub fn set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
+        self._set_nosigpipe(nosigpipe)
+    }
+
+    #[cfg(target_vendor = "apple")]
+    pub(crate) fn _set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
         unsafe {
-            setsockopt::<c_int>(
+            setsockopt(
                 self.inner,
                 libc::SOL_SOCKET,
                 libc::SO_NOSIGPIPE,
-                nosigpipe as _,
+                nosigpipe as c_int,
             )
         }
     }
@@ -663,7 +693,7 @@ unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> 
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
-#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[cfg(target_vendor = "apple")]
 unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()> {
     let payload = &payload as *const T as *const c_void;
     syscall!(setsockopt(

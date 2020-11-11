@@ -96,6 +96,10 @@ impl Type {
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
     pub const fn no_inherit(self) -> Type {
+        self._no_inherit()
+    }
+
+    pub(crate) const fn _no_inherit(self) -> Type {
         Type(self.0 | Type::NO_INHERIT)
     }
 }
@@ -528,7 +532,12 @@ fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Resu
 /// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
+    #[cfg(feature = "all")]
     pub fn set_no_inherit(&self, no_inherit: bool) -> io::Result<()> {
+        self._set_no_inherit(no_inherit)
+    }
+
+    pub(crate) fn _set_no_inherit(&self, no_inherit: bool) -> io::Result<()> {
         // NOTE: can't use `syscall!` because it expects the function in the
         // `sock::` path.
         let res = unsafe {
@@ -884,10 +893,6 @@ impl Socket {
             Err(last_error())
         }
     }
-
-    pub fn inner(self) -> SysSocket {
-        self.socket
-    }
 }
 
 impl fmt::Debug for Socket {
@@ -943,7 +948,7 @@ impl IntoRawSocket for crate::Socket {
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket {
-            inner: Socket::from_raw_socket(socket).inner(),
+            inner: socket as SysSocket,
         }
     }
 }
