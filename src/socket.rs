@@ -369,6 +369,49 @@ impl Socket {
         self.inner.set_ttl(ttl)
     }
 
+    /// Gets the value of the `TCP_MAXSEG` option on this socket.
+    ///
+    /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment
+    /// Size and is only available on TCP sockets.
+    #[cfg(unix)]
+    pub fn mss(&self) -> io::Result<u32> {
+        self.inner.mss()
+    }
+
+    /// Sets the value of the `TCP_MAXSEG` option on this socket.
+    ///
+    /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment
+    /// Size and is only available on TCP sockets.
+    #[cfg(unix)]
+    pub fn set_mss(&self, mss: u32) -> io::Result<()> {
+        self.inner.set_mss(mss)
+    }
+
+    /// Gets the value for the `SO_MARK` option on this socket.
+    ///
+    /// This value gets the socket mark field for each packet sent through
+    /// this socket.
+    ///
+    /// This function is only available on Linux and requires the
+    /// `CAP_NET_ADMIN` capability.
+    #[cfg(target_os = "linux")]
+    pub fn mark(&self) -> io::Result<u32> {
+        self.inner.mark()
+    }
+
+    /// Sets the value for the `SO_MARK` option on this socket.
+    ///
+    /// This value sets the socket mark field for each packet sent through
+    /// this socket. Changing the mark can be used for mark-based routing
+    /// without netfilter or for packet filtering.
+    ///
+    /// This function is only available on Linux and requires the
+    /// `CAP_NET_ADMIN` capability.
+    #[cfg(target_os = "linux")]
+    pub fn set_mark(&self, mark: u32) -> io::Result<()> {
+        self.inner.set_mark(mark)
+    }
+
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets

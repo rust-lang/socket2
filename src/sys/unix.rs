@@ -534,6 +534,30 @@ impl Socket {
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
     }
 
+    pub fn mss(&self) -> io::Result<u32> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::IPPROTO_TCP, libc::TCP_MAXSEG)?;
+            Ok(raw as u32)
+        }
+    }
+
+    pub fn set_mss(&self, mss: u32) -> io::Result<()> {
+        unsafe { self.setsockopt(libc::IPPROTO_TCP, libc::TCP_MAXSEG, mss as c_int) }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn mark(&self) -> io::Result<u32> {
+        unsafe {
+            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_MARK)?;
+            Ok(raw as u32)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn set_mark(&self, mark: u32) -> io::Result<()> {
+        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
+    }
+
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
