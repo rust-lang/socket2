@@ -1,6 +1,6 @@
-use std::mem::{self, MaybeUninit};
+use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::{fmt, ptr};
+use std::{fmt, io, ptr};
 
 use crate::sys::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
@@ -39,9 +39,27 @@ impl SockAddr {
         }
     }
 
-    /// Constructs a `SockAddr` from its raw components.
-    pub(crate) const fn from_raw(storage: sockaddr_storage, len: socklen_t) -> SockAddr {
-        SockAddr { storage, len }
+    /// Initilaise a `SockAddr` by calling the function `f`.
+    ///
+    /// # Safety
+    ///
+    /// Caller must initialise the provided address storage and set the length
+    /// properly.
+    pub(crate) unsafe fn init<F, T>(f: F) -> io::Result<(T, SockAddr)>
+    where
+        F: FnOnce(*mut sockaddr_storage, *mut socklen_t) -> io::Result<T>,
+    {
+        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
+        let mut len = size_of::<sockaddr_storage>() as socklen_t;
+        f(storage.as_mut_ptr(), &mut len).map(|res| {
+            let addr = SockAddr {
+                // Safety: zeroed-out `sockaddr_storage` is valid, caller must
+                // ensure at least `len` bytes are valid.
+                storage: storage.assume_init(),
+                len,
+            };
+            (res, addr)
+        })
     }
 
     /// Returns this address's family.

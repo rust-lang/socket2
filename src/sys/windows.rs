@@ -8,7 +8,7 @@
 
 use std::cmp::min;
 use std::io::{self, IoSlice, IoSliceMut};
-use std::mem::{self, size_of, size_of_val, MaybeUninit};
+use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
 use std::sync::Once;
@@ -192,42 +192,44 @@ pub(crate) fn listen(socket: SysSocket, backlog: i32) -> io::Result<()> {
 }
 
 pub(crate) fn accept(socket: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
-    // Safety: zeroed `SOCKADDR_STORAGE` is valid.
-    let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
-    let mut len = size_of_val(&storage) as c_int;
-    syscall!(
-        accept(socket, &mut storage as *mut _ as *mut _, &mut len),
-        PartialEq::eq,
-        sock::INVALID_SOCKET
-    )
-    .map(|socket| {
-        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
-        (socket, addr)
-    })
+    // Safety: `accept` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::init(|storage, len| {
+            syscall!(
+                accept(socket, storage.cast(), len),
+                PartialEq::eq,
+                sock::INVALID_SOCKET
+            )
+        })
+    }
 }
 
 pub(crate) fn getsockname(socket: SysSocket) -> io::Result<SockAddr> {
-    // Safety: zeroed `SOCKADDR_STORAGE` is valid.
-    let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
-    let mut len = size_of_val(&storage) as c_int;
-    syscall!(
-        getsockname(socket, &mut storage as *mut _ as *mut _, &mut len),
-        PartialEq::eq,
-        sock::SOCKET_ERROR
-    )
-    .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
+    // Safety: `getsockname` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::init(|storage, len| {
+            syscall!(
+                getsockname(socket, storage.cast(), len),
+                PartialEq::eq,
+                sock::SOCKET_ERROR
+            )
+        })
+    }
+    .map(|(_, addr)| addr)
 }
 
 pub(crate) fn getpeername(socket: SysSocket) -> io::Result<SockAddr> {
-    // Safety: zeroed `SOCKADDR_STORAGE` is valid.
-    let mut storage: SOCKADDR_STORAGE = unsafe { mem::zeroed() };
-    let mut len = size_of_val(&storage) as c_int;
-    syscall!(
-        getpeername(socket, &mut storage as *mut _ as *mut _, &mut len),
-        PartialEq::eq,
-        sock::SOCKET_ERROR
-    )
-    .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
+    // Safety: `getpeername` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::init(|storage, len| {
+            syscall!(
+                getpeername(socket, storage.cast(), len),
+                PartialEq::eq,
+                sock::SOCKET_ERROR
+            )
+        })
+    }
+    .map(|(_, addr)| addr)
 }
 
 pub(crate) fn try_clone(socket: SysSocket) -> io::Result<SysSocket> {
@@ -331,34 +333,27 @@ pub(crate) fn recv_from(
     buf: &mut [u8],
     flags: c_int,
 ) -> io::Result<(usize, SockAddr)> {
-    let mut storage: MaybeUninit<SOCKADDR_STORAGE> = MaybeUninit::zeroed();
-    let mut addrlen = size_of_val(&storage) as socklen_t;
-    let res = syscall!(
-        recvfrom(
-            socket,
-            buf.as_mut_ptr().cast(),
-            min(buf.len(), MAX_BUF_LEN) as c_int,
-            flags,
-            storage.as_mut_ptr().cast(),
-            &mut addrlen,
-        ),
-        PartialEq::eq,
-        sock::SOCKET_ERROR
-    );
-    match res {
-        Ok(n) => {
-            // Safety: `recvfrom` wrote an address of `addrlen` bytes for us. The
-            // remaining bytes are initialised to zero (which is valid for
-            // `sockaddr_storage`).
-            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-            Ok((n as usize, addr))
-        }
-        Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => {
-            // Safety: see above.
-            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-            Ok((0, addr))
-        }
-        Err(err) => Err(err),
+    // Safety: `recvfrom` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::init(|storage, addrlen| {
+            let res = syscall!(
+                recvfrom(
+                    socket,
+                    buf.as_mut_ptr().cast(),
+                    min(buf.len(), MAX_BUF_LEN) as c_int,
+                    flags,
+                    storage.cast(),
+                    addrlen,
+                ),
+                PartialEq::eq,
+                sock::SOCKET_ERROR
+            );
+            match res {
+                Ok(n) => Ok(n as usize),
+                Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => Ok(0),
+                Err(err) => Err(err),
+            }
+        })
     }
 }
 
@@ -367,45 +362,39 @@ pub(crate) fn recv_from_vectored(
     bufs: &mut [IoSliceMut<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
-    let mut storage: MaybeUninit<SOCKADDR_STORAGE> = MaybeUninit::zeroed();
-    let mut addrlen = size_of_val(&storage) as socklen_t;
-    let mut nread = 0;
-    let mut flags = flags as DWORD;
-    let res = syscall!(
-        WSARecvFrom(
-            socket,
-            bufs.as_mut_ptr().cast(),
-            min(bufs.len(), DWORD::max_value() as usize) as DWORD,
-            &mut nread,
-            &mut flags,
-            storage.as_mut_ptr().cast(),
-            &mut addrlen,
-            ptr::null_mut(),
-            None,
-        ),
-        PartialEq::eq,
-        sock::SOCKET_ERROR
-    );
-    match res {
-        Ok(_) => {
-            // Safety: `WSARecvFrom` wrote an address of `addrlen` bytes for us.
-            // The remaining bytes are initialised to zero (which is valid for
-            // `sockaddr_storage`).
-            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-            Ok((nread as usize, RecvFlags(0), addr))
-        }
-        Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => {
-            // Safety: see above.
-            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-            Ok((nread as usize, RecvFlags(0), addr))
-        }
-        Err(ref err) if err.raw_os_error() == Some(sock::WSAEMSGSIZE as i32) => {
-            // Safety: see above.
-            let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-            Ok((nread as usize, RecvFlags(MSG_TRUNC), addr))
-        }
-        Err(err) => Err(err),
+    // Safety: `recvfrom` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::init(|storage, addrlen| {
+            let mut nread = 0;
+            let mut flags = flags as DWORD;
+            let res = syscall!(
+                WSARecvFrom(
+                    socket,
+                    bufs.as_mut_ptr().cast(),
+                    min(bufs.len(), DWORD::max_value() as usize) as DWORD,
+                    &mut nread,
+                    &mut flags,
+                    storage.cast(),
+                    addrlen,
+                    ptr::null_mut(),
+                    None,
+                ),
+                PartialEq::eq,
+                sock::SOCKET_ERROR
+            );
+            match res {
+                Ok(_) => Ok((nread as usize, RecvFlags(0))),
+                Err(ref err) if err.raw_os_error() == Some(sock::WSAESHUTDOWN as i32) => {
+                    Ok((nread as usize, RecvFlags(0)))
+                }
+                Err(ref err) if err.raw_os_error() == Some(sock::WSAEMSGSIZE as i32) => {
+                    Ok((nread as usize, RecvFlags(MSG_TRUNC)))
+                }
+                Err(err) => Err(err),
+            }
+        })
     }
+    .map(|((n, recv_flags), addr)| (n, recv_flags, addr))
 }
 
 pub(crate) fn send(socket: SysSocket, buf: &[u8], flags: c_int) -> io::Result<usize> {
