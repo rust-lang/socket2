@@ -9,7 +9,7 @@
 use std::cmp::min;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
-use std::mem::{self, size_of, size_of_val, MaybeUninit};
+use std::mem::{self, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
 #[cfg(feature = "all")]
@@ -355,27 +355,20 @@ pub(crate) fn listen(fd: SysSocket, backlog: i32) -> io::Result<()> {
 }
 
 pub(crate) fn accept(fd: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
-    // Safety: zeroed `sockaddr_storage` is valid.
-    let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-    let mut len = size_of_val(&storage) as socklen_t;
-    syscall!(accept(fd, &mut storage as *mut _ as *mut _, &mut len)).map(|fd| {
-        let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
-        (fd, addr)
-    })
+    // Safety: `accept` initialises the `SockAddr` for us.
+    unsafe { SockAddr::init(|storage, len| syscall!(accept(fd, storage.cast(), len))) }
 }
 
 pub(crate) fn getsockname(fd: SysSocket) -> io::Result<SockAddr> {
-    let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-    let mut len = size_of_val(&storage) as libc::socklen_t;
-    syscall!(getsockname(fd, &mut storage as *mut _ as *mut _, &mut len,))
-        .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
+    // Safety: `accept` initialises the `SockAddr` for us.
+    unsafe { SockAddr::init(|storage, len| syscall!(getsockname(fd, storage.cast(), len))) }
+        .map(|(_, addr)| addr)
 }
 
 pub(crate) fn getpeername(fd: SysSocket) -> io::Result<SockAddr> {
-    let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-    let mut len = size_of_val(&storage) as libc::socklen_t;
-    syscall!(getpeername(fd, &mut storage as *mut _ as *mut _, &mut len,))
-        .map(|_| unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) })
+    // Safety: `accept` initialises the `SockAddr` for us.
+    unsafe { SockAddr::init(|storage, len| syscall!(getpeername(fd, storage.cast(), len))) }
+        .map(|(_, addr)| addr)
 }
 
 pub(crate) fn try_clone(fd: SysSocket) -> io::Result<SysSocket> {
@@ -422,23 +415,20 @@ pub(crate) fn recv_from(
     buf: &mut [u8],
     flags: c_int,
 ) -> io::Result<(usize, SockAddr)> {
-    let mut storage: MaybeUninit<libc::sockaddr_storage> = MaybeUninit::zeroed();
-    let mut addrlen = size_of_val(&storage) as socklen_t;
-    syscall!(recvfrom(
-        fd,
-        buf.as_mut_ptr().cast(),
-        min(buf.len(), MAX_BUF_LEN),
-        flags,
-        storage.as_mut_ptr().cast(),
-        &mut addrlen,
-    ))
-    .map(|n| {
-        // Safety: `recvfrom` wrote an address of `addrlen` bytes for us. The
-        // remaining bytes are initialised to zero (which is valid for
-        // `sockaddr_storage`).
-        let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-        (n as usize, addr)
-    })
+    // Safety: `recvfrom` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::init(|addr, addrlen| {
+            syscall!(recvfrom(
+                fd,
+                buf.as_mut_ptr().cast(),
+                min(buf.len(), MAX_BUF_LEN),
+                flags,
+                addr.cast(),
+                addrlen
+            ))
+            .map(|n| n as usize)
+        })
+    }
 }
 
 #[cfg(not(target_os = "redox"))]
@@ -456,14 +446,18 @@ pub(crate) fn recv_from_vectored(
     bufs: &mut [IoSliceMut<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
-    let mut storage: MaybeUninit<libc::sockaddr_storage> = MaybeUninit::zeroed();
-    recvmsg(fd, storage.as_mut_ptr(), bufs, flags).map(|(n, addrlen, recv_flags)| {
-        // Safety: `recvmsg` wrote an address of `addrlen` bytes for us. The
-        // remaining bytes are initialised to zero (which is valid for
-        // `sockaddr_storage`).
-        let addr = SockAddr::from_raw(unsafe { storage.assume_init() }, addrlen);
-        (n as usize, recv_flags, addr)
-    })
+    // Safety: `recvmsg` initialises the address storage and we set the length
+    // manually.
+    unsafe {
+        SockAddr::init(|storage, len| {
+            recvmsg(fd, storage, bufs, flags).map(|(n, addrlen, recv_flags)| {
+                // Set the correct address length.
+                *len = addrlen;
+                (n, recv_flags)
+            })
+        })
+    }
+    .map(|((n, recv_flags), addr)| (n, recv_flags, addr))
 }
 
 /// Returns the (bytes received, sending address len, `RecvFlags`).
@@ -598,19 +592,13 @@ impl crate::Socket {
         target_os = "openbsd"
     ))]
     pub(crate) fn _accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
-        // Safety: zeroed `sockaddr_storage` is valid.
-        let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-        let mut len = mem::size_of_val(&storage) as socklen_t;
-        syscall!(accept4(
-            self.inner,
-            &mut storage as *mut _ as *mut _,
-            &mut len,
-            flags
-        ))
-        .map(|inner| {
-            let addr = unsafe { SockAddr::from_raw_parts(&storage as *const _ as *const _, len) };
-            (crate::Socket { inner }, addr)
-        })
+        // Safety: `accept4` initialises the `SockAddr` for us.
+        unsafe {
+            SockAddr::init(|storage, len| {
+                syscall!(accept4(self.inner, storage.cast(), len, flags))
+                    .map(|inner| crate::Socket { inner })
+            })
+        }
     }
 
     /// Sets `CLOEXEC` on the socket.
