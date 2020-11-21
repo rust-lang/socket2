@@ -675,6 +675,33 @@ impl crate::Socket {
             )
         }
     }
+
+    /// Gets the value for the `SO_MARK` option on this socket.
+    ///
+    /// This value gets the socket mark field for each packet sent through
+    /// this socket.
+    ///
+    /// This function is only available on Linux and requires the
+    /// `CAP_NET_ADMIN` capability.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn mark(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK).map(|mark| mark as u32)
+        }
+    }
+
+    /// Sets the value for the `SO_MARK` option on this socket.
+    ///
+    /// This value sets the socket mark field for each packet sent through
+    /// this socket. Changing the mark can be used for mark-based routing
+    /// without netfilter or for packet filtering.
+    ///
+    /// This function is only available on Linux and requires the
+    /// `CAP_NET_ADMIN` capability.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn set_mark(&self, mark: u32) -> io::Result<()> {
+        unsafe { setsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
+    }
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
@@ -738,11 +765,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    #[cfg(target_os = "linux")]
-    pub fn set_mark(&self, mark: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
-    }
-
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
