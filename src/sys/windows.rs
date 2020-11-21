@@ -493,20 +493,55 @@ pub(crate) fn send_to_vectored(
     .map(|_| nsent as usize)
 }
 
-/// Caller must ensure `T` is the correct type for `opt` and `val`.
-unsafe fn getsockopt<T>(socket: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
-    let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
-    let mut len = mem::size_of::<T>() as c_int;
+pub(crate) fn ttl(socket: SysSocket) -> io::Result<u32> {
+    unsafe { getsockopt::<c_int>(socket, IPPROTO_IP, IP_TTL).map(|ttl| ttl as u32) }
+}
+
+pub(crate) fn set_ttl(socket: SysSocket, ttl: u32) -> io::Result<()> {
+    unsafe { setsockopt::<c_int>(socket, IPPROTO_IP, IP_TTL, ttl as c_int) }
+}
+
+/// Caller must ensure `T` is the correct type for `level` and `optname`.
+unsafe fn getsockopt<T>(socket: SysSocket, level: c_int, optname: c_int) -> io::Result<T> {
+    let mut optval: MaybeUninit<T> = MaybeUninit::uninit();
+    let mut optlen = mem::size_of::<T>() as c_int;
     syscall!(
-        getsockopt(socket, opt, val, payload.as_mut_ptr().cast(), &mut len,),
+        getsockopt(
+            socket,
+            level,
+            optname,
+            optval.as_mut_ptr().cast(),
+            &mut optlen,
+        ),
         PartialEq::eq,
         sock::SOCKET_ERROR
     )
     .map(|_| {
-        debug_assert_eq!(len as usize, mem::size_of::<T>());
-        // Safety: `getsockopt` initialised `payload` for us.
-        payload.assume_init()
+        debug_assert_eq!(optlen as usize, mem::size_of::<T>());
+        // Safety: `getsockopt` initialised `optval` for us.
+        optval.assume_init()
     })
+}
+
+/// Caller must ensure `T` is the correct type for `level` and `optname`.
+unsafe fn setsockopt<T>(
+    socket: SysSocket,
+    level: c_int,
+    optname: c_int,
+    optval: T,
+) -> io::Result<()> {
+    syscall!(
+        setsockopt(
+            socket,
+            level,
+            optname,
+            (&optval as *const T).cast(),
+            mem::size_of::<T>() as c_int,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| ())
 }
 
 fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Result<()> {
@@ -551,17 +586,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn ttl(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IP, IP_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IP, IP_TTL, ttl as c_int) }
-    }
-
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS)?;
