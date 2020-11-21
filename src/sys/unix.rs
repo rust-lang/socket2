@@ -648,6 +648,35 @@ impl crate::Socket {
             )
         }
     }
+
+    /// Gets the value of the `TCP_MAXSEG` option on this socket.
+    ///
+    /// For more information about this option, see [`set_mss`].
+    ///
+    /// [set_mss]: Socket::set_mss
+    #[cfg(feature = "all")]
+    pub fn mss(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::IPPROTO_TCP, libc::TCP_MAXSEG)
+                .map(|mss| mss as u32)
+        }
+    }
+
+    /// Sets the value of the `TCP_MAXSEG` option on this socket.
+    ///
+    /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment Size and is only
+    /// available on TCP sockets.
+    #[cfg(feature = "all")]
+    pub fn set_mss(&self, mss: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt::<c_int>(
+                self.inner,
+                libc::IPPROTO_TCP,
+                libc::TCP_MAXSEG,
+                mss as c_int,
+            )
+        }
+    }
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
