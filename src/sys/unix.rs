@@ -465,6 +465,7 @@ pub(crate) fn recv_from_vectored(
 }
 
 /// Returns the (bytes received, sending address len, `RecvFlags`).
+#[cfg(not(target_os = "redox"))]
 fn recvmsg(
     fd: SysSocket,
     msg_name: *mut sockaddr_storage,
@@ -536,6 +537,7 @@ pub(crate) fn send_to_vectored(
 }
 
 /// Returns the (bytes received, sending address len, `RecvFlags`).
+#[cfg(not(target_os = "redox"))]
 fn sendmsg(
     fd: SysSocket,
     msg_name: *const sockaddr_storage,
