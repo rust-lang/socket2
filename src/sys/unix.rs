@@ -555,6 +555,14 @@ fn sendmsg(
     syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
+pub(crate) fn ttl(fd: SysSocket) -> io::Result<u32> {
+    unsafe { getsockopt::<c_int>(fd, libc::IPPROTO_IP, libc::IP_TTL).map(|ttl| ttl as u32) }
+}
+
+pub(crate) fn set_ttl(fd: SysSocket, ttl: u32) -> io::Result<()> {
+    unsafe { setsockopt::<c_int>(fd, libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -683,7 +691,6 @@ unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> 
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
-#[cfg(target_vendor = "apple")]
 unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()> {
     let payload = &payload as *const T as *const c_void;
     syscall!(setsockopt(
@@ -702,17 +709,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn ttl(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
-    }
-
     #[cfg(target_os = "linux")]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }

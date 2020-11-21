@@ -496,11 +496,11 @@ impl Socket {
 
     /// Gets the value of the `IP_TTL` option for this socket.
     ///
-    /// For more information about this option, see [`set_ttl`][link].
+    /// For more information about this option, see [`set_ttl`].
     ///
-    /// [link]: #method.set_ttl
+    /// [set_ttl]: Socket::set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
-        self.inner().ttl()
+        sys::ttl(self.inner)
     }
 
     /// Sets the value for the `IP_TTL` option on this socket.
@@ -508,7 +508,7 @@ impl Socket {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        self.inner().set_ttl(ttl)
+        sys::set_ttl(self.inner, ttl)
     }
 
     /// Sets the value for the `SO_MARK` option on this socket.
