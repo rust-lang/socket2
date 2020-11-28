@@ -59,11 +59,12 @@ pub(crate) use winapi::shared::ws2def::{
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
-pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, SOL_SOCKET, SO_ERROR};
-pub(crate) use winapi::shared::ws2ipdef::IP_TTL;
+pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, IPPROTO_IPV6 as c_int, SOL_SOCKET, SO_ERROR};
+pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IP_TTL};
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
 pub(crate) use winapi::um::winsock2::MSG_PEEK;
+pub(crate) const IPPROTO_IPV6: c_int = winapi::shared::ws2def::IPPROTO_IPV6 as c_int;
 
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
 const MAX_BUF_LEN: usize = <c_int>::max_value() as usize;
@@ -576,17 +577,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_UNICAST_HOPS, hops as c_int) }
-    }
-
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY)?;

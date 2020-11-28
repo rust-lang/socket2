@@ -50,7 +50,9 @@ pub(crate) use libc::MSG_TRUNC;
 // Used in `Socket`.
 #[cfg(all(unix, feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::MSG_OOB;
-pub(crate) use libc::{IPPROTO_IP, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_ERROR};
+pub(crate) use libc::{
+    IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_HOPS, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_ERROR,
+};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -754,23 +756,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::IPPROTO_IPV6 as c_int,
-                libc::IPV6_UNICAST_HOPS,
-                hops as c_int,
-            )
-        }
-    }
-
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_V6ONLY)?;
