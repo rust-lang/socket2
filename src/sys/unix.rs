@@ -52,7 +52,7 @@ pub(crate) use libc::MSG_TRUNC;
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL, MSG_PEEK, SOL_SOCKET,
-    SO_ERROR,
+    SO_ERROR, TCP_NODELAY,
 };
 
 cfg_if::cfg_if! {
@@ -781,17 +781,6 @@ impl Socket {
 
     pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO, dur2timeval(dur)?) }
-    }
-
-    pub fn nodelay(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_TCP, libc::TCP_NODELAY)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::IPPROTO_TCP, libc::TCP_NODELAY, nodelay as c_int) }
     }
 
     pub fn broadcast(&self) -> io::Result<bool> {

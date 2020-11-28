@@ -606,11 +606,14 @@ impl Socket {
 
     /// Gets the value of the `TCP_NODELAY` option on this socket.
     ///
-    /// For more information about this option, see [`set_nodelay`][link].
+    /// For more information about this option, see [`set_nodelay`].
     ///
-    /// [link]: #method.set_nodelay
+    /// [`set_nodelay`]: Socket::set_nodelay
     pub fn nodelay(&self) -> io::Result<bool> {
-        self.inner().nodelay()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
+                .map(|nodelay| nodelay != 0)
+        }
     }
 
     /// Sets the value of the `TCP_NODELAY` option on this socket.
@@ -621,7 +624,14 @@ impl Socket {
     /// sufficient amount to send out, thereby avoiding the frequent sending of
     /// small packets.
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        self.inner().set_nodelay(nodelay)
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_TCP,
+                sys::TCP_NODELAY,
+                nodelay as c_int,
+            )
+        }
     }
 
     /// Sets the value of the `SO_BROADCAST` option for this socket.
