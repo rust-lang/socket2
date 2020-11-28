@@ -976,7 +976,7 @@ impl Socket {
     /// [`set_nodelay`]: Socket::set_nodelay
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
+            getsockopt::<sys::NoDelay>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
                 .map(|nodelay| nodelay != 0)
         }
     }

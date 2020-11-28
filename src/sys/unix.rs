@@ -56,6 +56,9 @@ pub(crate) use libc::{
     SO_ERROR, TCP_NODELAY,
 };
 
+// See this type in the Windows file.
+pub(crate) type NoDelay = c_int;
+
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
                  target_os = "ios", target_os = "macos",

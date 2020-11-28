@@ -71,6 +71,14 @@ pub(crate) use winapi::um::winsock2::MSG_OOB;
 pub(crate) use winapi::um::winsock2::MSG_PEEK;
 pub(crate) const IPPROTO_IPV6: c_int = winapi::shared::ws2def::IPPROTO_IPV6 as c_int;
 
+/// Type used in set/getsockopt to retrieve the `TCP_NODELAY` option.
+///
+/// NOTE: https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt
+/// documents that `TCP_NODELAY` expects a `BOOL` (alias for `c_int`, 4 bytes),
+/// however in practice this turns out to be false (or misleading) as a
+/// `BOOLEAN` (`c_uchar`, 1 byte) is returned by `getsockopt`.
+pub(crate) type NoDelay = winapi::shared::ntdef::BOOLEAN;
+
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
 const MAX_BUF_LEN: usize = <c_int>::max_value() as usize;
 
