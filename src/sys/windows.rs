@@ -59,7 +59,9 @@ pub(crate) use winapi::shared::ws2def::{
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
-pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, SOL_SOCKET, SO_ERROR, TCP_NODELAY};
+pub(crate) use winapi::shared::ws2def::{
+    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, TCP_NODELAY,
+};
 pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL};
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
@@ -591,17 +593,6 @@ impl Socket {
 
     pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
         unsafe { self.setsockopt(SOL_SOCKET, SO_SNDTIMEO, dur2ms(dur)?) }
-    }
-
-    pub fn broadcast(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(SOL_SOCKET, SO_BROADCAST)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(SOL_SOCKET, SO_BROADCAST, broadcast as c_int) }
     }
 
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
