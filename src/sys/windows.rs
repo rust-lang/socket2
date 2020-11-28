@@ -62,7 +62,10 @@ pub(crate) use winapi::um::ws2tcpip::socklen_t;
 pub(crate) use winapi::shared::ws2def::{
     IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, TCP_NODELAY,
 };
-pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL};
+pub(crate) use winapi::shared::ws2ipdef::{
+    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
+    IP_MULTICAST_TTL, IP_TTL,
+};
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
 pub(crate) use winapi::um::winsock2::MSG_PEEK;
@@ -595,39 +598,6 @@ impl Socket {
         unsafe { self.setsockopt(SOL_SOCKET, SO_SNDTIMEO, dur2ms(dur)?) }
     }
 
-    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IP, IP_MULTICAST_LOOP)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_LOOP, multicast_loop_v4 as c_int) }
-    }
-
-    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IP, IP_MULTICAST_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_TTL, multicast_ttl_v4 as c_int) }
-    }
-
-    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_HOPS, hops as c_int) }
-    }
-
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
         unsafe {
             let imr_interface: IN_ADDR = self.getsockopt(IPPROTO_IP, IP_MULTICAST_IF)?;
@@ -650,23 +620,6 @@ impl Socket {
 
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
         unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF, interface as c_int) }
-    }
-
-    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_LOOP)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                IPPROTO_IPV6 as c_int,
-                IPV6_MULTICAST_LOOP,
-                multicast_loop_v6 as c_int,
-            )
-        }
     }
 
     pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
