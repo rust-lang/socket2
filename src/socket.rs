@@ -604,36 +604,6 @@ impl Socket {
         self.inner().set_write_timeout(dur)
     }
 
-    /// Gets the value of the `TCP_NODELAY` option on this socket.
-    ///
-    /// For more information about this option, see [`set_nodelay`].
-    ///
-    /// [`set_nodelay`]: Socket::set_nodelay
-    pub fn nodelay(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
-                .map(|nodelay| nodelay != 0)
-        }
-    }
-
-    /// Sets the value of the `TCP_NODELAY` option on this socket.
-    ///
-    /// If set, this option disables the Nagle algorithm. This means that
-    /// segments are always sent as soon as possible, even if there is only a
-    /// small amount of data. When not set, data is buffered until there is a
-    /// sufficient amount to send out, thereby avoiding the frequent sending of
-    /// small packets.
-    pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_TCP,
-                sys::TCP_NODELAY,
-                nodelay as c_int,
-            )
-        }
-    }
-
     /// Sets the value of the `SO_BROADCAST` option for this socket.
     ///
     /// For more information about this option, see [`set_broadcast`].
@@ -990,6 +960,43 @@ impl Socket {
         // Safety: this is safe because `sys::Socket` has the
         // `repr(transparent)` attribute.
         unsafe { &*(&self.inner as *const sys::SysSocket as *const sys::Socket) }
+    }
+}
+
+/// Socket options for TCP socket, get/set using `IPPROTO_TCP`.
+///
+/// Additional documentation can be found in documentation of the OS.
+/// * Linux: <https://man7.org/linux/man-pages/man7/tcp.7.html>
+/// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options>
+impl Socket {
+    /// Gets the value of the `TCP_NODELAY` option on this socket.
+    ///
+    /// For more information about this option, see [`set_nodelay`].
+    ///
+    /// [`set_nodelay`]: Socket::set_nodelay
+    pub fn nodelay(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
+                .map(|nodelay| nodelay != 0)
+        }
+    }
+
+    /// Sets the value of the `TCP_NODELAY` option on this socket.
+    ///
+    /// If set, this option disables the Nagle algorithm. This means that
+    /// segments are always sent as soon as possible, even if there is only a
+    /// small amount of data. When not set, data is buffered until there is a
+    /// sufficient amount to send out, thereby avoiding the frequent sending of
+    /// small packets.
+    pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_TCP,
+                sys::TCP_NODELAY,
+                nodelay as c_int,
+            )
+        }
     }
 }
 
