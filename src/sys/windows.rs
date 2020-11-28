@@ -59,6 +59,8 @@ pub(crate) use winapi::shared::ws2def::{
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
+pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, SOL_SOCKET, SO_ERROR};
+pub(crate) use winapi::shared::ws2ipdef::IP_TTL;
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
 pub(crate) use winapi::um::winsock2::MSG_PEEK;
@@ -254,14 +256,6 @@ pub(crate) fn try_clone(socket: SysSocket) -> io::Result<SysSocket> {
         PartialEq::eq,
         sock::INVALID_SOCKET
     )
-}
-
-pub(crate) fn take_error(socket: SysSocket) -> io::Result<Option<io::Error>> {
-    match unsafe { getsockopt::<c_int>(socket, SOL_SOCKET, SO_ERROR) } {
-        Ok(0) => Ok(None),
-        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
-        Err(err) => Err(err),
-    }
 }
 
 pub(crate) fn set_nonblocking(socket: SysSocket, nonblocking: bool) -> io::Result<()> {
@@ -493,16 +487,12 @@ pub(crate) fn send_to_vectored(
     .map(|_| nsent as usize)
 }
 
-pub(crate) fn ttl(socket: SysSocket) -> io::Result<u32> {
-    unsafe { getsockopt::<c_int>(socket, IPPROTO_IP, IP_TTL).map(|ttl| ttl as u32) }
-}
-
-pub(crate) fn set_ttl(socket: SysSocket, ttl: u32) -> io::Result<()> {
-    unsafe { setsockopt::<c_int>(socket, IPPROTO_IP, IP_TTL, ttl as c_int) }
-}
-
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
-unsafe fn getsockopt<T>(socket: SysSocket, level: c_int, optname: c_int) -> io::Result<T> {
+pub(crate) unsafe fn getsockopt<T>(
+    socket: SysSocket,
+    level: c_int,
+    optname: c_int,
+) -> io::Result<T> {
     let mut optval: MaybeUninit<T> = MaybeUninit::uninit();
     let mut optlen = mem::size_of::<T>() as c_int;
     syscall!(
@@ -524,7 +514,7 @@ unsafe fn getsockopt<T>(socket: SysSocket, level: c_int, optname: c_int) -> io::
 }
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
-unsafe fn setsockopt<T>(
+pub(crate) unsafe fn setsockopt<T>(
     socket: SysSocket,
     level: c_int,
     optname: c_int,
@@ -555,7 +545,7 @@ fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Resu
 
 /// Windows only API.
 impl crate::Socket {
-    /// Sets `HANDLE_FLAG_INHERIT` to zero using `SetHandleInformation`.
+    /// Sets `HANDLE_FLAG_INHERIT` using `SetHandleInformation`.
     #[cfg(feature = "all")]
     pub fn set_no_inherit(&self, no_inherit: bool) -> io::Result<()> {
         self._set_no_inherit(no_inherit)

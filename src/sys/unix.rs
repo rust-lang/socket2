@@ -50,7 +50,7 @@ pub(crate) use libc::MSG_TRUNC;
 // Used in `Socket`.
 #[cfg(all(unix, feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::MSG_OOB;
-pub(crate) use libc::MSG_PEEK;
+pub(crate) use libc::{IPPROTO_IP, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_ERROR};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
@@ -373,14 +373,6 @@ pub(crate) fn try_clone(fd: SysSocket) -> io::Result<SysSocket> {
     syscall!(fcntl(fd, libc::F_DUPFD_CLOEXEC, 0))
 }
 
-pub(crate) fn take_error(fd: SysSocket) -> io::Result<Option<io::Error>> {
-    match unsafe { getsockopt::<c_int>(fd, libc::SOL_SOCKET, libc::SO_ERROR) } {
-        Ok(0) => Ok(None),
-        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
-        Err(err) => Err(err),
-    }
-}
-
 pub(crate) fn set_nonblocking(fd: SysSocket, nonblocking: bool) -> io::Result<()> {
     if nonblocking {
         fcntl_add(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
@@ -555,14 +547,6 @@ fn sendmsg(
     syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
-pub(crate) fn ttl(fd: SysSocket) -> io::Result<u32> {
-    unsafe { getsockopt::<c_int>(fd, libc::IPPROTO_IP, libc::IP_TTL).map(|ttl| ttl as u32) }
-}
-
-pub(crate) fn set_ttl(fd: SysSocket, ttl: u32) -> io::Result<()> {
-    unsafe { setsockopt::<c_int>(fd, libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
-}
-
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -729,7 +713,7 @@ fn fcntl_remove(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> i
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
-unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
+pub(crate) unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
     let mut len = size_of::<T>() as libc::socklen_t;
     syscall!(getsockopt(
@@ -747,7 +731,12 @@ unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> 
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
-unsafe fn setsockopt<T>(fd: SysSocket, opt: c_int, val: c_int, payload: T) -> io::Result<()> {
+pub(crate) unsafe fn setsockopt<T>(
+    fd: SysSocket,
+    opt: c_int,
+    val: c_int,
+    payload: T,
+) -> io::Result<()> {
     let payload = &payload as *const T as *const c_void;
     syscall!(setsockopt(
         fd,

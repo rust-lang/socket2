@@ -17,7 +17,7 @@ use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
-use crate::sys;
+use crate::sys::{self, c_int, getsockopt, setsockopt};
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
 use crate::{Domain, Protocol, SockAddr, Type};
@@ -263,7 +263,11 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        sys::take_error(self.inner)
+        match unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_ERROR) } {
+            Ok(0) => Ok(None),
+            Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
+            Err(err) => Err(err),
+        }
     }
 
     /// Moves this TCP stream into or out of nonblocking mode.
@@ -500,7 +504,9 @@ impl Socket {
     ///
     /// [set_ttl]: Socket::set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
-        sys::ttl(self.inner)
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
+        }
     }
 
     /// Sets the value for the `IP_TTL` option on this socket.
@@ -508,7 +514,7 @@ impl Socket {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        sys::set_ttl(self.inner, ttl)
+        unsafe { setsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
 
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
