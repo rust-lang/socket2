@@ -639,17 +639,26 @@ impl Socket {
     /// When enabled, this socket is allowed to send packets to a broadcast
     /// address.
     pub fn broadcast(&self) -> io::Result<bool> {
-        self.inner().broadcast()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_BROADCAST)
+                .map(|broadcast| broadcast != 0)
+        }
     }
 
     /// Gets the value of the `SO_BROADCAST` option for this socket.
     ///
-    /// For more information about this option, see
-    /// [`set_broadcast`][link].
+    /// For more information about this option, see [`set_broadcast`].
     ///
-    /// [link]: #method.set_broadcast
+    /// [`set_broadcast`]: Socket::set_broadcast
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
-        self.inner().set_broadcast(broadcast)
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::SOL_SOCKET,
+                sys::SO_BROADCAST,
+                broadcast as c_int,
+            )
+        }
     }
 
     /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
