@@ -514,21 +514,31 @@ impl Socket {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { setsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
+        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
 
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        self.inner().unicast_hops_v6()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_UNICAST_HOPS)
+                .map(|hops| hops as u32)
+        }
     }
 
     /// Sets the value for the `IPV6_UNICAST_HOPS` option on this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets
-    pub fn set_unicast_hops_v6(&self, ttl: u32) -> io::Result<()> {
-        self.inner().set_unicast_hops_v6(ttl)
+    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_UNICAST_HOPS,
+                hops as c_int,
+            )
+        }
     }
 
     /// Gets the value of the `IPV6_V6ONLY` option for this socket.
