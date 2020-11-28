@@ -51,8 +51,9 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(all(unix, feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
-    IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL, MSG_PEEK, SOL_SOCKET,
-    SO_BROADCAST, SO_ERROR, TCP_NODELAY,
+    IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
+    IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
+    SO_ERROR, TCP_NODELAY,
 };
 
 cfg_if::cfg_if! {
@@ -783,51 +784,6 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO, dur2timeval(dur)?) }
     }
 
-    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_LOOP)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::IPPROTO_IP,
-                libc::IP_MULTICAST_LOOP,
-                multicast_loop_v4 as c_int,
-            )
-        }
-    }
-
-    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_TTL)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::IPPROTO_IP,
-                libc::IP_MULTICAST_TTL,
-                multicast_ttl_v4 as c_int,
-            )
-        }
-    }
-
-    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_HOPS, hops as c_int) }
-    }
-
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
         unsafe {
             let imr_interface: libc::in_addr =
@@ -855,23 +811,6 @@ impl Socket {
                 libc::IPPROTO_IPV6,
                 libc::IPV6_MULTICAST_IF,
                 interface as c_int,
-            )
-        }
-    }
-
-    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_LOOP)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::IPPROTO_IPV6,
-                libc::IPV6_MULTICAST_LOOP,
-                multicast_loop_v6 as c_int,
             )
         }
     }

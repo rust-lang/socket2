@@ -636,8 +636,9 @@ impl Socket {
 
     /// Sets the value of the `SO_BROADCAST` option for this socket.
     ///
-    /// When enabled, this socket is allowed to send packets to a broadcast
-    /// address.
+    /// For more information about this option, see [`set_broadcast`].
+    ///
+    /// [`set_broadcast`]: Socket::set_broadcast
     pub fn broadcast(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_BROADCAST)
@@ -647,9 +648,8 @@ impl Socket {
 
     /// Gets the value of the `SO_BROADCAST` option for this socket.
     ///
-    /// For more information about this option, see [`set_broadcast`].
-    ///
-    /// [`set_broadcast`]: Socket::set_broadcast
+    /// When enabled, this socket is allowed to send packets to a broadcast
+    /// address.
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -663,30 +663,68 @@ impl Socket {
 
     /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
     ///
-    /// For more information about this option, see
-    /// [`set_multicast_loop_v4`][link].
+    /// For more information about this option, see [`set_multicast_loop_v4`].
     ///
-    /// [link]: #method.set_multicast_loop_v4
+    /// [`set_multicast_loop_v4`]: Socket::set_multicast_loop_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        self.inner().multicast_loop_v4()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
+                .map(|loop_v4| loop_v4 != 0)
+        }
     }
 
     /// Sets the value of the `IP_MULTICAST_LOOP` option for this socket.
     ///
     /// If enabled, multicast packets will be looped back to the local socket.
     /// Note that this may not have any affect on IPv6 sockets.
-    pub fn set_multicast_loop_v4(&self, multicast_loop_v4: bool) -> io::Result<()> {
-        self.inner().set_multicast_loop_v4(multicast_loop_v4)
+    pub fn set_multicast_loop_v4(&self, loop_v4: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IP,
+                sys::IP_MULTICAST_LOOP,
+                loop_v4 as c_int,
+            )
+        }
+    }
+
+    /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// For more information about this option, see [`set_multicast_loop_v6`].
+    ///
+    /// [`set_multicast_loop_v6`]: Socket::set_multicast_loop_v6
+    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_LOOP)
+                .map(|loop_v6| loop_v6 != 0)
+        }
+    }
+
+    /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// Controls whether this socket sees the multicast packets it sends itself.
+    /// Note that this may not have any affect on IPv4 sockets.
+    pub fn set_multicast_loop_v6(&self, loop_v6: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MULTICAST_LOOP,
+                loop_v6 as c_int,
+            )
+        }
     }
 
     /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
     ///
-    /// For more information about this option, see
-    /// [`set_multicast_ttl_v4`][link].
+    /// For more information about this option, see [`set_multicast_ttl_v4`].
     ///
-    /// [link]: #method.set_multicast_ttl_v4
+    /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        self.inner().multicast_ttl_v4()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
+                .map(|ttl| ttl as u32)
+        }
     }
 
     /// Sets the value of the `IP_MULTICAST_TTL` option for this socket.
@@ -696,8 +734,15 @@ impl Socket {
     /// don't leave the local network unless explicitly requested.
     ///
     /// Note that this may not have any affect on IPv6 sockets.
-    pub fn set_multicast_ttl_v4(&self, multicast_ttl_v4: u32) -> io::Result<()> {
-        self.inner().set_multicast_ttl_v4(multicast_ttl_v4)
+    pub fn set_multicast_ttl_v4(&self, ttl: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IP,
+                sys::IP_MULTICAST_TTL,
+                ttl as c_int,
+            )
+        }
     }
 
     /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
@@ -707,7 +752,10 @@ impl Socket {
     ///
     /// [link]: #method.set_multicast_hops_v6
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        self.inner().multicast_hops_v6()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_HOPS)
+                .map(|hops| hops as u32)
+        }
     }
 
     /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
@@ -716,7 +764,14 @@ impl Socket {
     /// this socket. The default value is 1 which means that multicast packets
     /// don't leave the local network unless explicitly requested.
     pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        self.inner().set_multicast_hops_v6(hops)
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MULTICAST_HOPS,
+                hops as c_int,
+            )
+        }
     }
 
     /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
@@ -757,24 +812,6 @@ impl Socket {
     /// overlap.
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
         self.inner().set_multicast_if_v6(interface)
-    }
-
-    /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_loop_v6`][link].
-    ///
-    /// [link]: #method.set_multicast_loop_v6
-    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        self.inner().multicast_loop_v6()
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
-    ///
-    /// Controls whether this socket sees the multicast packets it sends itself.
-    /// Note that this may not have any affect on IPv4 sockets.
-    pub fn set_multicast_loop_v6(&self, multicast_loop_v6: bool) -> io::Result<()> {
-        self.inner().set_multicast_loop_v6(multicast_loop_v6)
     }
 
     /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
