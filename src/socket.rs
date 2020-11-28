@@ -502,7 +502,7 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_ttl`].
     ///
-    /// [set_ttl]: Socket::set_ttl
+    /// [`set_ttl`]: Socket::set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
@@ -543,11 +543,14 @@ impl Socket {
 
     /// Gets the value of the `IPV6_V6ONLY` option for this socket.
     ///
-    /// For more information about this option, see [`set_only_v6`][link].
+    /// For more information about this option, see [`set_only_v6`].
     ///
-    /// [link]: #method.set_only_v6
+    /// [`set_only_v6`]: Socket::set_only_v6
     pub fn only_v6(&self) -> io::Result<bool> {
-        self.inner().only_v6()
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
+                .map(|only_v6| only_v6 != 0)
+        }
     }
 
     /// Sets the value for the `IPV6_V6ONLY` option on this socket.
@@ -559,7 +562,14 @@ impl Socket {
     /// If this is set to `false` then the socket can be used to send and
     /// receive packets from an IPv4-mapped IPv6 address.
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        self.inner().set_only_v6(only_v6)
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_V6ONLY,
+                only_v6 as c_int,
+            )
+        }
     }
 
     /// Returns the read timeout of this socket.
