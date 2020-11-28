@@ -59,8 +59,8 @@ pub(crate) use winapi::shared::ws2def::{
 pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
-pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, IPPROTO_IPV6 as c_int, SOL_SOCKET, SO_ERROR};
-pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IP_TTL};
+pub(crate) use winapi::shared::ws2def::{IPPROTO_IP, SOL_SOCKET, SO_ERROR};
+pub(crate) use winapi::shared::ws2ipdef::{IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL};
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
 pub(crate) use winapi::um::winsock2::MSG_PEEK;
@@ -577,17 +577,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn only_v6(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_V6ONLY, only_v6 as c_int) }
-    }
-
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_RCVTIMEO)?)) }
     }

@@ -51,7 +51,8 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(all(unix, feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
-    IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_HOPS, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_ERROR,
+    IPPROTO_IP, IPPROTO_IPV6, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_TTL, MSG_PEEK, SOL_SOCKET,
+    SO_ERROR,
 };
 
 cfg_if::cfg_if! {
@@ -756,17 +757,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn only_v6(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_V6ONLY)?;
-            Ok(raw != 0)
-        }
-    }
-
-    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::IPPROTO_IPV6, libc::IPV6_V6ONLY, only_v6 as c_int) }
-    }
-
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
             Ok(timeval2dur(
