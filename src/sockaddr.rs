@@ -216,10 +216,11 @@ impl From<SocketAddrV4> for SockAddr {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
             sin_addr,
-            sin_zero: [0; 8],
+            sin_zero: Default::default(),
             #[cfg(any(
                 target_os = "dragonfly",
                 target_os = "freebsd",
+                target_os = "haiku",
                 target_os = "ios",
                 target_os = "macos",
                 target_os = "netbsd",
@@ -268,6 +269,7 @@ impl From<SocketAddrV6> for SockAddr {
             #[cfg(any(
                 target_os = "dragonfly",
                 target_os = "freebsd",
+                target_os = "haiku",
                 target_os = "ios",
                 target_os = "macos",
                 target_os = "netbsd",
