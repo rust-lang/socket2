@@ -373,7 +373,7 @@ impl Socket {
     ///
     /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment
     /// Size and is only available on TCP sockets.
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "redox")))]
     pub fn mss(&self) -> io::Result<u32> {
         self.inner.mss()
     }
@@ -382,7 +382,7 @@ impl Socket {
     ///
     /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment
     /// Size and is only available on TCP sockets.
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "redox")))]
     pub fn set_mss(&self, mss: u32) -> io::Result<()> {
         self.inner.set_mss(mss)
     }

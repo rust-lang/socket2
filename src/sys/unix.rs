@@ -31,7 +31,9 @@ pub use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use libc::{SOCK_DGRAM, SOCK_RAW, SOCK_SEQPACKET, SOCK_STREAM};
+#[cfg(not(target_os = "redox"))]
+pub(crate) use libc::SOCK_RAW;
+pub(crate) use libc::{SOCK_DGRAM, SOCK_SEQPACKET, SOCK_STREAM};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 
@@ -131,8 +133,9 @@ impl_debug!(
     crate::Type,
     libc::SOCK_STREAM,
     libc::SOCK_DGRAM,
+    #[cfg(not(target_os = "redox"))]
     libc::SOCK_RAW,
-    #[cfg(not(target_os = "haiku"))]
+    #[cfg(not(any(target_os = "haiku", target_os = "redox")))]
     libc::SOCK_RDM,
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
@@ -534,6 +537,7 @@ impl Socket {
         unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_TTL, ttl as c_int) }
     }
 
+    #[cfg(not(target_os = "redox"))]
     pub fn mss(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_TCP, libc::TCP_MAXSEG)?;
@@ -541,6 +545,7 @@ impl Socket {
         }
     }
 
+    #[cfg(not(target_os = "redox"))]
     pub fn set_mss(&self, mss: u32) -> io::Result<()> {
         unsafe { self.setsockopt(libc::IPPROTO_TCP, libc::TCP_MAXSEG, mss as c_int) }
     }
