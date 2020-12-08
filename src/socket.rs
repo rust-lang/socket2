@@ -308,7 +308,7 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`out_of_band_inline`]: Socket::out_of_band_inline
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg(feature = "all")]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_OOB)
     }
@@ -456,7 +456,7 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     /// [`out_of_band_inline`]: #method.out_of_band_inline
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg(feature = "all")]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
         self.send_with_flags(buf, sys::MSG_OOB)
     }
@@ -914,7 +914,7 @@ impl Socket {
     /// For more information about this option, see [`set_out_of_band_inline`][link].
     ///
     /// [link]: #method.set_out_of_band_inline
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg(feature = "all")]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         self.inner().out_of_band_inline()
     }
@@ -1228,7 +1228,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg(feature = "all")]
     fn out_of_band_inline() {
         let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 

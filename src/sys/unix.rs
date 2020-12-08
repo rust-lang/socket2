@@ -35,9 +35,11 @@ pub use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
-pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 #[cfg(all(feature = "all", not(target_os = "redox")))]
-pub(crate) use libc::{SOCK_RAW, SOCK_SEQPACKET};
+pub(crate) use libc::SOCK_RAW;
+#[cfg(feature = "all")]
+pub(crate) use libc::SOCK_SEQPACKET;
+pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
@@ -48,7 +50,7 @@ pub(crate) use libc::{
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::MSG_TRUNC;
 // Used in `Socket`.
-#[cfg(all(unix, feature = "all", not(target_os = "redox")))]
+#[cfg(feature = "all")]
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
@@ -150,7 +152,6 @@ impl_debug!(
     libc::AF_UNIX,
     #[cfg(target_os = "linux")]
     libc::AF_PACKET,
-    #[cfg(not(target_os = "redox"))]
     libc::AF_UNSPEC, // = 0.
 );
 
@@ -219,7 +220,6 @@ impl_debug!(
     libc::SOCK_RAW,
     #[cfg(not(any(target_os = "redox", target_os = "haiku")))]
     libc::SOCK_RDM,
-    #[cfg(not(target_os = "redox"))]
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
     #[cfg(any(
@@ -645,7 +645,7 @@ impl crate::Socket {
     /// For more information about this option, see [`set_mss`].
     ///
     /// [set_mss]: Socket::set_mss
-    #[cfg(feature = "all")]
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn mss(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.inner, libc::IPPROTO_TCP, libc::TCP_MAXSEG)
@@ -657,7 +657,7 @@ impl crate::Socket {
     ///
     /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment Size and is only
     /// available on TCP sockets.
-    #[cfg(feature = "all")]
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_mss(&self, mss: u32) -> io::Result<()> {
         unsafe {
             setsockopt::<c_int>(
@@ -948,7 +948,7 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg(feature = "all")]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE)?;
@@ -956,7 +956,7 @@ impl Socket {
         }
     }
 
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg(feature = "all")]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE, oob_inline as c_int) }
     }
@@ -1211,7 +1211,8 @@ fn test_ip() {
 }
 
 #[test]
-#[cfg(all(feature = "all", not(target_os = "redox")))]
+#[cfg(feature = "all")]
+#[cfg_attr(target_os = "redox", ignore)]
 fn test_out_of_band_inline() {
     let tcp = Socket {
         fd: socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap(),
