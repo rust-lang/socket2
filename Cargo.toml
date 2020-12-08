@@ -19,12 +19,9 @@ all-features = true
 version = "0.3.3"
 features = ["handleapi", "ws2def", "ws2ipdef", "ws2tcpip", "minwindef"]
 
-[target."cfg(any(unix, target_os = \"redox\"))".dependencies]
+[target."cfg(unix)".dependencies]
 cfg-if = "1.0"
 libc = { version = "0.2.66", features = ["align"] }
-
-[target."cfg(target_os = \"redox\")".dependencies]
-redox_syscall = "0.1.38"
 
 [dev-dependencies]
 tempdir = "0.3"
