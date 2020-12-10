@@ -102,6 +102,7 @@ macro_rules! impl_debug {
 
 mod sockaddr;
 mod socket;
+mod sockref;
 
 #[cfg(test)]
 mod tests;
@@ -117,6 +118,7 @@ use sys::c_int;
 
 pub use sockaddr::SockAddr;
 pub use socket::Socket;
+pub use sockref::SockRef;
 
 /// Specification of the communication domain for a socket.
 ///
