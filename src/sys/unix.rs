@@ -660,7 +660,7 @@ impl crate::Socket {
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_mss(&self, mss: u32) -> io::Result<()> {
         unsafe {
-            setsockopt::<c_int>(
+            setsockopt(
                 self.inner,
                 libc::IPPROTO_TCP,
                 libc::TCP_MAXSEG,
