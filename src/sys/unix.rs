@@ -563,6 +563,72 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
     }
 
+    /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
+    ///
+    /// This value gets the socket binded device's interface name.
+    ///
+    /// This function is only available on Linux.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn device(&self) -> io::Result<Option<String>> {
+        unsafe {
+            let mut opt_len = libc::IFNAMSIZ as libc::socklen_t;
+            let mut payload: MaybeUninit<[u8; libc::IFNAMSIZ]> = MaybeUninit::uninit();
+            syscall!(getsockopt(
+                self.fd,
+                libc::SOL_SOCKET,
+                libc::SO_BINDTODEVICE,
+                payload.as_mut_ptr().cast(),
+                &mut opt_len,
+            ))?;
+            match opt_len {
+                0 => Ok(None),
+                _ => {
+                    let end: usize = opt_len as usize - 1;
+                    match String::from_utf8(payload.assume_init()[..end].to_vec()) {
+                        Ok(interface) => Ok(Some(interface)),
+                        Err(_) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::InvalidData,
+                                "Data not valid for the operation were encountered.",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Sets the value for the `SO_BINDTODEVICE` option on this socket.
+    ///
+    /// If a socket is bound to an interface, only packets received from that
+    /// particular interface are processed by the socket. Note that this only
+    /// works for some socket types, particularly AF_INET sockets. Accept an
+    /// Option where None which will set the length to zero, removing the
+    /// interface binding.
+    ///
+    /// This function is only available on Linux.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn bind_device(&self, interface: Option<&str>) -> io::Result<()> {
+        unsafe {
+            let value = interface.unwrap_or_default();
+            let opt_len = value.len();
+            if opt_len > libc::IFNAMSIZ {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "interface name is too long",
+                ));
+            }
+            syscall!(setsockopt(
+                self.fd,
+                libc::SOL_SOCKET,
+                libc::SO_BINDTODEVICE,
+                value.as_ptr() as *const c_void,
+                opt_len as libc::socklen_t,
+            ))?;
+            Ok(())
+        }
+    }
+
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_UNICAST_HOPS)?;
