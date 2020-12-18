@@ -70,7 +70,7 @@ pub(crate) use libc::{
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
 // See this type in the Windows file.
-pub(crate) type NoDelay = c_int;
+pub(crate) type Bool = c_int;
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",

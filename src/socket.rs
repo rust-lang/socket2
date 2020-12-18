@@ -17,7 +17,7 @@ use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
-use crate::sys::{self, c_int, getsockopt, setsockopt};
+use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
@@ -812,7 +812,7 @@ impl Socket {
     /// [`set_keepalive`]: Socket::set_keepalive
     pub fn keepalive(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_KEEPALIVE)
+            getsockopt::<Bool>(self.inner, sys::SOL_SOCKET, sys::SO_KEEPALIVE)
                 .map(|keepalive| keepalive != 0)
         }
     }
@@ -1123,7 +1123,7 @@ impl Socket {
     /// [`set_nodelay`]: Socket::set_nodelay
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<sys::NoDelay>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
+            getsockopt::<Bool>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
                 .map(|nodelay| nodelay != 0)
         }
     }
