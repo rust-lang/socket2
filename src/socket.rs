@@ -559,22 +559,6 @@ impl Socket {
         }
     }
 
-    /// Returns the read timeout of this socket.
-    ///
-    /// If the timeout is `None`, then `read` calls will block indefinitely.
-    pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        self.inner().read_timeout()
-    }
-
-    /// Sets the read timeout to the timeout specified.
-    ///
-    /// If the value specified is `None`, then `read` calls will block
-    /// indefinitely. It is an error to pass the zero `Duration` to this
-    /// method.
-    pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        self.inner().set_read_timeout(dur)
-    }
-
     /// Returns the write timeout of this socket.
     ///
     /// If the timeout is `None`, then `write` calls will block indefinitely.
@@ -981,6 +965,22 @@ impl Socket {
     /// with the socket.
     pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
         unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_RCVBUF, size as c_int) }
+    }
+
+    /// Get value for the `SO_RCVTIMEO` option on this socket.
+    ///
+    /// If the returned timeout is `None`, then `read` and `recv` calls will
+    /// block indefinitely.
+    pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
+        sys::read_timeout(self.inner)
+    }
+
+    /// Set value for the `SO_RCVTIMEO` option on this socket.
+    ///
+    /// If `timeout` is `None`, then `read` and `recv` calls will block
+    /// indefinitely.
+    pub fn set_read_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
+        sys::set_read_timeout(self.inner, duration)
     }
 
     /// Gets the value of the `SO_REUSEADDR` option on this socket.

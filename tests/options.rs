@@ -88,6 +88,10 @@ test!(
     set_mark(123)
 );
 test!(linger, set_linger(Some(Duration::from_secs(10))));
+test!(
+    read_timeout,
+    set_read_timeout(Some(Duration::from_secs(10)))
+);
 
 test!(IPv4 ttl, set_ttl(40));
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
