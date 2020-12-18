@@ -811,32 +811,6 @@ impl Socket {
         self.inner().set_keepalive(keepalive)
     }
 
-    /// Check the value of the `SO_REUSEPORT` option on this socket.
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(
-        feature = "all",
-        not(any(windows, target_os = "solaris", target_os = "illumos"))
-    ))]
-    pub fn reuse_port(&self) -> io::Result<bool> {
-        self.inner().reuse_port()
-    }
-
-    /// Set value for the `SO_REUSEPORT` option on this socket.
-    ///
-    /// This indicates that further calls to `bind` may allow reuse of local
-    /// addresses. For IPv4 sockets this means that a socket may bind even when
-    /// there's a socket already listening on this port.
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(
-        feature = "all",
-        not(any(windows, target_os = "solaris", target_os = "illumos"))
-    ))]
-    pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
-        self.inner().set_reuse_port(reuse)
-    }
-
     fn inner(&self) -> &sys::Socket {
         // Safety: this is safe because `sys::Socket` has the
         // `repr(transparent)` attribute.
@@ -983,7 +957,7 @@ impl Socket {
         sys::set_read_timeout(self.inner, duration)
     }
 
-    /// Gets the value of the `SO_REUSEADDR` option on this socket.
+    /// Get the value of the `SO_REUSEADDR` option on this socket.
     ///
     /// For more information about this option, see [`set_reuse_address`].
     ///

@@ -727,6 +727,46 @@ impl crate::Socket {
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         unsafe { setsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
     }
+
+    /// Get the value of the `SO_REUSEPORT` option on this socket.
+    ///
+    /// For more information about this option, see [`reuse_port`].
+    ///
+    /// This function is only available on Unix.
+    ///
+    /// [`reuse_port`]: Socket::reuse_port
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "solaris", target_os = "illumos"))
+    ))]
+    pub fn reuse_port(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_REUSEPORT)
+                .map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set value for the `SO_REUSEPORT` option on this socket.
+    ///
+    /// This indicates that further calls to `bind` may allow reuse of local
+    /// addresses. For IPv4 sockets this means that a socket may bind even when
+    /// there's a socket already listening on this port.
+    ///
+    /// This function is only available on Unix.
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "solaris", target_os = "illumos"))
+    ))]
+    pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                libc::SOL_SOCKET,
+                libc::SO_REUSEPORT,
+                reuse as c_int,
+            )
+        }
+    }
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
@@ -910,25 +950,6 @@ impl Socket {
             }
             Ok(())
         }
-    }
-
-    #[cfg(all(
-        feature = "all",
-        not(any(target_os = "solaris", target_os = "illumos"))
-    ))]
-    pub fn reuse_port(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT)?;
-            Ok(raw != 0)
-        }
-    }
-
-    #[cfg(all(
-        feature = "all",
-        not(any(target_os = "solaris", target_os = "illumos"))
-    ))]
-    pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
