@@ -838,8 +838,7 @@ impl Socket {
     /// [`set_linger`]: Socket::set_linger
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            getsockopt::<sys::linger>(self.inner, sys::SOL_SOCKET, sys::SO_LINGER)
-                .map(into_duration)
+            getsockopt::<sys::linger>(self.inner, sys::SOL_SOCKET, sys::SO_LINGER).map(from_linger)
         }
     }
 
@@ -853,7 +852,7 @@ impl Socket {
     ///
     /// Note that the duration only has a precision of seconds on most OSes.
     pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
-        let linger = from_duration(linger);
+        let linger = into_linger(linger);
         unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_LINGER, linger) }
     }
 
@@ -989,7 +988,7 @@ impl Socket {
     }
 }
 
-fn into_duration(linger: sys::linger) -> Option<Duration> {
+fn from_linger(linger: sys::linger) -> Option<Duration> {
     if linger.l_onoff == 0 {
         None
     } else {
@@ -997,7 +996,7 @@ fn into_duration(linger: sys::linger) -> Option<Duration> {
     }
 }
 
-fn from_duration(duration: Option<Duration>) -> sys::linger {
+fn into_linger(duration: Option<Duration>) -> sys::linger {
     match duration {
         Some(duration) => sys::linger {
             l_onoff: 1,
