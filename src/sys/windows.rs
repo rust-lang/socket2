@@ -20,7 +20,7 @@ use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::HANDLE;
-use winapi::shared::ws2def::{self, *};
+use winapi::shared::ws2def::{self, SO_RCVTIMEO, *};
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
@@ -502,6 +502,38 @@ pub(crate) fn send_to_vectored(
     .map(|_| nsent as usize)
 }
 
+pub(crate) fn read_timeout(fd: SysSocket) -> io::Result<Option<Duration>> {
+    unsafe { getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO).map(from_ms) }
+}
+
+pub(crate) fn set_read_timeout(fd: SysSocket, duration: Option<Duration>) -> io::Result<()> {
+    let duration = into_ms(duration);
+    unsafe { setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, duration) }
+}
+
+fn from_ms(duration: DWORD) -> Option<Duration> {
+    if duration == 0 {
+        None
+    } else {
+        let secs = duration / 1000;
+        let nsec = (duration % 1000) * 1000000;
+        Some(Duration::new(secs as u64, nsec as u32))
+    }
+}
+
+fn into_ms(duration: Option<Duration>) -> DWORD {
+    // Note that a duration is a (u64, u32) (seconds, nanoseconds) pair, and the
+    // timeouts in windows APIs are typically u32 milliseconds. To translate, we
+    // have two pieces to take care of:
+    //
+    // * Nanosecond precision is rounded up
+    // * Greater than u32::MAX milliseconds (50 days) is rounded up to
+    //   INFINITE (never time out).
+    duration
+        .map(|duration| min(duration.as_millis(), INFINITE as u128) as DWORD)
+        .unwrap_or(0)
+}
+
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
 pub(crate) unsafe fn getsockopt<T>(
     socket: SysSocket,
@@ -591,14 +623,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_RCVTIMEO)?)) }
-    }
-
-    pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe { self.setsockopt(SOL_SOCKET, SO_RCVTIMEO, dur2ms(dur)?) }
-    }
-
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_SNDTIMEO)?)) }
     }

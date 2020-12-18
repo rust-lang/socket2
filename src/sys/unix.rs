@@ -556,6 +556,38 @@ fn sendmsg(
     syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
+pub(crate) fn read_timeout(fd: SysSocket) -> io::Result<Option<Duration>> {
+    unsafe { getsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVTIMEO).map(from_timeval) }
+}
+
+pub(crate) fn set_read_timeout(fd: SysSocket, duration: Option<Duration>) -> io::Result<()> {
+    let duration = into_timeval(duration);
+    unsafe { setsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVTIMEO, duration) }
+}
+
+fn from_timeval(duration: libc::timeval) -> Option<Duration> {
+    if duration.tv_sec == 0 && duration.tv_usec == 0 {
+        None
+    } else {
+        let sec = duration.tv_sec as u64;
+        let nsec = (duration.tv_usec as u32) * 1000;
+        Some(Duration::new(sec, nsec))
+    }
+}
+
+fn into_timeval(duration: Option<Duration>) -> libc::timeval {
+    match duration {
+        Some(duration) => libc::timeval {
+            tv_sec: min(duration.as_secs(), libc::time_t::max_value() as u64) as libc::time_t,
+            tv_usec: (duration.subsec_nanos() / 1000) as libc::suseconds_t,
+        },
+        None => libc::timeval {
+            tv_sec: 0,
+            tv_usec: 0,
+        },
+    }
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -763,18 +795,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            Ok(timeval2dur(
-                self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO)?,
-            ))
-        }
-    }
-
-    pub fn set_read_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_RCVTIMEO, dur2timeval(dur)?) }
-    }
-
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
             Ok(timeval2dur(
