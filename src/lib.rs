@@ -123,8 +123,8 @@ pub use sockref::SockRef;
 /// Specification of the communication domain for a socket.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
-/// addition to an injection point for documentation. Convenience constructors
-/// such as `Domain::ipv4`, `Domain::ipv6`, etc, are provided to avoid reaching
+/// addition to an injection point for documentation. Convenience constants such
+/// as [`Domain::IPV4`], [`Domain::IPV6`], etc, are provided to avoid reaching
 /// into libc for various constants.
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
@@ -163,8 +163,8 @@ impl From<Domain> for c_int {
 /// Specification of communication semantics on a socket.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
-/// addition to an injection point for documentation. Convenience constructors
-/// such as `Type::stream`, `Type::dgram`, etc, are provided to avoid reaching
+/// addition to an injection point for documentation. Convenience constants such
+/// as [`Type::STREAM`], [`Type::DGRAM`], etc, are provided to avoid reaching
 /// into libc for various constants.
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
