@@ -53,9 +53,9 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(feature = "all")]
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
-    IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
+    linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
     IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, SO_REUSEADDR, TCP_NODELAY,
+    SO_ERROR, SO_LINGER, SO_REUSEADDR, TCP_NODELAY,
 };
 
 // See this type in the Windows file.
@@ -852,18 +852,6 @@ impl Socket {
         unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, mreq) }
     }
 
-    pub fn linger(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            Ok(linger2dur(
-                self.getsockopt(libc::SOL_SOCKET, libc::SO_LINGER)?,
-            ))
-        }
-    }
-
-    pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_LINGER, dur2linger(dur)) }
-    }
-
     pub fn recv_buffer_size(&self) -> io::Result<usize> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVBUF)?;
@@ -1165,27 +1153,6 @@ fn to_ipv6mr_interface(value: u32) -> c_int {
 #[cfg(not(target_os = "android"))]
 fn to_ipv6mr_interface(value: u32) -> libc::c_uint {
     value as libc::c_uint
-}
-
-fn linger2dur(linger_opt: libc::linger) -> Option<Duration> {
-    if linger_opt.l_onoff == 0 {
-        None
-    } else {
-        Some(Duration::from_secs(linger_opt.l_linger as u64))
-    }
-}
-
-fn dur2linger(dur: Option<Duration>) -> libc::linger {
-    match dur {
-        Some(d) => libc::linger {
-            l_onoff: 1,
-            l_linger: d.as_secs() as c_int,
-        },
-        None => libc::linger {
-            l_onoff: 0,
-            l_linger: 0,
-        },
-    }
 }
 
 #[test]

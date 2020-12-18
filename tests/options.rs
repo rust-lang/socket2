@@ -1,5 +1,7 @@
 //! Tests for getting and setting socket options.
 
+use std::time::Duration;
+
 use socket2::{Domain, Socket, Type};
 
 /// Macro to create a simple test to set and get a socket option.
@@ -85,6 +87,7 @@ test!(
     mark,
     set_mark(123)
 );
+test!(linger, set_linger(Some(Duration::from_secs(10))));
 
 test!(IPv4 ttl, set_ttl(40));
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.

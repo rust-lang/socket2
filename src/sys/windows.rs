@@ -60,7 +60,7 @@ pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
 pub(crate) use winapi::shared::ws2def::{
-    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_REUSEADDR, TCP_NODELAY,
+    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_REUSEADDR, TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
@@ -68,7 +68,7 @@ pub(crate) use winapi::shared::ws2ipdef::{
 };
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
-pub(crate) use winapi::um::winsock2::MSG_PEEK;
+pub(crate) use winapi::um::winsock2::{linger, MSG_PEEK};
 pub(crate) const IPPROTO_IPV6: c_int = winapi::shared::ws2def::IPPROTO_IPV6 as c_int;
 
 /// Type used in set/getsockopt to retrieve the `TCP_NODELAY` option.
@@ -664,14 +664,6 @@ impl Socket {
         unsafe { self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq) }
     }
 
-    pub fn linger(&self) -> io::Result<Option<Duration>> {
-        unsafe { Ok(linger2dur(self.getsockopt(SOL_SOCKET, SO_LINGER)?)) }
-    }
-
-    pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe { self.setsockopt(SOL_SOCKET, SO_LINGER, dur2linger(dur)) }
-    }
-
     pub fn recv_buffer_size(&self) -> io::Result<usize> {
         unsafe {
             let raw: c_int = self.getsockopt(SOL_SOCKET, SO_RCVBUF)?;
@@ -944,27 +936,6 @@ pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
 
 pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
     Ipv6Addr::from(*unsafe { in6_addr.u.Byte() })
-}
-
-fn linger2dur(linger_opt: sock::linger) -> Option<Duration> {
-    if linger_opt.l_onoff == 0 {
-        None
-    } else {
-        Some(Duration::from_secs(linger_opt.l_linger as u64))
-    }
-}
-
-fn dur2linger(dur: Option<Duration>) -> sock::linger {
-    match dur {
-        Some(d) => sock::linger {
-            l_onoff: 1,
-            l_linger: d.as_secs() as u16,
-        },
-        None => sock::linger {
-            l_onoff: 0,
-            l_linger: 0,
-        },
-    }
 }
 
 #[test]
