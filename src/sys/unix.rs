@@ -55,7 +55,7 @@ pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
     IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, TCP_NODELAY,
+    SO_ERROR, SO_REUSEADDR, TCP_NODELAY,
 };
 
 // See this type in the Windows file.
@@ -862,17 +862,6 @@ impl Socket {
 
     pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_LINGER, dur2linger(dur)) }
-    }
-
-    pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEADDR, reuse as c_int) }
-    }
-
-    pub fn reuse_address(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_REUSEADDR)?;
-            Ok(raw != 0)
-        }
     }
 
     pub fn recv_buffer_size(&self) -> io::Result<usize> {
