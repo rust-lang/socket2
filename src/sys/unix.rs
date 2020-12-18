@@ -55,7 +55,7 @@ pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
     IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, SO_LINGER, SO_REUSEADDR, TCP_NODELAY,
+    SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_REUSEADDR, TCP_NODELAY,
 };
 
 // See this type in the Windows file.
@@ -925,19 +925,6 @@ impl Socket {
         unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_REUSEPORT, reuse as c_int) }
     }
 
-    #[cfg(feature = "all")]
-    pub fn out_of_band_inline(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE)?;
-            Ok(raw != 0)
-        }
-    }
-
-    #[cfg(feature = "all")]
-    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_OOBINLINE, oob_inline as c_int) }
-    }
-
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
@@ -1164,17 +1151,4 @@ fn test_ip() {
     let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
     assert_eq!(to_in_addr(&ip).s_addr, want);
     assert_eq!(from_in_addr(in_addr { s_addr: want }), ip);
-}
-
-#[test]
-#[cfg(feature = "all")]
-#[cfg_attr(target_os = "redox", ignore)]
-fn test_out_of_band_inline() {
-    let tcp = Socket {
-        fd: socket(libc::AF_INET, libc::SOCK_STREAM, 0).unwrap(),
-    };
-    assert_eq!(tcp.out_of_band_inline().unwrap(), false);
-
-    tcp.set_out_of_band_inline(true).unwrap();
-    assert_eq!(tcp.out_of_band_inline().unwrap(), true);
 }

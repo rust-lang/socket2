@@ -60,7 +60,8 @@ pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
 pub(crate) use winapi::shared::ws2def::{
-    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_REUSEADDR, TCP_NODELAY,
+    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_REUSEADDR,
+    TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
@@ -755,19 +756,6 @@ impl Socket {
         }
     }
 
-    #[cfg(feature = "all")]
-    pub fn out_of_band_inline(&self) -> io::Result<bool> {
-        unsafe {
-            let raw: c_int = self.getsockopt(SOL_SOCKET, SO_OOBINLINE)?;
-            Ok(raw != 0)
-        }
-    }
-
-    #[cfg(feature = "all")]
-    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
-        unsafe { self.setsockopt(SOL_SOCKET, SO_OOBINLINE, oob_inline as c_int) }
-    }
-
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
@@ -971,16 +959,4 @@ fn test_ipv6() {
     let mut addr: in6_addr_u = unsafe { mem::zeroed() };
     unsafe { *(addr.Word_mut()) = want };
     assert_eq!(from_in6_addr(IN6_ADDR { u: addr }), ip);
-}
-
-#[test]
-#[cfg(feature = "all")]
-fn test_out_of_band_inline() {
-    let tcp = Socket {
-        socket: socket(AF_INET, SOCK_STREAM, 0).unwrap(),
-    };
-    assert_eq!(tcp.out_of_band_inline().unwrap(), false);
-
-    tcp.set_out_of_band_inline(true).unwrap();
-    assert_eq!(tcp.out_of_band_inline().unwrap(), true);
 }

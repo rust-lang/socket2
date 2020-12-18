@@ -845,26 +845,6 @@ impl Socket {
         self.inner().set_keepalive(keepalive)
     }
 
-    /// Returns the value of the `SO_OOBINLINE` flag of the underlying socket.
-    /// For more information about this option, see [`set_out_of_band_inline`][link].
-    ///
-    /// [link]: #method.set_out_of_band_inline
-    #[cfg(feature = "all")]
-    pub fn out_of_band_inline(&self) -> io::Result<bool> {
-        self.inner().out_of_band_inline()
-    }
-
-    /// Sets the `SO_OOBINLINE` flag of the underlying socket.
-    /// as per RFC6093, TCP sockets using the Urgent mechanism
-    /// are encouraged to set this flag.
-    ///
-    /// If this flag is not set, the `MSG_OOB` flag is needed
-    /// while `recv`ing to aquire the out-of-band data.
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
-    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
-        self.inner().set_out_of_band_inline(oob_inline)
-    }
-
     /// Check the value of the `SO_REUSEPORT` option on this socket.
     ///
     /// This function is only available on Unix.
@@ -904,7 +884,7 @@ impl Socket {
 /// * Linux: <https://man7.org/linux/man-pages/man7/socket.7.html>
 /// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options>
 impl Socket {
-    /// Sets the value of the `SO_BROADCAST` option for this socket.
+    /// Get the value of the `SO_BROADCAST` option for this socket.
     ///
     /// For more information about this option, see [`set_broadcast`].
     ///
@@ -916,7 +896,7 @@ impl Socket {
         }
     }
 
-    /// Gets the value of the `SO_BROADCAST` option for this socket.
+    /// Set the value of the `SO_BROADCAST` option for this socket.
     ///
     /// When enabled, this socket is allowed to send packets to a broadcast
     /// address.
@@ -968,6 +948,37 @@ impl Socket {
     pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
         let linger = from_duration(linger);
         unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_LINGER, linger) }
+    }
+
+    /// Get value for the `SO_OOBINLINE` option on this socket.
+    ///
+    /// For more information about this option, see [`set_out_of_band_inline`].
+    ///
+    /// [`set_out_of_band_inline`]: Socket::set_out_of_band_inline
+    #[cfg(not(target_os = "redox"))]
+    pub fn out_of_band_inline(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_OOBINLINE)
+                .map(|oob_inline| oob_inline != 0)
+        }
+    }
+
+    /// Set value for the `SO_OOBINLINE` option on this socket.
+    ///
+    /// If this option is enabled, out-of-band data is directly placed into the
+    /// receive data stream. Otherwise, out-of-band data is passed only when the
+    /// `MSG_OOB` flag is set during receiving. As per RFC6093, TCP sockets
+    /// using the Urgent mechanism are encouraged to set this flag.
+    #[cfg(not(target_os = "redox"))]
+    pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::SOL_SOCKET,
+                sys::SO_OOBINLINE,
+                oob_inline as c_int,
+            )
+        }
     }
 
     /// Gets the value of the `SO_REUSEADDR` option on this socket.
