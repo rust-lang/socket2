@@ -835,20 +835,6 @@ impl Socket {
         self.inner().set_linger(dur)
     }
 
-    /// Check the `SO_REUSEADDR` option on this socket.
-    pub fn reuse_address(&self) -> io::Result<bool> {
-        self.inner().reuse_address()
-    }
-
-    /// Set value for the `SO_REUSEADDR` option on this socket.
-    ///
-    /// This indicates that futher calls to `bind` may allow reuse of local
-    /// addresses. For IPv4 sockets this means that a socket may bind even when
-    /// there's a socket already listening on this port.
-    pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
-        self.inner().set_reuse_address(reuse)
-    }
-
     /// Gets the value of the `SO_RCVBUF` option on this socket.
     ///
     /// For more information about this option, see
@@ -960,6 +946,41 @@ impl Socket {
         // Safety: this is safe because `sys::Socket` has the
         // `repr(transparent)` attribute.
         unsafe { &*(&self.inner as *const sys::SysSocket as *const sys::Socket) }
+    }
+}
+
+/// Socket options get/set using `SOL_SOCKET`.
+///
+/// Additional documentation can be found in documentation of the OS.
+/// * Linux: <https://man7.org/linux/man-pages/man7/socket.7.html>
+/// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options>
+impl Socket {
+    /// Gets the value of the `SO_REUSEADDR` option on this socket.
+    ///
+    /// For more information about this option, see [`set_reuse_address`].
+    ///
+    /// [`set_reuse_address`]: Socket::set_reuse_address
+    pub fn reuse_address(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_REUSEADDR)
+                .map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set value for the `SO_REUSEADDR` option on this socket.
+    ///
+    /// This indicates that futher calls to `bind` may allow reuse of local
+    /// addresses. For IPv4 sockets this means that a socket may bind even when
+    /// there's a socket already listening on this port.
+    pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::SOL_SOCKET,
+                sys::SO_REUSEADDR,
+                reuse as c_int,
+            )
+        }
     }
 }
 
