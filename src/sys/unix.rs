@@ -55,7 +55,8 @@ pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
     IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_REUSEADDR, SO_SNDBUF, TCP_NODELAY,
+    SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
+    SO_SNDTIMEO, TCP_NODELAY,
 };
 
 // See this type in the Windows file.
@@ -556,13 +557,9 @@ fn sendmsg(
     syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
-pub(crate) fn read_timeout(fd: SysSocket) -> io::Result<Option<Duration>> {
-    unsafe { getsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVTIMEO).map(from_timeval) }
-}
-
-pub(crate) fn set_read_timeout(fd: SysSocket, duration: Option<Duration>) -> io::Result<()> {
-    let duration = into_timeval(duration);
-    unsafe { setsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVTIMEO, duration) }
+/// Wrapper around `getsockopt` to deal with platform specific timeouts.
+pub(crate) fn timeout_opt(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<Option<Duration>> {
+    unsafe { getsockopt(fd, opt, val).map(from_timeval) }
 }
 
 fn from_timeval(duration: libc::timeval) -> Option<Duration> {
@@ -573,6 +570,17 @@ fn from_timeval(duration: libc::timeval) -> Option<Duration> {
         let nsec = (duration.tv_usec as u32) * 1000;
         Some(Duration::new(sec, nsec))
     }
+}
+
+/// Wrapper around `setsockopt` to deal with platform specific timeouts.
+pub(crate) fn set_timeout_opt(
+    fd: SysSocket,
+    opt: c_int,
+    val: c_int,
+    duration: Option<Duration>,
+) -> io::Result<()> {
+    let duration = into_timeval(duration);
+    unsafe { setsockopt(fd, opt, val, duration) }
 }
 
 fn into_timeval(duration: Option<Duration>) -> libc::timeval {
@@ -835,18 +843,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            Ok(timeval2dur(
-                self.getsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO)?,
-            ))
-        }
-    }
-
-    pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe { self.setsockopt(libc::SOL_SOCKET, libc::SO_SNDTIMEO, dur2timeval(dur)?) }
-    }
-
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
         unsafe {
             let imr_interface: libc::in_addr =
@@ -1079,47 +1075,6 @@ impl From<UnixDatagram> for crate::Socket {
 pub(crate) fn close(fd: SysSocket) {
     unsafe {
         let _ = libc::close(fd);
-    }
-}
-
-fn dur2timeval(dur: Option<Duration>) -> io::Result<libc::timeval> {
-    match dur {
-        Some(dur) => {
-            if dur.as_secs() == 0 && dur.subsec_nanos() == 0 {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "cannot set a 0 duration timeout",
-                ));
-            }
-
-            let secs = if dur.as_secs() > libc::time_t::max_value() as u64 {
-                libc::time_t::max_value()
-            } else {
-                dur.as_secs() as libc::time_t
-            };
-            let mut timeout = libc::timeval {
-                tv_sec: secs,
-                tv_usec: (dur.subsec_nanos() / 1000) as libc::suseconds_t,
-            };
-            if timeout.tv_sec == 0 && timeout.tv_usec == 0 {
-                timeout.tv_usec = 1;
-            }
-            Ok(timeout)
-        }
-        None => Ok(libc::timeval {
-            tv_sec: 0,
-            tv_usec: 0,
-        }),
-    }
-}
-
-fn timeval2dur(raw: libc::timeval) -> Option<Duration> {
-    if raw.tv_sec == 0 && raw.tv_usec == 0 {
-        None
-    } else {
-        let sec = raw.tv_sec as u64;
-        let nsec = (raw.tv_usec as u32) * 1000;
-        Some(Duration::new(sec, nsec))
     }
 }
 
