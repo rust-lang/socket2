@@ -67,6 +67,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 use std::net::SocketAddr;
+use std::time::Duration;
 
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
 /// rather than a number.
@@ -258,5 +259,87 @@ impl RecvFlags {
     /// On Windows this corresponds to the `WSAEMSGSIZE` error code.
     pub const fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
+    }
+}
+
+/// Configures a socket's TCP keepalive parameters.
+///
+/// See [`Socket::set_tcp_keepalive`].
+#[derive(Debug, Clone)]
+pub struct TcpKeepalive {
+    time: Option<Duration>,
+    interval: Option<Duration>,
+    retries: Option<u32>,
+}
+
+impl TcpKeepalive {
+    /// Returns a new, empty set of TCP keepalive parameters.
+    pub const fn new() -> TcpKeepalive {
+        TcpKeepalive {
+            time: None,
+            interval: None,
+            retries: None,
+        }
+    }
+
+    /// Set the amount of time after which TCP keepalive probes will be sent on
+    /// idle connections.
+    ///
+    /// This will set the value of `SO_KEEPALIVE` on OpenBSD and Haiku,
+    /// `TCP_KEEPALIVE` on macOS and iOS, and `TCP_KEEPIDLE` on all other Unix
+    /// operating systems. On Windows, this sets the value of the
+    /// `tcp_keepalive` struct's `keepalivetime` field.
+    ///
+    /// Some platforms specify this value in seconds, so sub-second
+    /// specifications may be omitted.
+    pub fn with_time(self, time: Duration) -> Self {
+        Self {
+            time: Some(time),
+            ..self
+        }
+    }
+
+    /// Set the value of the `TCP_KEEPINTVL` option. On Windows, this sets the
+    /// value of the `tcp_keepalive` struct's `keepaliveinterval` field.
+    ///
+    /// Sets the time interval between TCP keepalive probes.
+    ///
+    /// Some platforms specify this value in seconds, so sub-second
+    /// specifications may be omitted.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+            windows,
+        )
+    ))]
+    pub fn with_interval(self, interval: Duration) -> Self {
+        Self {
+            interval: Some(interval),
+            ..self
+        }
+    }
+
+    /// Set the value of the `TCP_KEEPCNT` option.
+    ///
+    /// Set the maximum number of TCP keepalive probes that will be sent before
+    /// dropping a connection, if TCP keepalive is enabled on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+        )
+    ))]
+    pub fn with_retries(self, retries: u32) -> Self {
+        Self {
+            retries: Some(retries),
+            ..self
+        }
     }
 }

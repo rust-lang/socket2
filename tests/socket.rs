@@ -4,6 +4,7 @@ use std::io;
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
+use std::time::Duration;
 
 #[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
@@ -12,7 +13,7 @@ use winapi::um::handleapi::GetHandleInformation;
 #[cfg(windows)]
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-use socket2::{Domain, Socket, Type};
+use socket2::{Domain, Socket, TcpKeepalive, Type};
 
 #[test]
 fn set_nonblocking() {
@@ -203,4 +204,70 @@ where
     }
     assert_eq!(length as usize, size_of::<libc::c_int>());
     assert_eq!(flags, want as _, "non-blocking option");
+}
+
+#[test]
+fn keepalive() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    let params = TcpKeepalive::new().with_time(Duration::from_secs(200));
+
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+            windows,
+        )
+    ))]
+    let params = params.with_interval(Duration::from_secs(30));
+
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+        )
+    ))]
+    let params = params.with_retries(10);
+
+    // Set the parameters.
+    socket.set_tcp_keepalive(&params).unwrap();
+
+    #[cfg(all(feature = "all", not(windows)))]
+    assert_eq!(socket.keepalive_time().unwrap(), Duration::from_secs(200));
+
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+        )
+    ))]
+    assert_eq!(
+        socket.keepalive_interval().unwrap(),
+        Duration::from_secs(30)
+    );
+
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+        )
+    ))]
+    assert_eq!(socket.keepalive_retries().unwrap(), 10);
 }
