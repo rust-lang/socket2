@@ -784,24 +784,6 @@ impl Socket {
         self.inner().leave_multicast_v6(multiaddr, interface)
     }
 
-    /// Gets the value of the `SO_RCVBUF` option on this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_recv_buffer_size`][link].
-    ///
-    /// [link]: #method.set_recv_buffer_size
-    pub fn recv_buffer_size(&self) -> io::Result<usize> {
-        self.inner().recv_buffer_size()
-    }
-
-    /// Sets the value of the `SO_RCVBUF` option on this socket.
-    ///
-    /// Changes the size of the operating system's receive buffer associated
-    /// with the socket.
-    pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
-        self.inner().set_recv_buffer_size(size)
-    }
-
     /// Gets the value of the `SO_SNDBUF` option on this socket.
     ///
     /// For more information about this option, see [`set_send_buffer`][link].
@@ -979,6 +961,26 @@ impl Socket {
                 oob_inline as c_int,
             )
         }
+    }
+
+    /// Get value for the `SO_RCVBUF` option on this socket.
+    ///
+    /// For more information about this option, see [`set_recv_buffer_size`].
+    ///
+    /// [`set_recv_buffer_size`]: Socket::set_recv_buffer_size
+    pub fn recv_buffer_size(&self) -> io::Result<usize> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_RCVBUF)
+                .map(|size| size as usize)
+        }
+    }
+
+    /// Set value for the `SO_RCVBUF` option on this socket.
+    ///
+    /// Changes the size of the operating system's receive buffer associated
+    /// with the socket.
+    pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
+        unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_RCVBUF, size as c_int) }
     }
 
     /// Gets the value of the `SO_REUSEADDR` option on this socket.

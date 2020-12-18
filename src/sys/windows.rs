@@ -60,8 +60,8 @@ pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
 pub(crate) use winapi::shared::ws2def::{
-    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_REUSEADDR,
-    TCP_NODELAY,
+    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF,
+    SO_REUSEADDR, TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
@@ -663,20 +663,6 @@ impl Socket {
             ipv6mr_interface: interface,
         };
         unsafe { self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq) }
-    }
-
-    pub fn recv_buffer_size(&self) -> io::Result<usize> {
-        unsafe {
-            let raw: c_int = self.getsockopt(SOL_SOCKET, SO_RCVBUF)?;
-            Ok(raw as usize)
-        }
-    }
-
-    pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
-        unsafe {
-            // TODO: casting usize to a c_int should be a checked cast
-            self.setsockopt(SOL_SOCKET, SO_RCVBUF, size as c_int)
-        }
     }
 
     pub fn send_buffer_size(&self) -> io::Result<usize> {
