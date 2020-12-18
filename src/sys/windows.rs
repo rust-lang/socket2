@@ -20,7 +20,7 @@ use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::ntdef::HANDLE;
-use winapi::shared::ws2def::{self, SO_RCVTIMEO, *};
+use winapi::shared::ws2def;
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
@@ -61,7 +61,7 @@ pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
 pub(crate) use winapi::shared::ws2def::{
     IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF,
-    SO_REUSEADDR, SO_SNDBUF, TCP_NODELAY,
+    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
@@ -502,13 +502,9 @@ pub(crate) fn send_to_vectored(
     .map(|_| nsent as usize)
 }
 
-pub(crate) fn read_timeout(fd: SysSocket) -> io::Result<Option<Duration>> {
-    unsafe { getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO).map(from_ms) }
-}
-
-pub(crate) fn set_read_timeout(fd: SysSocket, duration: Option<Duration>) -> io::Result<()> {
-    let duration = into_ms(duration);
-    unsafe { setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, duration) }
+/// Wrapper around `getsockopt` to deal with platform specific timeouts.
+pub(crate) fn timeout_opt(fd: SysSocket, lvl: c_int, name: c_int) -> io::Result<Option<Duration>> {
+    unsafe { getsockopt(fd, lvl, name).map(from_ms) }
 }
 
 fn from_ms(duration: DWORD) -> Option<Duration> {
@@ -519,6 +515,17 @@ fn from_ms(duration: DWORD) -> Option<Duration> {
         let nsec = (duration % 1000) * 1000000;
         Some(Duration::new(secs as u64, nsec as u32))
     }
+}
+
+/// Wrapper around `setsockopt` to deal with platform specific timeouts.
+pub(crate) fn set_timeout_opt(
+    fd: SysSocket,
+    level: c_int,
+    optname: c_int,
+    duration: Option<Duration>,
+) -> io::Result<()> {
+    let duration = into_ms(duration);
+    unsafe { setsockopt(fd, level, optname, duration) }
 }
 
 fn into_ms(duration: Option<Duration>) -> DWORD {
@@ -623,14 +630,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        unsafe { Ok(ms2dur(self.getsockopt(SOL_SOCKET, SO_SNDTIMEO)?)) }
-    }
-
-    pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        unsafe { self.setsockopt(SOL_SOCKET, SO_SNDTIMEO, dur2ms(dur)?) }
-    }
-
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
         unsafe {
             let imr_interface: IN_ADDR = self.getsockopt(IPPROTO_IP, IP_MULTICAST_IF)?;
@@ -885,16 +884,6 @@ fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {
             Ok(ms)
         }
         None => Ok(0),
-    }
-}
-
-fn ms2dur(raw: DWORD) -> Option<Duration> {
-    if raw == 0 {
-        None
-    } else {
-        let secs = raw / 1000;
-        let nsec = (raw % 1000) * 1000000;
-        Some(Duration::new(secs as u64, nsec as u32))
     }
 }
 

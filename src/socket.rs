@@ -559,22 +559,6 @@ impl Socket {
         }
     }
 
-    /// Returns the write timeout of this socket.
-    ///
-    /// If the timeout is `None`, then `write` calls will block indefinitely.
-    pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        self.inner().write_timeout()
-    }
-
-    /// Sets the write timeout to the timeout specified.
-    ///
-    /// If the value specified is `None`, then `write` calls will block
-    /// indefinitely. It is an error to pass the zero `Duration` to this
-    /// method.
-    pub fn set_write_timeout(&self, dur: Option<Duration>) -> io::Result<()> {
-        self.inner().set_write_timeout(dur)
-    }
-
     /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
     ///
     /// For more information about this option, see [`set_multicast_loop_v4`].
@@ -929,7 +913,7 @@ impl Socket {
     /// If the returned timeout is `None`, then `read` and `recv` calls will
     /// block indefinitely.
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        sys::read_timeout(self.inner)
+        sys::timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_RCVTIMEO)
     }
 
     /// Set value for the `SO_RCVTIMEO` option on this socket.
@@ -937,7 +921,7 @@ impl Socket {
     /// If `timeout` is `None`, then `read` and `recv` calls will block
     /// indefinitely.
     pub fn set_read_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
-        sys::set_read_timeout(self.inner, duration)
+        sys::set_timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_RCVTIMEO, duration)
     }
 
     /// Get the value of the `SO_REUSEADDR` option on this socket.
@@ -986,6 +970,22 @@ impl Socket {
     /// the socket.
     pub fn set_send_buffer_size(&self, size: usize) -> io::Result<()> {
         unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_SNDBUF, size as c_int) }
+    }
+
+    /// Get value for the `SO_SNDTIMEO` option on this socket.
+    ///
+    /// If the returned timeout is `None`, then `write` and `send` calls will
+    /// block indefinitely.
+    pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
+        sys::timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_SNDTIMEO)
+    }
+
+    /// Set value for the `SO_SNDTIMEO` option on this socket.
+    ///
+    /// If `timeout` is `None`, then `write` and `send` calls will block
+    /// indefinitely.
+    pub fn set_write_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
+        sys::set_timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_SNDTIMEO, duration)
     }
 }
 
