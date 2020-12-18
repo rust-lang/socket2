@@ -15,24 +15,22 @@ use std::sync::Once;
 use std::time::Duration;
 use std::{fmt, ptr};
 
-use winapi::ctypes::{c_char, c_long, c_ulong};
+use winapi::ctypes::{c_char, c_long};
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
+use winapi::shared::mstcpip::{tcp_keepalive, SIO_KEEPALIVE_VALS};
 use winapi::shared::ntdef::HANDLE;
 use winapi::shared::ws2def;
 use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
-use winapi::um::winbase;
-use winapi::um::winbase::INFINITE;
+use winapi::um::winbase::{self, INFINITE};
 use winapi::um::winsock2::{self as sock, u_long, SD_BOTH, SD_RECEIVE, SD_SEND};
 
-use crate::{RecvFlags, SockAddr, Type};
+use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
 
-const SIO_KEEPALIVE_VALS: DWORD = 0x98000004;
-
-pub use winapi::ctypes::c_int;
+pub(crate) use winapi::ctypes::c_int;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
 ///
@@ -60,8 +58,8 @@ pub(crate) use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH as sockaddr_in6;
 pub(crate) use winapi::um::ws2tcpip::socklen_t;
 // Used in `Socket`.
 pub(crate) use winapi::shared::ws2def::{
-    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF,
-    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
+    IPPROTO_IP, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE,
+    SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
@@ -144,13 +142,6 @@ impl std::fmt::Debug for RecvFlags {
             .field("is_truncated", &self.is_truncated())
             .finish()
     }
-}
-
-#[repr(C)]
-struct tcp_keepalive {
-    onoff: c_ulong,
-    keepalivetime: c_ulong,
-    keepaliveinterval: c_ulong,
 }
 
 fn init() {
@@ -541,6 +532,31 @@ fn into_ms(duration: Option<Duration>) -> DWORD {
         .unwrap_or(0)
 }
 
+pub(crate) fn set_tcp_keepalive(socket: SysSocket, keepalive: &TcpKeepalive) -> io::Result<()> {
+    let mut keepalive = tcp_keepalive {
+        onoff: 1,
+        keepalivetime: into_ms(keepalive.time),
+        keepaliveinterval: into_ms(keepalive.interval),
+    };
+    let mut out = 0;
+    syscall!(
+        WSAIoctl(
+            socket,
+            SIO_KEEPALIVE_VALS,
+            &mut keepalive as *mut _ as *mut _,
+            size_of::<tcp_keepalive>() as _,
+            ptr::null_mut(),
+            0,
+            &mut out,
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        sock::SOCKET_ERROR
+    )
+    .map(|_| ())
+}
+
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
 pub(crate) unsafe fn getsockopt<T>(
     socket: SysSocket,
@@ -688,69 +704,6 @@ impl Socket {
         unsafe { self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq) }
     }
 
-    pub fn keepalive(&self) -> io::Result<Option<Duration>> {
-        let mut ka = tcp_keepalive {
-            onoff: 0,
-            keepalivetime: 0,
-            keepaliveinterval: 0,
-        };
-        let n = unsafe {
-            sock::WSAIoctl(
-                self.socket,
-                SIO_KEEPALIVE_VALS,
-                0 as *mut _,
-                0,
-                &mut ka as *mut _ as *mut _,
-                mem::size_of_val(&ka) as DWORD,
-                0 as *mut _,
-                0 as *mut _,
-                None,
-            )
-        };
-        if n == 0 {
-            Ok(if ka.onoff == 0 {
-                None
-            } else if ka.keepaliveinterval == 0 {
-                None
-            } else {
-                let seconds = ka.keepaliveinterval / 1000;
-                let nanos = (ka.keepaliveinterval % 1000) * 1_000_000;
-                Some(Duration::new(seconds as u64, nanos as u32))
-            })
-        } else {
-            Err(last_error())
-        }
-    }
-
-    pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
-        let ms = dur2ms(keepalive)?;
-        // TODO: checked casts here
-        let ka = tcp_keepalive {
-            onoff: keepalive.is_some() as c_ulong,
-            keepalivetime: ms as c_ulong,
-            keepaliveinterval: ms as c_ulong,
-        };
-        let mut out = 0;
-        let n = unsafe {
-            sock::WSAIoctl(
-                self.socket,
-                SIO_KEEPALIVE_VALS,
-                &ka as *const _ as *mut _,
-                mem::size_of_val(&ka) as DWORD,
-                0 as *mut _,
-                0,
-                &mut out,
-                0 as *mut _,
-                None,
-            )
-        };
-        if n == 0 {
-            Ok(())
-        } else {
-            Err(last_error())
-        }
-    }
-
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
@@ -843,47 +796,6 @@ impl FromRawSocket for crate::Socket {
 pub(crate) fn close(socket: SysSocket) {
     unsafe {
         let _ = sock::closesocket(socket);
-    }
-}
-
-fn dur2ms(dur: Option<Duration>) -> io::Result<DWORD> {
-    match dur {
-        Some(dur) => {
-            // Note that a duration is a (u64, u32) (seconds, nanoseconds)
-            // pair, and the timeouts in windows APIs are typically u32
-            // milliseconds. To translate, we have two pieces to take care of:
-            //
-            // * Nanosecond precision is rounded up
-            // * Greater than u32::MAX milliseconds (50 days) is rounded up to
-            //   INFINITE (never time out).
-            let ms = dur
-                .as_secs()
-                .checked_mul(1000)
-                .and_then(|ms| ms.checked_add((dur.subsec_nanos() as u64) / 1_000_000))
-                .and_then(|ms| {
-                    ms.checked_add(if dur.subsec_nanos() % 1_000_000 > 0 {
-                        1
-                    } else {
-                        0
-                    })
-                })
-                .map(|ms| {
-                    if ms > <DWORD>::max_value() as u64 {
-                        INFINITE
-                    } else {
-                        ms as DWORD
-                    }
-                })
-                .unwrap_or(INFINITE);
-            if ms == 0 {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "cannot set a 0 duration timeout",
-                ));
-            }
-            Ok(ms)
-        }
-        None => Ok(0),
     }
 }
 

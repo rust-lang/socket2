@@ -28,9 +28,9 @@ use libc::{c_void, in6_addr, in_addr};
 
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
-use crate::{Domain, Type};
+use crate::{Domain, SockAddr, TcpKeepalive, Type};
 
-pub use libc::c_int;
+pub(crate) use libc::c_int;
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
@@ -55,16 +55,26 @@ pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
     IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
-    SO_SNDTIMEO, TCP_NODELAY,
+    SO_ERROR, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR,
+    SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_vendor = "apple",
+    )
+))]
+pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
 // See this type in the Windows file.
 pub(crate) type NoDelay = c_int;
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
-                 target_os = "ios", target_os = "macos",
+                 target_vendor = "apple",
                  target_os = "openbsd", target_os = "netbsd",
                  target_os = "solaris", target_os = "illumos",
                  target_os = "haiku"))] {
@@ -75,18 +85,12 @@ cfg_if::cfg_if! {
         use libc::IPV6_DROP_MEMBERSHIP;
     }
 }
-
-cfg_if::cfg_if! {
-    if #[cfg(any(target_os = "macos", target_os = "ios"))] {
-        use libc::TCP_KEEPALIVE as KEEPALIVE_OPTION;
-    } else if #[cfg(any(target_os = "openbsd", target_os = "netbsd", target_os = "haiku"))] {
-        use libc::SO_KEEPALIVE as KEEPALIVE_OPTION;
-    } else {
-        use libc::TCP_KEEPIDLE as KEEPALIVE_OPTION;
-    }
-}
-
-use crate::SockAddr;
+#[cfg(any(target_os = "openbsd", target_os = "haiku"))]
+use libc::SO_KEEPALIVE as KEEPALIVE_TIME;
+#[cfg(target_vendor = "apple")]
+use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
+#[cfg(not(any(target_os = "openbsd", target_os = "haiku", target_vendor = "apple")))]
+use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
 /// Helper macro to execute a system call that returns an `io::Result`.
 macro_rules! syscall {
@@ -122,9 +126,8 @@ type IovLen = usize;
 #[cfg(any(
     target_os = "dragonfly",
     target_os = "freebsd",
-    target_os = "ios",
     all(target_os = "linux", target_env = "musl"),
-    target_os = "macos",
+    target_vendor = "apple",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
@@ -596,6 +599,47 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     }
 }
 
+#[cfg(feature = "all")]
+pub(crate) fn keepalive_time(fd: SysSocket) -> io::Result<Duration> {
+    unsafe {
+        getsockopt::<c_int>(fd, IPPROTO_TCP, KEEPALIVE_TIME)
+            .map(|secs| Duration::from_secs(secs as u64))
+    }
+}
+
+pub(crate) fn set_tcp_keepalive(fd: SysSocket, keepalive: &TcpKeepalive) -> io::Result<()> {
+    if let Some(time) = keepalive.time {
+        let secs = into_secs(time);
+        unsafe { setsockopt(fd, libc::IPPROTO_TCP, KEEPALIVE_TIME, secs)? }
+    }
+
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "illumos",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_vendor = "apple",
+    ))]
+    {
+        if let Some(interval) = keepalive.interval {
+            let secs = into_secs(interval);
+            unsafe { setsockopt(fd, libc::IPPROTO_TCP, libc::TCP_KEEPINTVL, secs)? }
+        }
+
+        if let Some(retries) = keepalive.retries {
+            unsafe { setsockopt(fd, libc::IPPROTO_TCP, libc::TCP_KEEPCNT, retries as c_int)? }
+        }
+    }
+
+    Ok(())
+}
+
+fn into_secs(duration: Duration) -> c_int {
+    min(duration.as_secs(), c_int::max_value() as u64) as c_int
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -906,32 +950,6 @@ impl Socket {
             ipv6mr_interface: to_ipv6mr_interface(interface),
         };
         unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, mreq) }
-    }
-
-    pub fn keepalive(&self) -> io::Result<Option<Duration>> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_KEEPALIVE)?;
-            if raw == 0 {
-                return Ok(None);
-            }
-            let secs: c_int = self.getsockopt(libc::IPPROTO_TCP, KEEPALIVE_OPTION)?;
-            Ok(Some(Duration::new(secs as u64, 0)))
-        }
-    }
-
-    pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::SOL_SOCKET,
-                libc::SO_KEEPALIVE,
-                keepalive.is_some() as c_int,
-            )?;
-            if let Some(dur) = keepalive {
-                // TODO: checked cast here
-                self.setsockopt(libc::IPPROTO_TCP, KEEPALIVE_OPTION, dur.as_secs() as c_int)?;
-            }
-            Ok(())
-        }
     }
 
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>

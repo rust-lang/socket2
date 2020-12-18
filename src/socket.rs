@@ -20,7 +20,7 @@ use std::time::Duration;
 use crate::sys::{self, c_int, getsockopt, setsockopt};
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
-use crate::{Domain, Protocol, SockAddr, Type};
+use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 
 /// Owned wrapper around a system socket.
 ///
@@ -752,32 +752,6 @@ impl Socket {
         self.inner().leave_multicast_v6(multiaddr, interface)
     }
 
-    /// Returns whether keepalive messages are enabled on this socket, and if so
-    /// the duration of time between them.
-    ///
-    /// For more information about this option, see [`set_keepalive`][link].
-    ///
-    /// [link]: #method.set_keepalive
-    pub fn keepalive(&self) -> io::Result<Option<Duration>> {
-        self.inner().keepalive()
-    }
-
-    /// Sets whether keepalive messages are enabled to be sent on this socket.
-    ///
-    /// On Unix, this option will set the `SO_KEEPALIVE` as well as the
-    /// `TCP_KEEPALIVE` or `TCP_KEEPIDLE` option (depending on your platform).
-    /// On Windows, this will set the `SIO_KEEPALIVE_VALS` option.
-    ///
-    /// If `None` is specified then keepalive messages are disabled, otherwise
-    /// the duration specified will be the time to remain idle before sending a
-    /// TCP keepalive probe.
-    ///
-    /// Some platforms specify this value in seconds, so sub-second
-    /// specifications may be omitted.
-    pub fn set_keepalive(&self, keepalive: Option<Duration>) -> io::Result<()> {
-        self.inner().set_keepalive(keepalive)
-    }
-
     fn inner(&self) -> &sys::Socket {
         // Safety: this is safe because `sys::Socket` has the
         // `repr(transparent)` attribute.
@@ -828,6 +802,32 @@ impl Socket {
             Ok(0) => Ok(None),
             Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
             Err(err) => Err(err),
+        }
+    }
+
+    /// Get the value of the `SO_KEEPALIVE` option on this socket.
+    ///
+    /// For more information about this option, see [`set_keepalive`].
+    ///
+    /// [`set_keepalive`]: Socket::set_keepalive
+    pub fn keepalive(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_KEEPALIVE)
+                .map(|keepalive| keepalive != 0)
+        }
+    }
+
+    /// Set value for the `SO_KEEPALIVE` option on this socket.
+    ///
+    /// Enable sending of keep-alive messages on connection-oriented sockets.
+    pub fn set_keepalive(&self, keepalive: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::SOL_SOCKET,
+                sys::SO_KEEPALIVE,
+                keepalive as c_int,
+            )
         }
     }
 
@@ -1015,7 +1015,108 @@ fn into_linger(duration: Option<Duration>) -> sys::linger {
 /// * Linux: <https://man7.org/linux/man-pages/man7/tcp.7.html>
 /// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options>
 impl Socket {
-    /// Gets the value of the `TCP_NODELAY` option on this socket.
+    /// Get the value of the `TCP_KEEPIDLE` option on this socket.
+    ///
+    /// This returns the value of `SO_KEEPALIVE` on OpenBSD and Haiku,
+    /// `TCP_KEEPALIVE` on macOS and iOS, and `TCP_KEEPIDLE` on all other Unix
+    /// operating systems.
+    #[cfg(all(feature = "all", not(windows)))]
+    pub fn keepalive_time(&self) -> io::Result<Duration> {
+        sys::keepalive_time(self.inner)
+    }
+
+    /// Get the value of the `TCP_KEEPINTVL` option on this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_keepalive`].
+    ///
+    /// [`set_tcp_keepalive`]: Socket::set_tcp_keepalive
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+        )
+    ))]
+    pub fn keepalive_interval(&self) -> io::Result<Duration> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_KEEPINTVL)
+                .map(|secs| Duration::from_secs(secs as u64))
+        }
+    }
+
+    /// Get the value of the `TCP_KEEPCNT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_keepalive`].
+    ///
+    /// [`set_tcp_keepalive`]: Socket::set_tcp_keepalive
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_vendor = "apple",
+        )
+    ))]
+    pub fn keepalive_retries(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_KEEPCNT)
+                .map(|retries| retries as u32)
+        }
+    }
+
+    /// Set parameters configuring TCP keepalive probes for this socket.
+    ///
+    /// The supported parameters depend on the operating system, and are
+    /// configured using the [`TcpKeepalive`] struct. At a minimum, all systems
+    /// support configuring the [keepalive time]: the time after which the OS
+    /// will start sending keepalive messages on an idle connection.
+    ///
+    /// [keepalive time]: TcpKeepalive::with_time
+    ///
+    /// # Notes
+    ///
+    /// * This will enable `SO_KEEPALIVE` on this socket, if it is not already
+    ///   enabled.
+    /// * On some platforms, such as Windows, any keepalive parameters *not*
+    ///   configured by the `TcpKeepalive` struct passed to this function may be
+    ///   overwritten with their default values. Therefore, this function should
+    ///   either only be called once per socket, or the same parameters should
+    ///   be passed every time it is called.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    ///
+    /// use socket2::{Socket, TcpKeepalive, Domain, Type};
+    ///
+    /// # fn main() -> std::io::Result<()> {
+    /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+    /// let keepalive = TcpKeepalive::new()
+    ///     .with_time(Duration::from_secs(4));
+    ///     // Depending on the target operating system, we may also be able to
+    ///     // configure the keepalive probe interval and/or the number of
+    ///     // retries here as well.
+    ///
+    /// socket.set_tcp_keepalive(&keepalive)?;
+    /// # Ok(()) }
+    /// ```
+    ///
+    pub fn set_tcp_keepalive(&self, params: &TcpKeepalive) -> io::Result<()> {
+        self.set_keepalive(true)?;
+        sys::set_tcp_keepalive(self.inner, params)
+    }
+
+    /// Get the value of the `TCP_NODELAY` option on this socket.
     ///
     /// For more information about this option, see [`set_nodelay`].
     ///
@@ -1027,7 +1128,7 @@ impl Socket {
         }
     }
 
-    /// Sets the value of the `TCP_NODELAY` option on this socket.
+    /// Set the value of the `TCP_NODELAY` option on this socket.
     ///
     /// If set, this option disables the Nagle algorithm. This means that
     /// segments are always sent as soon as possible, even if there is only a
@@ -1250,18 +1351,6 @@ mod test {
     }
 
     #[test]
-    fn keepalive() {
-        let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-        socket.set_keepalive(Some(Duration::from_secs(7))).unwrap();
-        // socket.keepalive() doesn't work on Windows #24
-        #[cfg(unix)]
-        assert_eq!(socket.keepalive().unwrap(), Some(Duration::from_secs(7)));
-        socket.set_keepalive(None).unwrap();
-        #[cfg(unix)]
-        assert_eq!(socket.keepalive().unwrap(), None);
-    }
-
-    #[test]
     fn nodelay() {
         let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 
@@ -1285,7 +1374,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "all", any(target_os = "windows", target_os = "linux")))]
+    #[cfg(all(feature = "all", any(windows, target_os = "linux")))]
     fn out_of_band_send_recv() {
         let s1 = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
         s1.bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())

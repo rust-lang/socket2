@@ -92,6 +92,7 @@ test!(
     read_timeout,
     set_read_timeout(Some(Duration::from_secs(10)))
 );
+test!(keepalive, set_keepalive(true));
 
 test!(IPv4 ttl, set_ttl(40));
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
