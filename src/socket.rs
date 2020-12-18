@@ -257,19 +257,6 @@ impl Socket {
         sys::try_clone(self.inner).map(|inner| Socket { inner })
     }
 
-    /// Get the value of the `SO_ERROR` option on this socket.
-    ///
-    /// This will retrieve the stored error in the underlying socket, clearing
-    /// the field in the process. This can be useful for checking errors between
-    /// calls.
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        match unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_ERROR) } {
-            Ok(0) => Ok(None),
-            Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
-            Err(err) => Err(err),
-        }
-    }
-
     /// Moves this TCP stream into or out of nonblocking mode.
     ///
     /// # Notes
@@ -604,33 +591,6 @@ impl Socket {
         self.inner().set_write_timeout(dur)
     }
 
-    /// Sets the value of the `SO_BROADCAST` option for this socket.
-    ///
-    /// For more information about this option, see [`set_broadcast`].
-    ///
-    /// [`set_broadcast`]: Socket::set_broadcast
-    pub fn broadcast(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_BROADCAST)
-                .map(|broadcast| broadcast != 0)
-        }
-    }
-
-    /// Gets the value of the `SO_BROADCAST` option for this socket.
-    ///
-    /// When enabled, this socket is allowed to send packets to a broadcast
-    /// address.
-    pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::SOL_SOCKET,
-                sys::SO_BROADCAST,
-                broadcast as c_int,
-            )
-        }
-    }
-
     /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
     ///
     /// For more information about this option, see [`set_multicast_loop_v4`].
@@ -955,6 +915,46 @@ impl Socket {
 /// * Linux: <https://man7.org/linux/man-pages/man7/socket.7.html>
 /// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options>
 impl Socket {
+    /// Sets the value of the `SO_BROADCAST` option for this socket.
+    ///
+    /// For more information about this option, see [`set_broadcast`].
+    ///
+    /// [`set_broadcast`]: Socket::set_broadcast
+    pub fn broadcast(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_BROADCAST)
+                .map(|broadcast| broadcast != 0)
+        }
+    }
+
+    /// Gets the value of the `SO_BROADCAST` option for this socket.
+    ///
+    /// When enabled, this socket is allowed to send packets to a broadcast
+    /// address.
+    pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::SOL_SOCKET,
+                sys::SO_BROADCAST,
+                broadcast as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `SO_ERROR` option on this socket.
+    ///
+    /// This will retrieve the stored error in the underlying socket, clearing
+    /// the field in the process. This can be useful for checking errors between
+    /// calls.
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        match unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_ERROR) } {
+            Ok(0) => Ok(None),
+            Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
+            Err(err) => Err(err),
+        }
+    }
+
     /// Gets the value of the `SO_REUSEADDR` option on this socket.
     ///
     /// For more information about this option, see [`set_reuse_address`].
