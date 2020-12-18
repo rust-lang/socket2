@@ -55,7 +55,7 @@ pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
     IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_REUSEADDR, TCP_NODELAY,
+    SO_ERROR, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_REUSEADDR, TCP_NODELAY,
 };
 
 // See this type in the Windows file.
@@ -850,20 +850,6 @@ impl Socket {
             ipv6mr_interface: to_ipv6mr_interface(interface),
         };
         unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, mreq) }
-    }
-
-    pub fn recv_buffer_size(&self) -> io::Result<usize> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::SOL_SOCKET, libc::SO_RCVBUF)?;
-            Ok(raw as usize)
-        }
-    }
-
-    pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
-        unsafe {
-            // TODO: casting usize to a c_int should be a checked cast
-            self.setsockopt(libc::SOL_SOCKET, libc::SO_RCVBUF, size as c_int)
-        }
     }
 
     pub fn send_buffer_size(&self) -> io::Result<usize> {
