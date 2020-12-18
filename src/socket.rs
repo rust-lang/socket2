@@ -784,17 +784,6 @@ impl Socket {
         self.inner().leave_multicast_v6(multiaddr, interface)
     }
 
-    /// Reads the linger duration for this socket by getting the SO_LINGER
-    /// option
-    pub fn linger(&self) -> io::Result<Option<Duration>> {
-        self.inner().linger()
-    }
-
-    /// Sets the linger duration of this socket by setting the SO_LINGER option
-    pub fn set_linger(&self, dur: Option<Duration>) -> io::Result<()> {
-        self.inner().set_linger(dur)
-    }
-
     /// Gets the value of the `SO_RCVBUF` option on this socket.
     ///
     /// For more information about this option, see
@@ -955,6 +944,32 @@ impl Socket {
         }
     }
 
+    /// Get the value of the `SO_LINGER` option on this socket.
+    ///
+    /// For more information about this option, see [`set_linger`].
+    ///
+    /// [`set_linger`]: Socket::set_linger
+    pub fn linger(&self) -> io::Result<Option<Duration>> {
+        unsafe {
+            getsockopt::<sys::linger>(self.inner, sys::SOL_SOCKET, sys::SO_LINGER)
+                .map(into_duration)
+        }
+    }
+
+    /// Set value for the `SO_LINGER` option on this socket.
+    ///
+    /// If `linger` is not `None`, a close(2) or shutdown(2) will not return
+    /// until all queued messages for the socket have been successfully sent or
+    /// the linger timeout has been reached. Otherwise, the call returns
+    /// immediately and the closing is done in the background. When the socket
+    /// is closed as part of exit(2), it always lingers in the background.
+    ///
+    /// Note that the duration only has a precision of seconds on most OSes.
+    pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
+        let linger = from_duration(linger);
+        unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_LINGER, linger) }
+    }
+
     /// Gets the value of the `SO_REUSEADDR` option on this socket.
     ///
     /// For more information about this option, see [`set_reuse_address`].
@@ -981,6 +996,27 @@ impl Socket {
                 reuse as c_int,
             )
         }
+    }
+}
+
+fn into_duration(linger: sys::linger) -> Option<Duration> {
+    if linger.l_onoff == 0 {
+        None
+    } else {
+        Some(Duration::from_secs(linger.l_linger as u64))
+    }
+}
+
+fn from_duration(duration: Option<Duration>) -> sys::linger {
+    match duration {
+        Some(duration) => sys::linger {
+            l_onoff: 1,
+            l_linger: duration.as_secs() as _,
+        },
+        None => sys::linger {
+            l_onoff: 0,
+            l_linger: 0,
+        },
     }
 }
 
