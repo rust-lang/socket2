@@ -67,7 +67,7 @@ test!(
     set_send_buffer_size(SET_BUF_SIZE),
     GET_BUF_SIZE
 );
-#[cfg(all(feature = "all", not(target_os = "redox")))]
+#[cfg(not(target_os = "redox"))]
 test!(out_of_band_inline, set_out_of_band_inline(true));
 test!(reuse_address, set_reuse_address(true));
 #[cfg(all(
