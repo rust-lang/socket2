@@ -768,23 +768,6 @@ impl Socket {
         self.inner().leave_multicast_v6(multiaddr, interface)
     }
 
-    /// Gets the value of the `SO_SNDBUF` option on this socket.
-    ///
-    /// For more information about this option, see [`set_send_buffer`][link].
-    ///
-    /// [link]: #method.set_send_buffer
-    pub fn send_buffer_size(&self) -> io::Result<usize> {
-        self.inner().send_buffer_size()
-    }
-
-    /// Sets the value of the `SO_SNDBUF` option on this socket.
-    ///
-    /// Changes the size of the operating system's send buffer associated with
-    /// the socket.
-    pub fn set_send_buffer_size(&self, size: usize) -> io::Result<()> {
-        self.inner().set_send_buffer_size(size)
-    }
-
     /// Returns whether keepalive messages are enabled on this socket, and if so
     /// the duration of time between them.
     ///
@@ -983,6 +966,26 @@ impl Socket {
                 reuse as c_int,
             )
         }
+    }
+
+    /// Get the value of the `SO_SNDBUF` option on this socket.
+    ///
+    /// For more information about this option, see [`set_send_buffer_size`].
+    ///
+    /// [`set_send_buffer_size`]: Socket::set_send_buffer_size
+    pub fn send_buffer_size(&self) -> io::Result<usize> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_SNDBUF)
+                .map(|size| size as usize)
+        }
+    }
+
+    /// Set value for the `SO_SNDBUF` option on this socket.
+    ///
+    /// Changes the size of the operating system's send buffer associated with
+    /// the socket.
+    pub fn set_send_buffer_size(&self, size: usize) -> io::Result<()> {
+        unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_SNDBUF, size as c_int) }
     }
 }
 
