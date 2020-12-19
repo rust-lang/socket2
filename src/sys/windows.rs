@@ -158,9 +158,9 @@ fn init() {
 }
 
 // TODO: rename to `Socket` once the struct `Socket` is no longer used.
-pub(crate) type SysSocket = sock::SOCKET;
+pub(crate) type Socket = sock::SOCKET;
 
-pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Result<SysSocket> {
+pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Result<Socket> {
     init();
 
     // Check if we set our custom flag.
@@ -185,19 +185,19 @@ pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Resul
     )
 }
 
-pub(crate) fn bind(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
+pub(crate) fn bind(socket: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(bind(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
-pub(crate) fn connect(socket: SysSocket, addr: &SockAddr) -> io::Result<()> {
+pub(crate) fn connect(socket: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
-pub(crate) fn listen(socket: SysSocket, backlog: i32) -> io::Result<()> {
+pub(crate) fn listen(socket: Socket, backlog: i32) -> io::Result<()> {
     syscall!(listen(socket, backlog), PartialEq::ne, 0).map(|_| ())
 }
 
-pub(crate) fn accept(socket: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
+pub(crate) fn accept(socket: Socket) -> io::Result<(Socket, SockAddr)> {
     // Safety: `accept` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::init(|storage, len| {
@@ -210,7 +210,7 @@ pub(crate) fn accept(socket: SysSocket) -> io::Result<(SysSocket, SockAddr)> {
     }
 }
 
-pub(crate) fn getsockname(socket: SysSocket) -> io::Result<SockAddr> {
+pub(crate) fn getsockname(socket: Socket) -> io::Result<SockAddr> {
     // Safety: `getsockname` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::init(|storage, len| {
@@ -224,7 +224,7 @@ pub(crate) fn getsockname(socket: SysSocket) -> io::Result<SockAddr> {
     .map(|(_, addr)| addr)
 }
 
-pub(crate) fn getpeername(socket: SysSocket) -> io::Result<SockAddr> {
+pub(crate) fn getpeername(socket: Socket) -> io::Result<SockAddr> {
     // Safety: `getpeername` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::init(|storage, len| {
@@ -238,7 +238,7 @@ pub(crate) fn getpeername(socket: SysSocket) -> io::Result<SockAddr> {
     .map(|(_, addr)| addr)
 }
 
-pub(crate) fn try_clone(socket: SysSocket) -> io::Result<SysSocket> {
+pub(crate) fn try_clone(socket: Socket) -> io::Result<Socket> {
     let mut info: MaybeUninit<sock::WSAPROTOCOL_INFOW> = MaybeUninit::uninit();
     syscall!(
         WSADuplicateSocketW(socket, GetCurrentProcessId(), info.as_mut_ptr()),
@@ -262,12 +262,12 @@ pub(crate) fn try_clone(socket: SysSocket) -> io::Result<SysSocket> {
     )
 }
 
-pub(crate) fn set_nonblocking(socket: SysSocket, nonblocking: bool) -> io::Result<()> {
+pub(crate) fn set_nonblocking(socket: Socket, nonblocking: bool) -> io::Result<()> {
     let mut nonblocking = nonblocking as u_long;
     ioctlsocket(socket, sock::FIONBIO, &mut nonblocking)
 }
 
-pub(crate) fn shutdown(socket: SysSocket, how: Shutdown) -> io::Result<()> {
+pub(crate) fn shutdown(socket: Socket, how: Shutdown) -> io::Result<()> {
     let how = match how {
         Shutdown::Write => SD_SEND,
         Shutdown::Read => SD_RECEIVE,
@@ -276,7 +276,7 @@ pub(crate) fn shutdown(socket: SysSocket, how: Shutdown) -> io::Result<()> {
     syscall!(shutdown(socket, how), PartialEq::eq, sock::SOCKET_ERROR).map(|_| ())
 }
 
-pub(crate) fn recv(socket: SysSocket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+pub(crate) fn recv(socket: Socket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
     let res = syscall!(
         recv(
             socket,
@@ -295,7 +295,7 @@ pub(crate) fn recv(socket: SysSocket, buf: &mut [u8], flags: c_int) -> io::Resul
 }
 
 pub(crate) fn recv_vectored(
-    socket: SysSocket,
+    socket: Socket,
     bufs: &mut [IoSliceMut<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
@@ -327,7 +327,7 @@ pub(crate) fn recv_vectored(
 }
 
 pub(crate) fn recv_from(
-    socket: SysSocket,
+    socket: Socket,
     buf: &mut [u8],
     flags: c_int,
 ) -> io::Result<(usize, SockAddr)> {
@@ -356,7 +356,7 @@ pub(crate) fn recv_from(
 }
 
 pub(crate) fn recv_from_vectored(
-    socket: SysSocket,
+    socket: Socket,
     bufs: &mut [IoSliceMut<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
@@ -395,7 +395,7 @@ pub(crate) fn recv_from_vectored(
     .map(|((n, recv_flags), addr)| (n, recv_flags, addr))
 }
 
-pub(crate) fn send(socket: SysSocket, buf: &[u8], flags: c_int) -> io::Result<usize> {
+pub(crate) fn send(socket: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {
     syscall!(
         send(
             socket,
@@ -410,7 +410,7 @@ pub(crate) fn send(socket: SysSocket, buf: &[u8], flags: c_int) -> io::Result<us
 }
 
 pub(crate) fn send_vectored(
-    socket: SysSocket,
+    socket: Socket,
     bufs: &[IoSlice<'_>],
     flags: c_int,
 ) -> io::Result<usize> {
@@ -445,7 +445,7 @@ pub(crate) fn send_vectored(
 }
 
 pub(crate) fn send_to(
-    socket: SysSocket,
+    socket: Socket,
     buf: &[u8],
     addr: &SockAddr,
     flags: c_int,
@@ -466,7 +466,7 @@ pub(crate) fn send_to(
 }
 
 pub(crate) fn send_to_vectored(
-    socket: SysSocket,
+    socket: Socket,
     bufs: &[IoSlice<'_>],
     addr: &SockAddr,
     flags: c_int,
@@ -492,7 +492,7 @@ pub(crate) fn send_to_vectored(
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
-pub(crate) fn timeout_opt(fd: SysSocket, lvl: c_int, name: c_int) -> io::Result<Option<Duration>> {
+pub(crate) fn timeout_opt(fd: Socket, lvl: c_int, name: c_int) -> io::Result<Option<Duration>> {
     unsafe { getsockopt(fd, lvl, name).map(from_ms) }
 }
 
@@ -508,7 +508,7 @@ fn from_ms(duration: DWORD) -> Option<Duration> {
 
 /// Wrapper around `setsockopt` to deal with platform specific timeouts.
 pub(crate) fn set_timeout_opt(
-    fd: SysSocket,
+    fd: Socket,
     level: c_int,
     optname: c_int,
     duration: Option<Duration>,
@@ -530,7 +530,7 @@ fn into_ms(duration: Option<Duration>) -> DWORD {
         .unwrap_or(0)
 }
 
-pub(crate) fn set_tcp_keepalive(socket: SysSocket, keepalive: &TcpKeepalive) -> io::Result<()> {
+pub(crate) fn set_tcp_keepalive(socket: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
     let mut keepalive = tcp_keepalive {
         onoff: 1,
         keepalivetime: into_ms(keepalive.time),
@@ -556,11 +556,7 @@ pub(crate) fn set_tcp_keepalive(socket: SysSocket, keepalive: &TcpKeepalive) -> 
 }
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
-pub(crate) unsafe fn getsockopt<T>(
-    socket: SysSocket,
-    level: c_int,
-    optname: c_int,
-) -> io::Result<T> {
+pub(crate) unsafe fn getsockopt<T>(socket: Socket, level: c_int, optname: c_int) -> io::Result<T> {
     let mut optval: MaybeUninit<T> = MaybeUninit::uninit();
     let mut optlen = mem::size_of::<T>() as c_int;
     syscall!(
@@ -583,7 +579,7 @@ pub(crate) unsafe fn getsockopt<T>(
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
 pub(crate) unsafe fn setsockopt<T>(
-    socket: SysSocket,
+    socket: Socket,
     level: c_int,
     optname: c_int,
     optval: T,
@@ -602,7 +598,7 @@ pub(crate) unsafe fn setsockopt<T>(
     .map(|_| ())
 }
 
-fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Result<()> {
+fn ioctlsocket(socket: Socket, cmd: c_long, payload: &mut u_long) -> io::Result<()> {
     syscall!(
         ioctlsocket(socket, cmd, payload),
         PartialEq::eq,
@@ -611,7 +607,7 @@ fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Resu
     .map(|_| ())
 }
 
-pub(crate) fn close(socket: SysSocket) {
+pub(crate) fn close(socket: Socket) {
     unsafe {
         let _ = sock::closesocket(socket);
     }
@@ -685,7 +681,7 @@ impl IntoRawSocket for crate::Socket {
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket {
-            inner: socket as SysSocket,
+            inner: socket as Socket,
         }
     }
 }

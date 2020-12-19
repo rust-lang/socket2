@@ -68,7 +68,7 @@ use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 /// ```
 pub struct Socket {
     // The `sys` module most have access to the socket.
-    pub(crate) inner: sys::SysSocket,
+    pub(crate) inner: sys::Socket,
 }
 
 impl Socket {
