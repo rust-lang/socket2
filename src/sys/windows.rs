@@ -62,9 +62,9 @@ pub(crate) use winapi::shared::ws2def::{
     SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
-    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
-    IP_DROP_MEMBERSHIP, IP_MREQ as IpMreq, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
-    IP_TTL,
+    IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP, IPV6_MREQ as Ipv6Mreq, IPV6_MULTICAST_HOPS,
+    IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
+    IP_MREQ as IpMreq, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL,
 };
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
@@ -669,24 +669,6 @@ impl Socket {
 
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
         unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF, interface as c_int) }
-    }
-
-    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        let multiaddr = to_in6_addr(multiaddr);
-        let mreq = IPV6_MREQ {
-            ipv6mr_multiaddr: multiaddr,
-            ipv6mr_interface: interface,
-        };
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_ADD_MEMBERSHIP, mreq) }
-    }
-
-    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        let multiaddr = to_in6_addr(multiaddr);
-        let mreq = IPV6_MREQ {
-            ipv6mr_multiaddr: multiaddr,
-            ipv6mr_interface: interface,
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IPV6_DROP_MEMBERSHIP, mreq) }
     }
 
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>

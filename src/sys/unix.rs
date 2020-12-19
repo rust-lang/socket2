@@ -53,11 +53,35 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(feature = "all")]
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
-    ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP,
-    IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF,
-    IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR,
-    SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
-    SO_SNDTIMEO, TCP_NODELAY,
+    ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
+    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
+    IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK,
+    SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF,
+    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
+};
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_vendor = "apple"
+)))]
+pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_vendor = "apple",
+))]
+pub(crate) use libc::{
+    IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP, IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP,
 };
 #[cfg(all(
     feature = "all",
@@ -73,19 +97,6 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
-cfg_if::cfg_if! {
-    if #[cfg(any(target_os = "dragonfly", target_os = "freebsd",
-                 target_vendor = "apple",
-                 target_os = "openbsd", target_os = "netbsd",
-                 target_os = "solaris", target_os = "illumos",
-                 target_os = "haiku"))] {
-        use libc::IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP;
-        use libc::IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP;
-    } else {
-        use libc::IPV6_ADD_MEMBERSHIP;
-        use libc::IPV6_DROP_MEMBERSHIP;
-    }
-}
 #[cfg(any(target_os = "openbsd", target_os = "haiku"))]
 use libc::SO_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(target_vendor = "apple")]
@@ -954,24 +965,6 @@ impl Socket {
         }
     }
 
-    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        let multiaddr = to_in6_addr(multiaddr);
-        let mreq = libc::ipv6_mreq {
-            ipv6mr_multiaddr: multiaddr,
-            ipv6mr_interface: to_ipv6mr_interface(interface),
-        };
-        unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, mreq) }
-    }
-
-    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        let multiaddr = to_in6_addr(multiaddr);
-        let mreq = libc::ipv6_mreq {
-            ipv6mr_multiaddr: multiaddr,
-            ipv6mr_interface: to_ipv6mr_interface(interface),
-        };
-        unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, mreq) }
-    }
-
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
@@ -1124,16 +1117,6 @@ pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
 
 pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
     Ipv6Addr::from(in6_addr.s6_addr)
-}
-
-#[cfg(target_os = "android")]
-fn to_ipv6mr_interface(value: u32) -> c_int {
-    value as c_int
-}
-
-#[cfg(not(target_os = "android"))]
-fn to_ipv6mr_interface(value: u32) -> libc::c_uint {
-    value as libc::c_uint
 }
 
 #[test]
