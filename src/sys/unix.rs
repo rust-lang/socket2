@@ -54,10 +54,10 @@ pub(crate) use libc::MSG_TRUNC;
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
-    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
-    IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK,
-    SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF,
-    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
+    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
+    IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
+    IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE,
+    SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
 #[cfg(not(any(
     target_os = "dragonfly",
@@ -948,23 +948,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn multicast_if_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_IF)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        unsafe {
-            self.setsockopt(
-                libc::IPPROTO_IPV6,
-                libc::IPV6_MULTICAST_IF,
-                interface as c_int,
-            )
-        }
-    }
-
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,

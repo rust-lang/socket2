@@ -63,8 +63,9 @@ pub(crate) use winapi::shared::ws2def::{
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP, IPV6_MREQ as Ipv6Mreq, IPV6_MULTICAST_HOPS,
-    IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
-    IP_MREQ as IpMreq, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL,
+    IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
+    IP_DROP_MEMBERSHIP, IP_MREQ as IpMreq, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
+    IP_TTL,
 };
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
@@ -660,17 +661,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    pub fn multicast_if_v6(&self) -> io::Result<u32> {
-        unsafe {
-            let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF)?;
-            Ok(raw as u32)
-        }
-    }
-
-    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF, interface as c_int) }
-    }
-
     unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
     where
         T: Copy,
