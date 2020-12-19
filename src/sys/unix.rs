@@ -53,10 +53,11 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(feature = "all")]
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
-    linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS,
-    IPV6_V6ONLY, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST,
-    SO_ERROR, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR,
-    SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
+    ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP,
+    IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP,
+    IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE,
+    SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO,
+    TCP_NODELAY,
 };
 #[cfg(all(
     feature = "all",
@@ -881,6 +882,15 @@ pub(crate) unsafe fn setsockopt<T>(
     .map(|_| ())
 }
 
+pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
+    // `s_addr` is stored as BE on all machines, and the array is in BE order.
+    // So the native endian conversion method is used so that it's never
+    // swapped.
+    in_addr {
+        s_addr: u32::from_ne_bytes(addr.octets()),
+    }
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     fd: SysSocket,
@@ -918,14 +928,6 @@ impl Socket {
         }
     }
 
-    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let mreq = libc::ip_mreq {
-            imr_multiaddr: to_in_addr(multiaddr),
-            imr_interface: to_in_addr(interface),
-        };
-        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_ADD_MEMBERSHIP, mreq) }
-    }
-
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
         let mreq = libc::ipv6_mreq {
@@ -933,14 +935,6 @@ impl Socket {
             ipv6mr_interface: to_ipv6mr_interface(interface),
         };
         unsafe { self.setsockopt(libc::IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, mreq) }
-    }
-
-    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let mreq = libc::ip_mreq {
-            imr_multiaddr: to_in_addr(multiaddr),
-            imr_interface: to_in_addr(interface),
-        };
-        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_DROP_MEMBERSHIP, mreq) }
     }
 
     pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
@@ -1093,14 +1087,6 @@ impl From<UnixDatagram> for crate::Socket {
 pub(crate) fn close(fd: SysSocket) {
     unsafe {
         let _ = libc::close(fd);
-    }
-}
-
-pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
-    // `s_addr` is stored as BE on all machines, and the array is in BE order.
-    // So the native endian conversion method is used so that it's never swapped.
-    in_addr {
-        s_addr: u32::from_ne_bytes(addr.octets()),
     }
 }
 

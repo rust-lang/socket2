@@ -62,8 +62,8 @@ pub(crate) use winapi::shared::ws2def::{
     SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
 pub(crate) use winapi::shared::ws2ipdef::{
-    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_MULTICAST_LOOP,
-    IP_MULTICAST_TTL, IP_TTL,
+    IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
+    IP_DROP_MEMBERSHIP, IP_MREQ as IpMreq, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL,
 };
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
@@ -641,6 +641,14 @@ impl crate::Socket {
     }
 }
 
+pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
+    let mut s_un: in_addr_S_un = unsafe { mem::zeroed() };
+    // `S_un` is stored as BE on all machines, and the array is in BE order. So
+    // the native endian conversion method is used so that it's never swapped.
+    unsafe { *(s_un.S_addr_mut()) = u32::from_ne_bytes(addr.octets()) };
+    IN_ADDR { S_un: s_un }
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     socket: SysSocket,
@@ -671,14 +679,6 @@ impl Socket {
         unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF, interface as c_int) }
     }
 
-    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let mreq = IP_MREQ {
-            imr_multiaddr: to_in_addr(multiaddr),
-            imr_interface: to_in_addr(interface),
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq) }
-    }
-
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let multiaddr = to_in6_addr(multiaddr);
         let mreq = IPV6_MREQ {
@@ -686,14 +686,6 @@ impl Socket {
             ipv6mr_interface: interface,
         };
         unsafe { self.setsockopt(IPPROTO_IPV6 as c_int, IPV6_ADD_MEMBERSHIP, mreq) }
-    }
-
-    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        let mreq = IP_MREQ {
-            imr_multiaddr: to_in_addr(multiaddr),
-            imr_interface: to_in_addr(interface),
-        };
-        unsafe { self.setsockopt(IPPROTO_IP, IP_DROP_MEMBERSHIP, mreq) }
     }
 
     pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
@@ -798,14 +790,6 @@ pub(crate) fn close(socket: SysSocket) {
     unsafe {
         let _ = sock::closesocket(socket);
     }
-}
-
-pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
-    let mut s_un: in_addr_S_un = unsafe { mem::zeroed() };
-    // `S_un` is stored as BE on all machines, and the array is in BE order.
-    // So the native endian conversion method is used so that it's never swapped.
-    unsafe { *(s_un.S_addr_mut()) = u32::from_ne_bytes(addr.octets()) };
-    IN_ADDR { S_un: s_un }
 }
 
 pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
