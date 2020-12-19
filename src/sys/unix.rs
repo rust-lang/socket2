@@ -20,7 +20,7 @@ use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
 use std::time::Duration;
-use std::{fmt, io, ptr};
+use std::{io, ptr};
 
 #[cfg(not(target_vendor = "apple"))]
 use libc::ssize_t;
@@ -652,6 +652,95 @@ fn into_secs(duration: Duration) -> c_int {
     min(duration.as_secs(), c_int::max_value() as u64) as c_int
 }
 
+/// Add `flag` to the current set flags of `F_GETFD`.
+fn fcntl_add(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
+    let previous = syscall!(fcntl(fd, get_cmd))?;
+    let new = previous | flag;
+    if new != previous {
+        syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
+    } else {
+        // Flag was already set.
+        Ok(())
+    }
+}
+
+/// Remove `flag` to the current set flags of `F_GETFD`.
+fn fcntl_remove(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
+    let previous = syscall!(fcntl(fd, get_cmd))?;
+    let new = previous & !flag;
+    if new != previous {
+        syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
+    } else {
+        // Flag was already set.
+        Ok(())
+    }
+}
+
+/// Caller must ensure `T` is the correct type for `opt` and `val`.
+pub(crate) unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
+    let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
+    let mut len = size_of::<T>() as libc::socklen_t;
+    syscall!(getsockopt(
+        fd,
+        opt,
+        val,
+        payload.as_mut_ptr().cast(),
+        &mut len,
+    ))
+    .map(|_| {
+        debug_assert_eq!(len as usize, size_of::<T>());
+        // Safety: `getsockopt` initialised `payload` for us.
+        payload.assume_init()
+    })
+}
+
+/// Caller must ensure `T` is the correct type for `opt` and `val`.
+pub(crate) unsafe fn setsockopt<T>(
+    fd: SysSocket,
+    opt: c_int,
+    val: c_int,
+    payload: T,
+) -> io::Result<()> {
+    let payload = &payload as *const T as *const c_void;
+    syscall!(setsockopt(
+        fd,
+        opt,
+        val,
+        payload,
+        mem::size_of::<T>() as libc::socklen_t,
+    ))
+    .map(|_| ())
+}
+
+pub(crate) fn close(fd: SysSocket) {
+    unsafe {
+        let _ = libc::close(fd);
+    }
+}
+
+pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
+    // `s_addr` is stored as BE on all machines, and the array is in BE order.
+    // So the native endian conversion method is used so that it's never
+    // swapped.
+    in_addr {
+        s_addr: u32::from_ne_bytes(addr.octets()),
+    }
+}
+
+pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
+    Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
+}
+
+pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
+    let mut ret: libc::in6_addr = unsafe { mem::zeroed() };
+    ret.s6_addr = addr.octets();
+    return ret;
+}
+
+pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
+    Ipv6Addr::from(in6_addr.s6_addr)
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -869,124 +958,6 @@ impl crate::Socket {
     }
 }
 
-/// Add `flag` to the current set flags of `F_GETFD`.
-fn fcntl_add(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
-    let previous = syscall!(fcntl(fd, get_cmd))?;
-    let new = previous | flag;
-    if new != previous {
-        syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
-    } else {
-        // Flag was already set.
-        Ok(())
-    }
-}
-
-/// Remove `flag` to the current set flags of `F_GETFD`.
-fn fcntl_remove(fd: SysSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
-    let previous = syscall!(fcntl(fd, get_cmd))?;
-    let new = previous & !flag;
-    if new != previous {
-        syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
-    } else {
-        // Flag was already set.
-        Ok(())
-    }
-}
-
-/// Caller must ensure `T` is the correct type for `opt` and `val`.
-pub(crate) unsafe fn getsockopt<T>(fd: SysSocket, opt: c_int, val: c_int) -> io::Result<T> {
-    let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
-    let mut len = size_of::<T>() as libc::socklen_t;
-    syscall!(getsockopt(
-        fd,
-        opt,
-        val,
-        payload.as_mut_ptr().cast(),
-        &mut len,
-    ))
-    .map(|_| {
-        debug_assert_eq!(len as usize, size_of::<T>());
-        // Safety: `getsockopt` initialised `payload` for us.
-        payload.assume_init()
-    })
-}
-
-/// Caller must ensure `T` is the correct type for `opt` and `val`.
-pub(crate) unsafe fn setsockopt<T>(
-    fd: SysSocket,
-    opt: c_int,
-    val: c_int,
-    payload: T,
-) -> io::Result<()> {
-    let payload = &payload as *const T as *const c_void;
-    syscall!(setsockopt(
-        fd,
-        opt,
-        val,
-        payload,
-        mem::size_of::<T>() as libc::socklen_t,
-    ))
-    .map(|_| ())
-}
-
-pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
-    // `s_addr` is stored as BE on all machines, and the array is in BE order.
-    // So the native endian conversion method is used so that it's never
-    // swapped.
-    in_addr {
-        s_addr: u32::from_ne_bytes(addr.octets()),
-    }
-}
-
-pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
-    Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
-}
-
-#[repr(transparent)] // Required during rewriting.
-pub struct Socket {
-    fd: SysSocket,
-}
-
-impl Socket {
-    pub fn inner(self) -> SysSocket {
-        self.fd
-    }
-}
-
-impl fmt::Debug for Socket {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut f = f.debug_struct("Socket");
-        f.field("fd", &self.fd);
-        if let Ok(addr) = getsockname(self.fd) {
-            f.field("local_addr", &addr);
-        }
-        if let Ok(addr) = getpeername(self.fd) {
-            f.field("peer_addr", &addr);
-        }
-        f.finish()
-    }
-}
-
-impl AsRawFd for Socket {
-    fn as_raw_fd(&self) -> c_int {
-        self.fd
-    }
-}
-
-impl IntoRawFd for Socket {
-    fn into_raw_fd(self) -> c_int {
-        let fd = self.fd;
-        mem::forget(self);
-        return fd;
-    }
-}
-
-impl FromRawFd for Socket {
-    unsafe fn from_raw_fd(fd: c_int) -> Socket {
-        Socket { fd: fd }
-    }
-}
-
 impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
         self.inner
@@ -1003,9 +974,7 @@ impl IntoRawFd for crate::Socket {
 
 impl FromRawFd for crate::Socket {
     unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
-        crate::Socket {
-            inner: Socket::from_raw_fd(fd).inner(),
-        }
+        crate::Socket { inner: fd }
     }
 }
 
@@ -1055,22 +1024,6 @@ impl From<UnixDatagram> for crate::Socket {
             inner: socket.into_raw_fd(),
         }
     }
-}
-
-pub(crate) fn close(fd: SysSocket) {
-    unsafe {
-        let _ = libc::close(fd);
-    }
-}
-
-pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
-    let mut ret: libc::in6_addr = unsafe { mem::zeroed() };
-    ret.s6_addr = addr.octets();
-    return ret;
-}
-
-pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
-    Ipv6Addr::from(in6_addr.s6_addr)
 }
 
 #[test]

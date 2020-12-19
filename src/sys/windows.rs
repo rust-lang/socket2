@@ -11,9 +11,9 @@ use std::io::{self, IoSlice, IoSliceMut};
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
+use std::ptr;
 use std::sync::Once;
 use std::time::Duration;
-use std::{fmt, ptr};
 
 use winapi::ctypes::c_long;
 use winapi::shared::in6addr::*;
@@ -611,6 +611,36 @@ fn ioctlsocket(socket: SysSocket, cmd: c_long, payload: &mut u_long) -> io::Resu
     .map(|_| ())
 }
 
+pub(crate) fn close(socket: SysSocket) {
+    unsafe {
+        let _ = sock::closesocket(socket);
+    }
+}
+
+pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
+    let mut s_un: in_addr_S_un = unsafe { mem::zeroed() };
+    // `S_un` is stored as BE on all machines, and the array is in BE order. So
+    // the native endian conversion method is used so that it's never swapped.
+    unsafe { *(s_un.S_addr_mut()) = u32::from_ne_bytes(addr.octets()) };
+    IN_ADDR { S_un: s_un }
+}
+
+pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
+    Ipv4Addr::from(unsafe { *in_addr.S_un.S_addr() }.to_ne_bytes())
+}
+
+pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
+    let mut ret_addr: in6_addr_u = unsafe { mem::zeroed() };
+    unsafe { *(ret_addr.Byte_mut()) = addr.octets() };
+    let mut ret: in6_addr = unsafe { mem::zeroed() };
+    ret.u = ret_addr;
+    ret
+}
+
+pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
+    Ipv6Addr::from(*unsafe { in6_addr.u.Byte() })
+}
+
 /// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` using `SetHandleInformation`.
@@ -638,59 +668,6 @@ impl crate::Socket {
     }
 }
 
-pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
-    let mut s_un: in_addr_S_un = unsafe { mem::zeroed() };
-    // `S_un` is stored as BE on all machines, and the array is in BE order. So
-    // the native endian conversion method is used so that it's never swapped.
-    unsafe { *(s_un.S_addr_mut()) = u32::from_ne_bytes(addr.octets()) };
-    IN_ADDR { S_un: s_un }
-}
-
-pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
-    Ipv4Addr::from(unsafe { *in_addr.S_un.S_addr() }.to_ne_bytes())
-}
-
-#[repr(transparent)] // Required during rewriting.
-pub struct Socket {
-    socket: SysSocket,
-}
-
-impl fmt::Debug for Socket {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut f = f.debug_struct("Socket");
-        f.field("socket", &self.socket);
-        if let Ok(addr) = getsockname(self.socket) {
-            f.field("local_addr", &addr);
-        }
-        if let Ok(addr) = getpeername(self.socket) {
-            f.field("peer_addr", &addr);
-        }
-        f.finish()
-    }
-}
-
-impl AsRawSocket for Socket {
-    fn as_raw_socket(&self) -> RawSocket {
-        self.socket as RawSocket
-    }
-}
-
-impl IntoRawSocket for Socket {
-    fn into_raw_socket(self) -> RawSocket {
-        let socket = self.socket;
-        mem::forget(self);
-        socket as RawSocket
-    }
-}
-
-impl FromRawSocket for Socket {
-    unsafe fn from_raw_socket(socket: RawSocket) -> Socket {
-        Socket {
-            socket: socket as sock::SOCKET,
-        }
-    }
-}
-
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
         self.inner as RawSocket
@@ -711,24 +688,6 @@ impl FromRawSocket for crate::Socket {
             inner: socket as SysSocket,
         }
     }
-}
-
-pub(crate) fn close(socket: SysSocket) {
-    unsafe {
-        let _ = sock::closesocket(socket);
-    }
-}
-
-pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
-    let mut ret_addr: in6_addr_u = unsafe { mem::zeroed() };
-    unsafe { *(ret_addr.Byte_mut()) = addr.octets() };
-    let mut ret: in6_addr = unsafe { mem::zeroed() };
-    ret.u = ret_addr;
-    ret
-}
-
-pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
-    Ipv6Addr::from(*unsafe { in6_addr.u.Byte() })
 }
 
 #[test]
