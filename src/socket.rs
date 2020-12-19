@@ -672,25 +672,6 @@ impl Socket {
         }
     }
 
-    /// Gets the value of the `IP_MULTICAST_IF` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_if_v4`][link].
-    ///
-    /// [link]: #method.set_multicast_if_v4
-    ///
-    /// Returns the interface to use for routing multicast packets.
-    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        self.inner().multicast_if_v4()
-    }
-
-    /// Sets the value of the `IP_MULTICAST_IF` option for this socket.
-    ///
-    /// Specifies the interface to use for routing multicast packets.
-    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner().set_multicast_if_v4(interface)
-    }
-
     /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
     ///
     /// For more information about this option, see
@@ -1020,6 +1001,25 @@ impl Socket {
             imr_interface: sys::to_in_addr(interface),
         };
         unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_DROP_MEMBERSHIP, mreq) }
+    }
+
+    /// Get the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// For more information about this option, see [`set_multicast_if_v4`].
+    ///
+    /// [`set_multicast_if_v4`]: Socket::set_multicast_if_v4
+    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
+        unsafe {
+            getsockopt(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_IF).map(sys::from_in_addr)
+        }
+    }
+
+    /// Set the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets.
+    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
+        let interface = sys::to_in_addr(interface);
+        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_IF, interface) }
     }
 }
 
