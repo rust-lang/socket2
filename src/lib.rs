@@ -310,7 +310,7 @@ impl TcpKeepalive {
     ///
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.
-    pub fn with_time(self, time: Duration) -> Self {
+    pub const fn with_time(self, time: Duration) -> Self {
         Self {
             time: Some(time),
             ..self
@@ -334,7 +334,7 @@ impl TcpKeepalive {
             windows,
         )
     ))]
-    pub fn with_interval(self, interval: Duration) -> Self {
+    pub const fn with_interval(self, interval: Duration) -> Self {
         Self {
             interval: Some(interval),
             ..self
@@ -354,7 +354,7 @@ impl TcpKeepalive {
             target_vendor = "apple",
         )
     ))]
-    pub fn with_retries(self, retries: u32) -> Self {
+    pub const fn with_retries(self, retries: u32) -> Self {
         Self {
             retries: Some(retries),
             ..self
