@@ -1303,55 +1303,12 @@ impl fmt::Debug for Socket {
     }
 }
 
-/// Macro to convert from one network type to another.
-macro_rules! from_raw {
-    ($ty: ty, $socket: expr) => {{
-        #[cfg(unix)]
-        unsafe {
-            <$ty>::from_raw_fd($socket.into_raw_fd())
-        }
-        #[cfg(windows)]
-        unsafe {
-            <$ty>::from_raw_socket($socket.into_raw_socket())
-        }
-    }};
-}
-
-impl From<net::TcpStream> for Socket {
-    fn from(socket: net::TcpStream) -> Socket {
-        from_raw!(Socket, socket)
-    }
-}
-
-impl From<net::TcpListener> for Socket {
-    fn from(socket: net::TcpListener) -> Socket {
-        from_raw!(Socket, socket)
-    }
-}
-
-impl From<net::UdpSocket> for Socket {
-    fn from(socket: net::UdpSocket) -> Socket {
-        from_raw!(Socket, socket)
-    }
-}
-
-impl From<Socket> for net::TcpStream {
-    fn from(socket: Socket) -> net::TcpStream {
-        from_raw!(net::TcpStream, socket)
-    }
-}
-
-impl From<Socket> for net::TcpListener {
-    fn from(socket: Socket) -> net::TcpListener {
-        from_raw!(net::TcpListener, socket)
-    }
-}
-
-impl From<Socket> for net::UdpSocket {
-    fn from(socket: Socket) -> net::UdpSocket {
-        from_raw!(net::UdpSocket, socket)
-    }
-}
+from!(net::TcpStream, Socket);
+from!(net::TcpListener, Socket);
+from!(net::UdpSocket, Socket);
+from!(Socket, net::TcpStream);
+from!(Socket, net::TcpListener);
+from!(Socket, net::UdpSocket);
 
 impl Drop for Socket {
     fn drop(&mut self) {
