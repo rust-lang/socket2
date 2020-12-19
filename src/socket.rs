@@ -617,25 +617,6 @@ impl Socket {
         self.inner().set_multicast_if_v6(interface)
     }
 
-    /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
-    ///
-    /// This function specifies a new multicast group for this socket to join.
-    /// The address must be a valid multicast address, and `interface` is the
-    /// index of the interface to join/leave (or 0 to indicate any interface).
-    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        self.inner().join_multicast_v6(multiaddr, interface)
-    }
-
-    /// Executes an operation of the `IPV6_DROP_MEMBERSHIP` type.
-    ///
-    /// For more information about this option, see
-    /// [`join_multicast_v6`][link].
-    ///
-    /// [link]: #method.join_multicast_v6
-    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
-        self.inner().leave_multicast_v6(multiaddr, interface)
-    }
-
     fn inner(&self) -> &sys::Socket {
         // Safety: this is safe because `sys::Socket` has the
         // `repr(transparent)` attribute.
@@ -939,7 +920,7 @@ fn into_linger(duration: Option<Duration>) -> sys::linger {
     }
 }
 
-/// Socket options for IPv4 socket, get/set using `IPPROTO_IP`.
+/// Socket options for IPv4 sockets, get/set using `IPPROTO_IP`.
 ///
 /// Additional documentation can be found in documentation of the OS.
 /// * Linux: <https://man7.org/linux/man-pages/man7/ip.7.html>
@@ -1069,7 +1050,60 @@ impl Socket {
     }
 }
 
-/// Socket options for TCP socket, get/set using `IPPROTO_TCP`.
+/// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6`.
+///
+/// Additional documentation can be found in documentation of the OS.
+/// * Linux: <https://man7.org/linux/man-pages/man7/ipv6.7.html>
+/// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ipv6-socket-options>
+impl Socket {
+    /// Join a multicast group using `IPV6_ADD_MEMBERSHIP` option on this socket.
+    ///
+    /// Some OSes use `IPV6_JOIN_GROUP` for this option.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// index of the interface to join/leave (or 0 to indicate any interface).
+    pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
+        let mreq = sys::Ipv6Mreq {
+            ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
+            // NOTE: some OSes use `c_int`, others use `c_uint`.
+            ipv6mr_interface: interface as _,
+        };
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_ADD_MEMBERSHIP,
+                mreq,
+            )
+        }
+    }
+
+    /// Leave a multicast group using `IPV6_DROP_MEMBERSHIP` option on this socket.
+    ///
+    /// Some OSes use `IPV6_LEAVE_GROUP` for this option.
+    ///
+    /// For more information about this option, see [`join_multicast_v6`].
+    ///
+    /// [`join_multicast_v6`]: Socket::join_multicast_v6
+    pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
+        let mreq = sys::Ipv6Mreq {
+            ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
+            // NOTE: some OSes use `c_int`, others use `c_uint`.
+            ipv6mr_interface: interface as _,
+        };
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_DROP_MEMBERSHIP,
+                mreq,
+            )
+        }
+    }
+}
+
+/// Socket options for TCP sockets, get/set using `IPPROTO_TCP`.
 ///
 /// Additional documentation can be found in documentation of the OS.
 /// * Linux: <https://man7.org/linux/man-pages/man7/tcp.7.html>
