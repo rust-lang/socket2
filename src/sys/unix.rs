@@ -966,52 +966,17 @@ impl FromRawFd for crate::Socket {
 }
 
 #[cfg(feature = "all")]
-impl From<crate::Socket> for UnixStream {
-    fn from(socket: crate::Socket) -> UnixStream {
-        unsafe { UnixStream::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
+from!(UnixStream, crate::Socket);
 #[cfg(feature = "all")]
-impl From<crate::Socket> for UnixListener {
-    fn from(socket: crate::Socket) -> UnixListener {
-        unsafe { UnixListener::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
+from!(UnixListener, crate::Socket);
 #[cfg(feature = "all")]
-impl From<crate::Socket> for UnixDatagram {
-    fn from(socket: crate::Socket) -> UnixDatagram {
-        unsafe { UnixDatagram::from_raw_fd(socket.into_raw_fd()) }
-    }
-}
-
+from!(UnixDatagram, crate::Socket);
 #[cfg(feature = "all")]
-impl From<UnixStream> for crate::Socket {
-    fn from(socket: UnixStream) -> crate::Socket {
-        crate::Socket {
-            inner: socket.into_raw_fd(),
-        }
-    }
-}
-
+from!(crate::Socket, UnixStream);
 #[cfg(feature = "all")]
-impl From<UnixListener> for crate::Socket {
-    fn from(socket: UnixListener) -> crate::Socket {
-        crate::Socket {
-            inner: socket.into_raw_fd(),
-        }
-    }
-}
-
+from!(crate::Socket, UnixListener);
 #[cfg(feature = "all")]
-impl From<UnixDatagram> for crate::Socket {
-    fn from(socket: UnixDatagram) -> crate::Socket {
-        crate::Socket {
-            inner: socket.into_raw_fd(),
-        }
-    }
-}
+from!(crate::Socket, UnixDatagram);
 
 #[test]
 fn test_ip() {
