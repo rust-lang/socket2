@@ -948,35 +948,6 @@ pub struct Socket {
 }
 
 impl Socket {
-    unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
-    where
-        T: Copy,
-    {
-        let payload = &payload as *const T as *const c_void;
-        syscall!(setsockopt(
-            self.fd,
-            opt,
-            val,
-            payload,
-            mem::size_of::<T>() as libc::socklen_t,
-        ))?;
-        Ok(())
-    }
-
-    unsafe fn getsockopt<T: Copy>(&self, opt: c_int, val: c_int) -> io::Result<T> {
-        let mut slot: T = mem::zeroed();
-        let mut len = mem::size_of::<T>() as libc::socklen_t;
-        syscall!(getsockopt(
-            self.fd,
-            opt,
-            val,
-            &mut slot as *mut _ as *mut _,
-            &mut len,
-        ))?;
-        assert_eq!(len as usize, mem::size_of::<T>());
-        Ok(slot)
-    }
-
     pub fn inner(self) -> SysSocket {
         self.fd
     }

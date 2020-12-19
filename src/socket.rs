@@ -566,12 +566,6 @@ impl Socket {
             )
         }
     }
-
-    fn inner(&self) -> &sys::Socket {
-        // Safety: this is safe because `sys::Socket` has the
-        // `repr(transparent)` attribute.
-        unsafe { &*(&self.inner as *const sys::SysSocket as *const sys::Socket) }
-    }
 }
 
 /// Set `SOCK_CLOEXEC` and `NO_HANDLE_INHERIT` on the `ty`pe on platforms that

@@ -15,14 +15,13 @@ use std::sync::Once;
 use std::time::Duration;
 use std::{fmt, ptr};
 
-use winapi::ctypes::{c_char, c_long};
+use winapi::ctypes::c_long;
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
 use winapi::shared::mstcpip::{tcp_keepalive, SIO_KEEPALIVE_VALS};
 use winapi::shared::ntdef::HANDLE;
 use winapi::shared::ws2def;
-use winapi::shared::ws2ipdef::*;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::{self, INFINITE};
@@ -156,10 +155,6 @@ fn init() {
         // libstd will be sure to have initialized winsock.
         let _ = net::UdpSocket::bind("127.0.0.1:34254");
     });
-}
-
-fn last_error() -> io::Error {
-    io::Error::from_raw_os_error(unsafe { sock::WSAGetLastError() })
 }
 
 // TODO: rename to `Socket` once the struct `Socket` is no longer used.
@@ -658,38 +653,6 @@ pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     socket: SysSocket,
-}
-
-impl Socket {
-    unsafe fn setsockopt<T>(&self, opt: c_int, val: c_int, payload: T) -> io::Result<()>
-    where
-        T: Copy,
-    {
-        let payload = &payload as *const T as *const c_char;
-        if sock::setsockopt(self.socket, opt, val, payload, mem::size_of::<T>() as c_int) == 0 {
-            Ok(())
-        } else {
-            Err(last_error())
-        }
-    }
-
-    unsafe fn getsockopt<T: Copy>(&self, opt: c_int, val: c_int) -> io::Result<T> {
-        let mut slot: T = mem::zeroed();
-        let mut len = mem::size_of::<T>() as c_int;
-        if sock::getsockopt(
-            self.socket,
-            opt,
-            val,
-            &mut slot as *mut _ as *mut _,
-            &mut len,
-        ) == 0
-        {
-            assert_eq!(len as usize, mem::size_of::<T>());
-            Ok(slot)
-        } else {
-            Err(last_error())
-        }
-    }
 }
 
 impl fmt::Debug for Socket {
