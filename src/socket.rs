@@ -712,17 +712,6 @@ impl Socket {
         self.inner().set_multicast_if_v6(interface)
     }
 
-    /// Executes an operation of the `IP_ADD_MEMBERSHIP` type.
-    ///
-    /// This function specifies a new multicast group for this socket to join.
-    /// The address must be a valid multicast address, and `interface` is the
-    /// address of the local interface with which the system should join the
-    /// multicast group. If it's equal to `INADDR_ANY` then an appropriate
-    /// interface is chosen by the system.
-    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner().join_multicast_v4(multiaddr, interface)
-    }
-
     /// Executes an operation of the `IPV6_ADD_MEMBERSHIP` type.
     ///
     /// This function specifies a new multicast group for this socket to join.
@@ -730,16 +719,6 @@ impl Socket {
     /// index of the interface to join/leave (or 0 to indicate any interface).
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         self.inner().join_multicast_v6(multiaddr, interface)
-    }
-
-    /// Executes an operation of the `IP_DROP_MEMBERSHIP` type.
-    ///
-    /// For more information about this option, see
-    /// [`join_multicast_v4`][link].
-    ///
-    /// [link]: #method.join_multicast_v4
-    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
-        self.inner().leave_multicast_v4(multiaddr, interface)
     }
 
     /// Executes an operation of the `IPV6_DROP_MEMBERSHIP` type.
@@ -1006,6 +985,41 @@ fn into_linger(duration: Option<Duration>) -> sys::linger {
             l_onoff: 0,
             l_linger: 0,
         },
+    }
+}
+
+/// Socket options for IPv4 socket, get/set using `IPPROTO_IP`.
+///
+/// Additional documentation can be found in documentation of the OS.
+/// * Linux: <https://man7.org/linux/man-pages/man7/ip.7.html>
+/// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
+impl Socket {
+    /// Join a multicast group using `IP_ADD_MEMBERSHIP` option on this socket.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` is the
+    /// address of the local interface with which the system should join the
+    /// multicast group. If it's [`Ipv4Addr::UNSPECIFIED`] (`INADDR_ANY`) then
+    /// an appropriate interface is chosen by the system.
+    pub fn join_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+        let mreq = sys::IpMreq {
+            imr_multiaddr: sys::to_in_addr(multiaddr),
+            imr_interface: sys::to_in_addr(interface),
+        };
+        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_ADD_MEMBERSHIP, mreq) }
+    }
+
+    /// Leave a multicast group using `IP_DROP_MEMBERSHIP` option on this socket.
+    ///
+    /// For more information about this option, see [`join_multicast_v4`].
+    ///
+    /// [`join_multicast_v4`]: Socket::join_multicast_v4
+    pub fn leave_multicast_v4(&self, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+        let mreq = sys::IpMreq {
+            imr_multiaddr: sys::to_in_addr(multiaddr),
+            imr_interface: sys::to_in_addr(interface),
+        };
+        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_DROP_MEMBERSHIP, mreq) }
     }
 }
 
