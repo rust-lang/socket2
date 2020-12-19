@@ -783,11 +783,11 @@ impl crate::Socket {
 
     /// Get the value of the `SO_REUSEPORT` option on this socket.
     ///
-    /// For more information about this option, see [`reuse_port`].
+    /// For more information about this option, see [`set_reuse_port`].
     ///
     /// This function is only available on Unix.
     ///
-    /// [`reuse_port`]: Socket::reuse_port
+    /// [`set_reuse_port`]: Socket::set_reuse_port
     #[cfg(all(
         feature = "all",
         not(any(target_os = "solaris", target_os = "illumos"))
@@ -816,6 +816,42 @@ impl crate::Socket {
                 self.inner,
                 libc::SOL_SOCKET,
                 libc::SO_REUSEPORT,
+                reuse as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_FREEBIND` option on this socket.
+    ///
+    /// For more information about this option, see [`set_freebind`].
+    ///
+    /// This function is only available on Linux.
+    ///
+    /// [`set_freebind`]: Socket::set_freebind
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn freebind(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::IP_FREEBIND)
+                .map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set value for the `IP_FREEBIND` option on this socket.
+    ///
+    /// If enabled, this boolean option allows binding to an IP address that is
+    /// nonlocal or does not (yet) exist.  This permits listening on a socket,
+    /// without requiring the underlying network interface or the specified
+    /// dynamic IP address to be up at the time that the application is trying
+    /// to bind to it.
+    ///
+    /// This function is only available on Linux.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                libc::SOL_SOCKET,
+                libc::IP_FREEBIND,
                 reuse as c_int,
             )
         }
