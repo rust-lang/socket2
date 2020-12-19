@@ -54,10 +54,10 @@ pub(crate) use libc::MSG_TRUNC;
 pub(crate) use libc::MSG_OOB;
 pub(crate) use libc::{
     ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP,
-    IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_LOOP,
-    IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE,
-    SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO,
-    TCP_NODELAY,
+    IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF,
+    IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR,
+    SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
+    SO_SNDTIMEO, TCP_NODELAY,
 };
 #[cfg(all(
     feature = "all",
@@ -927,26 +927,16 @@ pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
     }
 }
 
+pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
+    Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     fd: SysSocket,
 }
 
 impl Socket {
-    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        unsafe {
-            let imr_interface: libc::in_addr =
-                self.getsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF)?;
-            Ok(from_in_addr(imr_interface))
-        }
-    }
-
-    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        let imr_interface = to_in_addr(interface);
-
-        unsafe { self.setsockopt(libc::IPPROTO_IP, libc::IP_MULTICAST_IF, imr_interface) }
-    }
-
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(libc::IPPROTO_IPV6, libc::IPV6_MULTICAST_IF)?;
@@ -1124,10 +1114,6 @@ pub(crate) fn close(fd: SysSocket) {
     unsafe {
         let _ = libc::close(fd);
     }
-}
-
-pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
-    Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
 }
 
 pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {

@@ -63,7 +63,8 @@ pub(crate) use winapi::shared::ws2def::{
 };
 pub(crate) use winapi::shared::ws2ipdef::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP,
-    IP_DROP_MEMBERSHIP, IP_MREQ as IpMreq, IP_MULTICAST_LOOP, IP_MULTICAST_TTL, IP_TTL,
+    IP_DROP_MEMBERSHIP, IP_MREQ as IpMreq, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
+    IP_TTL,
 };
 #[cfg(all(windows, feature = "all"))]
 pub(crate) use winapi::um::winsock2::MSG_OOB;
@@ -649,25 +650,16 @@ pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
     IN_ADDR { S_un: s_un }
 }
 
+pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
+    Ipv4Addr::from(unsafe { *in_addr.S_un.S_addr() }.to_ne_bytes())
+}
+
 #[repr(transparent)] // Required during rewriting.
 pub struct Socket {
     socket: SysSocket,
 }
 
 impl Socket {
-    pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
-        unsafe {
-            let imr_interface: IN_ADDR = self.getsockopt(IPPROTO_IP, IP_MULTICAST_IF)?;
-            Ok(from_in_addr(imr_interface))
-        }
-    }
-
-    pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
-        let imr_interface = to_in_addr(interface);
-
-        unsafe { self.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, imr_interface) }
-    }
-
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         unsafe {
             let raw: c_int = self.getsockopt(IPPROTO_IPV6 as c_int, IPV6_MULTICAST_IF)?;
@@ -790,10 +782,6 @@ pub(crate) fn close(socket: SysSocket) {
     unsafe {
         let _ = sock::closesocket(socket);
     }
-}
-
-pub(crate) fn from_in_addr(in_addr: IN_ADDR) -> Ipv4Addr {
-    Ipv4Addr::from(unsafe { *in_addr.S_un.S_addr() }.to_ne_bytes())
 }
 
 pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
