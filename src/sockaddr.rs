@@ -63,23 +63,23 @@ impl SockAddr {
     }
 
     /// Returns this address's family.
-    pub fn family(&self) -> sa_family_t {
+    pub const fn family(&self) -> sa_family_t {
         self.storage.ss_family
     }
 
     /// Returns the size of this address in bytes.
-    pub fn len(&self) -> socklen_t {
+    pub const fn len(&self) -> socklen_t {
         self.len
     }
 
     /// Returns a raw pointer to the address.
-    pub fn as_ptr(&self) -> *const sockaddr {
+    pub const fn as_ptr(&self) -> *const sockaddr {
         &self.storage as *const _ as *const _
     }
 
     /// Returns a raw pointer to the address storage.
     #[cfg(unix)]
-    pub(crate) fn as_storage_ptr(&self) -> *const sockaddr_storage {
+    pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
         &self.storage
     }
 
