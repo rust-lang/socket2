@@ -157,7 +157,6 @@ fn init() {
     });
 }
 
-// TODO: rename to `Socket` once the struct `Socket` is no longer used.
 pub(crate) type Socket = sock::SOCKET;
 
 pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Result<Socket> {

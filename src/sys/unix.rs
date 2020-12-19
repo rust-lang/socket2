@@ -136,14 +136,14 @@ const MAX_BUF_LEN: usize = <c_int>::max_value() as usize - 1;
 type IovLen = usize;
 
 #[cfg(any(
+    all(target_os = "linux", target_env = "musl"),
     target_os = "dragonfly",
     target_os = "freebsd",
-    all(target_os = "linux", target_env = "musl"),
-    target_vendor = "apple",
+    target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
-    target_os = "illumos",
+    target_vendor = "apple",
 ))]
 type IovLen = c_int;
 
@@ -352,7 +352,6 @@ impl SockAddr {
     }
 }
 
-// TODO: rename to `Socket` once the struct `Socket` is no longer used.
 pub(crate) type Socket = c_int;
 
 pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
