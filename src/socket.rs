@@ -485,25 +485,6 @@ impl Socket {
         sys::send_to_vectored(self.inner, bufs, addr, flags)
     }
 
-    /// Gets the value of the `IP_TTL` option for this socket.
-    ///
-    /// For more information about this option, see [`set_ttl`].
-    ///
-    /// [`set_ttl`]: Socket::set_ttl
-    pub fn ttl(&self) -> io::Result<u32> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
-        }
-    }
-
-    /// Sets the value for the `IP_TTL` option on this socket.
-    ///
-    /// This value sets the time-to-live field that is used in every packet sent
-    /// from this socket.
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
-    }
-
     /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
     ///
     /// Specifies the hop limit for ipv6 unicast packets
@@ -559,33 +540,6 @@ impl Socket {
         }
     }
 
-    /// Gets the value of the `IP_MULTICAST_LOOP` option for this socket.
-    ///
-    /// For more information about this option, see [`set_multicast_loop_v4`].
-    ///
-    /// [`set_multicast_loop_v4`]: Socket::set_multicast_loop_v4
-    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
-                .map(|loop_v4| loop_v4 != 0)
-        }
-    }
-
-    /// Sets the value of the `IP_MULTICAST_LOOP` option for this socket.
-    ///
-    /// If enabled, multicast packets will be looped back to the local socket.
-    /// Note that this may not have any affect on IPv6 sockets.
-    pub fn set_multicast_loop_v4(&self, loop_v4: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_IP,
-                sys::IP_MULTICAST_LOOP,
-                loop_v4 as c_int,
-            )
-        }
-    }
-
     /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
     ///
     /// For more information about this option, see [`set_multicast_loop_v6`].
@@ -609,36 +563,6 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_MULTICAST_LOOP,
                 loop_v6 as c_int,
-            )
-        }
-    }
-
-    /// Gets the value of the `IP_MULTICAST_TTL` option for this socket.
-    ///
-    /// For more information about this option, see [`set_multicast_ttl_v4`].
-    ///
-    /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
-    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
-                .map(|ttl| ttl as u32)
-        }
-    }
-
-    /// Sets the value of the `IP_MULTICAST_TTL` option for this socket.
-    ///
-    /// Indicates the time-to-live value of outgoing multicast packets for
-    /// this socket. The default value is 1 which means that multicast packets
-    /// don't leave the local network unless explicitly requested.
-    ///
-    /// Note that this may not have any affect on IPv6 sockets.
-    pub fn set_multicast_ttl_v4(&self, ttl: u32) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_IP,
-                sys::IP_MULTICAST_TTL,
-                ttl as c_int,
             )
         }
     }
@@ -1020,6 +944,82 @@ impl Socket {
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
         let interface = sys::to_in_addr(interface);
         unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_IF, interface) }
+    }
+
+    /// Get the value of the `IP_MULTICAST_LOOP` option for this socket.
+    ///
+    /// For more information about this option, see [`set_multicast_loop_v4`].
+    ///
+    /// [`set_multicast_loop_v4`]: Socket::set_multicast_loop_v4
+    pub fn multicast_loop_v4(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
+                .map(|loop_v4| loop_v4 != 0)
+        }
+    }
+
+    /// Set the value of the `IP_MULTICAST_LOOP` option for this socket.
+    ///
+    /// If enabled, multicast packets will be looped back to the local socket.
+    /// Note that this may not have any affect on IPv6 sockets.
+    pub fn set_multicast_loop_v4(&self, loop_v4: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IP,
+                sys::IP_MULTICAST_LOOP,
+                loop_v4 as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// For more information about this option, see [`set_multicast_ttl_v4`].
+    ///
+    /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
+    pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
+                .map(|ttl| ttl as u32)
+        }
+    }
+
+    /// Set the value of the `IP_MULTICAST_TTL` option for this socket.
+    ///
+    /// Indicates the time-to-live value of outgoing multicast packets for
+    /// this socket. The default value is 1 which means that multicast packets
+    /// don't leave the local network unless explicitly requested.
+    ///
+    /// Note that this may not have any affect on IPv6 sockets.
+    pub fn set_multicast_ttl_v4(&self, ttl: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IP,
+                sys::IP_MULTICAST_TTL,
+                ttl as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_TTL` option for this socket.
+    ///
+    /// For more information about this option, see [`set_ttl`].
+    ///
+    /// [`set_ttl`]: Socket::set_ttl
+    pub fn ttl(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
+        }
+    }
+
+    /// Set the value of the `IP_TTL` option for this socket.
+    ///
+    /// This value sets the time-to-live field that is used in every packet sent
+    /// from this socket.
+    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
+        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
 }
 
