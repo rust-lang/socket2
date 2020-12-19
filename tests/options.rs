@@ -93,6 +93,8 @@ test!(
     set_read_timeout(Some(Duration::from_secs(10)))
 );
 test!(keepalive, set_keepalive(true));
+#[cfg(all(feature = "all", target_os = "linux"))]
+test!(freebind, set_freebind(true));
 
 test!(IPv4 ttl, set_ttl(40));
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
