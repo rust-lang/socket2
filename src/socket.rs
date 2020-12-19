@@ -643,6 +643,52 @@ impl Socket {
     }
 }
 
+/// Set `SOCK_CLOEXEC` and `NO_HANDLE_INHERIT` on the `ty`pe on platforms that
+/// support it.
+#[inline(always)]
+fn set_common_type(ty: Type) -> Type {
+    // On platforms that support it set `SOCK_CLOEXEC`.
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    ))]
+    let ty = ty._cloexec();
+
+    // On windows set `NO_HANDLE_INHERIT`.
+    #[cfg(windows)]
+    let ty = ty._no_inherit();
+
+    ty
+}
+
+/// Set `FD_CLOEXEC` and `NOSIGPIPE` on the `socket` for platforms that need it.
+#[inline(always)]
+fn set_common_flags(socket: Socket) -> io::Result<Socket> {
+    // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        ))
+    ))]
+    socket._set_cloexec(true)?;
+
+    // On Apple platforms set `NOSIGPIPE`.
+    #[cfg(target_vendor = "apple")]
+    socket._set_nosigpipe(true)?;
+
+    Ok(socket)
+}
+
 /// Socket options get/set using `SOL_SOCKET`.
 ///
 /// Additional documentation can be found in documentation of the OS.
@@ -1159,52 +1205,6 @@ impl Socket {
             )
         }
     }
-}
-
-/// Set `SOCK_CLOEXEC` and `NO_HANDLE_INHERIT` on the `ty`pe on platforms that
-/// support it.
-#[inline(always)]
-fn set_common_type(ty: Type) -> Type {
-    // On platforms that support it set `SOCK_CLOEXEC`.
-    #[cfg(any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "openbsd",
-    ))]
-    let ty = ty._cloexec();
-
-    // On windows set `NO_HANDLE_INHERIT`.
-    #[cfg(windows)]
-    let ty = ty._no_inherit();
-
-    ty
-}
-
-/// Set `FD_CLOEXEC` and `NOSIGPIPE` on the `socket` for platforms that need it.
-#[inline(always)]
-fn set_common_flags(socket: Socket) -> io::Result<Socket> {
-    // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
-    #[cfg(all(
-        unix,
-        not(any(
-            target_os = "android",
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_os = "openbsd",
-        ))
-    ))]
-    socket._set_cloexec(true)?;
-
-    // On Apple platforms set `NOSIGPIPE`.
-    #[cfg(target_vendor = "apple")]
-    socket._set_nosigpipe(true)?;
-
-    Ok(socket)
 }
 
 impl Read for Socket {
