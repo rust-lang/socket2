@@ -776,7 +776,7 @@ impl crate::Socket {
     ///
     /// # Notes
     ///
-    /// On supported platforms you can use [`Protocol::cloexec`].
+    /// On supported platforms you can use [`Type::cloexec`].
     #[cfg(feature = "all")]
     pub fn set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {
         self._set_cloexec(close_on_exec)
@@ -816,7 +816,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_mss`].
     ///
-    /// [set_mss]: Socket::set_mss
+    /// [`set_mss`]: crate::Socket::set_mss
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn mss(&self) -> io::Result<u32> {
         unsafe {
@@ -874,7 +874,7 @@ impl crate::Socket {
     ///
     /// This function is only available on Unix.
     ///
-    /// [`set_reuse_port`]: Socket::set_reuse_port
+    /// [`set_reuse_port`]: crate::Socket::set_reuse_port
     #[cfg(all(
         feature = "all",
         not(any(target_os = "solaris", target_os = "illumos"))
