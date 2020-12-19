@@ -567,27 +567,6 @@ impl Socket {
         }
     }
 
-    /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_if_v6`][link].
-    ///
-    /// [link]: #method.set_multicast_if_v6
-    ///
-    /// Returns the interface to use for routing multicast packets.
-    pub fn multicast_if_v6(&self) -> io::Result<u32> {
-        self.inner().multicast_if_v6()
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_IF` option for this socket.
-    ///
-    /// Specifies the interface to use for routing multicast packets. Unlike ipv4, this
-    /// is generally required in ipv6 contexts where network routing prefixes may
-    /// overlap.
-    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
-        self.inner().set_multicast_if_v6(interface)
-    }
-
     fn inner(&self) -> &sys::Socket {
         // Safety: this is safe because `sys::Socket` has the
         // `repr(transparent)` attribute.
@@ -1075,10 +1054,9 @@ impl Socket {
 
     /// Get the value of the `IPV6_MULTICAST_HOPS` option for this socket
     ///
-    /// For more information about this option, see
-    /// [`set_multicast_hops_v6`][link].
+    /// For more information about this option, see [`set_multicast_hops_v6`].
     ///
-    /// [link]: #method.set_multicast_hops_v6
+    /// [`set_multicast_hops_v6`]: Socket::set_multicast_hops_v6
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_HOPS)
@@ -1098,6 +1076,34 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_MULTICAST_HOPS,
                 hops as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_MULTICAST_IF` option for this socket.
+    ///
+    /// For more information about this option, see [`set_multicast_if_v6`].
+    ///
+    /// [`set_multicast_if_v6`]: Socket::set_multicast_if_v6
+    pub fn multicast_if_v6(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_IF)
+                .map(|interface| interface as u32)
+        }
+    }
+
+    /// Set the value of the `IPV6_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets. Unlike
+    /// ipv4, this is generally required in ipv6 contexts where network routing
+    /// prefixes may overlap.
+    pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MULTICAST_IF,
+                interface as c_int,
             )
         }
     }
