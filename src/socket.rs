@@ -567,35 +567,6 @@ impl Socket {
         }
     }
 
-    /// Gets the value of the `IPV6_MULTICAST_HOPS` option for this socket
-    ///
-    /// For more information about this option, see
-    /// [`set_multicast_hops_v6`][link].
-    ///
-    /// [link]: #method.set_multicast_hops_v6
-    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_HOPS)
-                .map(|hops| hops as u32)
-        }
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_HOPS` option for this socket
-    ///
-    /// Indicates the number of "routers" multicast packets will transit for
-    /// this socket. The default value is 1 which means that multicast packets
-    /// don't leave the local network unless explicitly requested.
-    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_IPV6,
-                sys::IPV6_MULTICAST_HOPS,
-                hops as c_int,
-            )
-        }
-    }
-
     /// Gets the value of the `IPV6_MULTICAST_IF` option for this socket.
     ///
     /// For more information about this option, see
@@ -1098,6 +1069,35 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_DROP_MEMBERSHIP,
                 mreq,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    ///
+    /// For more information about this option, see
+    /// [`set_multicast_hops_v6`][link].
+    ///
+    /// [link]: #method.set_multicast_hops_v6
+    pub fn multicast_hops_v6(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_HOPS)
+                .map(|hops| hops as u32)
+        }
+    }
+
+    /// Set the value of the `IPV6_MULTICAST_HOPS` option for this socket
+    ///
+    /// Indicates the number of "routers" multicast packets will transit for
+    /// this socket. The default value is 1 which means that multicast packets
+    /// don't leave the local network unless explicitly requested.
+    pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MULTICAST_HOPS,
+                hops as c_int,
             )
         }
     }
