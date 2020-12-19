@@ -484,88 +484,6 @@ impl Socket {
     ) -> io::Result<usize> {
         sys::send_to_vectored(self.inner, bufs, addr, flags)
     }
-
-    /// Gets the value of the `IPV6_UNICAST_HOPS` option for this socket.
-    ///
-    /// Specifies the hop limit for ipv6 unicast packets
-    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_UNICAST_HOPS)
-                .map(|hops| hops as u32)
-        }
-    }
-
-    /// Sets the value for the `IPV6_UNICAST_HOPS` option on this socket.
-    ///
-    /// Specifies the hop limit for ipv6 unicast packets
-    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_IPV6,
-                sys::IPV6_UNICAST_HOPS,
-                hops as c_int,
-            )
-        }
-    }
-
-    /// Gets the value of the `IPV6_V6ONLY` option for this socket.
-    ///
-    /// For more information about this option, see [`set_only_v6`].
-    ///
-    /// [`set_only_v6`]: Socket::set_only_v6
-    pub fn only_v6(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
-                .map(|only_v6| only_v6 != 0)
-        }
-    }
-
-    /// Sets the value for the `IPV6_V6ONLY` option on this socket.
-    ///
-    /// If this is set to `true` then the socket is restricted to sending and
-    /// receiving IPv6 packets only. In this case two IPv4 and IPv6 applications
-    /// can bind the same port at the same time.
-    ///
-    /// If this is set to `false` then the socket can be used to send and
-    /// receive packets from an IPv4-mapped IPv6 address.
-    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_IPV6,
-                sys::IPV6_V6ONLY,
-                only_v6 as c_int,
-            )
-        }
-    }
-
-    /// Gets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
-    ///
-    /// For more information about this option, see [`set_multicast_loop_v6`].
-    ///
-    /// [`set_multicast_loop_v6`]: Socket::set_multicast_loop_v6
-    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_LOOP)
-                .map(|loop_v6| loop_v6 != 0)
-        }
-    }
-
-    /// Sets the value of the `IPV6_MULTICAST_LOOP` option for this socket.
-    ///
-    /// Controls whether this socket sees the multicast packets it sends itself.
-    /// Note that this may not have any affect on IPv4 sockets.
-    pub fn set_multicast_loop_v6(&self, loop_v6: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                sys::IPPROTO_IPV6,
-                sys::IPV6_MULTICAST_LOOP,
-                loop_v6 as c_int,
-            )
-        }
-    }
 }
 
 /// Set `SOCK_CLOEXEC` and `NO_HANDLE_INHERIT` on the `ty`pe on platforms that
@@ -1098,6 +1016,88 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_MULTICAST_IF,
                 interface as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// For more information about this option, see [`set_multicast_loop_v6`].
+    ///
+    /// [`set_multicast_loop_v6`]: Socket::set_multicast_loop_v6
+    pub fn multicast_loop_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_LOOP)
+                .map(|loop_v6| loop_v6 != 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_MULTICAST_LOOP` option for this socket.
+    ///
+    /// Controls whether this socket sees the multicast packets it sends itself.
+    /// Note that this may not have any affect on IPv4 sockets.
+    pub fn set_multicast_loop_v6(&self, loop_v6: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MULTICAST_LOOP,
+                loop_v6 as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_UNICAST_HOPS` option for this socket.
+    ///
+    /// Specifies the hop limit for ipv6 unicast packets
+    pub fn unicast_hops_v6(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_UNICAST_HOPS)
+                .map(|hops| hops as u32)
+        }
+    }
+
+    /// Set the value for the `IPV6_UNICAST_HOPS` option on this socket.
+    ///
+    /// Specifies the hop limit for ipv6 unicast packets
+    pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_UNICAST_HOPS,
+                hops as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_V6ONLY` option for this socket.
+    ///
+    /// For more information about this option, see [`set_only_v6`].
+    ///
+    /// [`set_only_v6`]: Socket::set_only_v6
+    pub fn only_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
+                .map(|only_v6| only_v6 != 0)
+        }
+    }
+
+    /// Set the value for the `IPV6_V6ONLY` option on this socket.
+    ///
+    /// If this is set to `true` then the socket is restricted to sending and
+    /// receiving IPv6 packets only. In this case two IPv4 and IPv6 applications
+    /// can bind the same port at the same time.
+    ///
+    /// If this is set to `false` then the socket can be used to send and
+    /// receive packets from an IPv4-mapped IPv6 address.
+    pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IPV6,
+                sys::IPV6_V6ONLY,
+                only_v6 as c_int,
             )
         }
     }
