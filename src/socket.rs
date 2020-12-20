@@ -82,6 +82,8 @@ impl Socket {
     /// the socket is made non-inheritable.
     ///
     /// [`Socket::new_raw`] can be used if you don't want these flags to be set.
+    ///
+    #[doc = man_links!(socket(2))]
     pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let ty = set_common_type(ty);
         Socket::new_raw(domain, ty, protocol).and_then(set_common_flags)
@@ -91,6 +93,8 @@ impl Socket {
     ///
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
     /// Windows and simply creates a new socket, no other configuration is done.
+    ///
+    #[doc = man_links!(socket(2))]
     pub fn new_raw(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         sys::socket(domain.0, ty.0, protocol).map(|inner| Socket { inner })
@@ -106,6 +110,8 @@ impl Socket {
     /// # Notes
     ///
     /// This function is only available on Unix.
+    ///
+    #[doc = man_links!(socketpair(2))]
     #[cfg(all(feature = "all", unix))]
     pub fn pair(
         domain: Domain,
@@ -126,6 +132,8 @@ impl Socket {
     /// # Notes
     ///
     /// This function is only available on Unix.
+    ///
+    #[doc = man_links!(socketpair(2))]
     #[cfg(all(feature = "all", unix))]
     pub fn pair_raw(
         domain: Domain,
@@ -141,6 +149,8 @@ impl Socket {
     ///
     /// This function directly corresponds to the `bind(2)` function on Windows
     /// and Unix.
+    ///
+    #[doc = man_links!(bind(2))]
     pub fn bind(&self, address: &SockAddr) -> io::Result<()> {
         sys::bind(self.inner, address)
     }
@@ -159,6 +169,8 @@ impl Socket {
     /// non-blocking mode before calling this function), socket option can't be
     /// set *while connecting*. This will cause errors on Windows. Socket
     /// options can be safely set before and after connecting the socket.
+    ///
+    #[doc = man_links!(connect(2))]
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
         sys::connect(self.inner, address)
     }
@@ -171,6 +183,8 @@ impl Socket {
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
+    ///
+    #[doc = man_links!(listen(2))]
     pub fn listen(&self, backlog: i32) -> io::Result<()> {
         sys::listen(self.inner, backlog)
     }
@@ -182,6 +196,8 @@ impl Socket {
     ///
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::accept_raw`] can be used if you don't want to set those flags.
+    ///
+    #[doc = man_links!(accept(2))]
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         // Use `accept4` on platforms that support it.
         #[cfg(any(
@@ -213,6 +229,8 @@ impl Socket {
     ///
     /// This function directly corresponds to the `accept(2)` function on
     /// Windows and Unix.
+    ///
+    #[doc = man_links!(accept(2))]
     pub fn accept_raw(&self) -> io::Result<(Socket, SockAddr)> {
         sys::accept(self.inner).map(|(inner, addr)| (Socket { inner }, addr))
     }
@@ -225,6 +243,8 @@ impl Socket {
     /// [bound].
     ///
     /// [bound]: Socket::bind
+    ///
+    #[doc = man_links!(getsockname(2))]
     pub fn local_addr(&self) -> io::Result<SockAddr> {
         sys::getsockname(self.inner)
     }
@@ -236,6 +256,8 @@ impl Socket {
     /// This returns an error if the socket is not [`connect`ed].
     ///
     /// [`connect`ed]: Socket::connect
+    ///
+    #[doc = man_links!(getpeername(2))]
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
         sys::getpeername(self.inner)
     }
@@ -253,6 +275,8 @@ impl Socket {
     /// On Windows this can **not** be used function cannot be used on a
     /// QOS-enabled socket, see
     /// <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw>.
+    ///
+    #[doc = man_links!(dup(2))] // FIXME: Windows link to WSADuplicateSocketW.
     pub fn try_clone(&self) -> io::Result<Socket> {
         sys::try_clone(self.inner).map(|inner| Socket { inner })
     }
@@ -273,6 +297,8 @@ impl Socket {
     ///
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
+    ///
+    #[doc = man_links!(shutdown(2))]
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         sys::shutdown(self.inner, how)
     }
@@ -284,6 +310,8 @@ impl Socket {
     /// This method might fail if the socket is not connected.
     ///
     /// [`connect`]: Socket::connect
+    ///
+    #[doc = man_links!(recv(2))]
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.recv_with_flags(buf, 0)
     }
@@ -295,6 +323,8 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`out_of_band_inline`]: Socket::out_of_band_inline
+    ///
+    #[doc = man_links!(recv(2))]
     #[cfg(feature = "all")]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_OOB)
@@ -304,6 +334,8 @@ impl Socket {
     /// the underlying `recv` call.
     ///
     /// [`recv`]: Socket::recv
+    ///
+    #[doc = man_links!(recv(2))]
     pub fn recv_with_flags(&self, buf: &mut [u8], flags: sys::c_int) -> io::Result<usize> {
         sys::recv(self.inner, buf, flags)
     }
@@ -320,6 +352,8 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`connect`]: Socket::connect
+    ///
+    #[doc = man_links!(recvmsg(2))] // FIXME: on Windows link to WSARecv.
     #[cfg(not(target_os = "redox"))]
     pub fn recv_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<(usize, RecvFlags)> {
         self.recv_vectored_with_flags(bufs, 0)
@@ -329,6 +363,8 @@ impl Socket {
     /// flags to the underlying `recvmsg`/`WSARecv` call.
     ///
     /// [`recv_vectored`]: Socket::recv_vectored
+    ///
+    #[doc = man_links!(recvmsg(2))] // FIXME: on Windows link to WSARecv.
     #[cfg(not(target_os = "redox"))]
     pub fn recv_vectored_with_flags(
         &self,
@@ -344,12 +380,16 @@ impl Socket {
     ///
     /// Successive calls return the same data. This is accomplished by passing
     /// `MSG_PEEK` as a flag to the underlying `recv` system call.
+    ///
+    #[doc = man_links!(recv(2))]
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_PEEK)
     }
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
+    ///
+    #[doc = man_links!(recvfrom(2))]
     pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recv_from_with_flags(buf, 0)
     }
@@ -358,6 +398,8 @@ impl Socket {
     /// flags to the underlying `recvfrom` call.
     ///
     /// [`recv_from`]: Socket::recv_from
+    ///
+    #[doc = man_links!(recvfrom(2))]
     pub fn recv_from_with_flags(
         &self,
         buf: &mut [u8],
@@ -371,6 +413,8 @@ impl Socket {
     /// [`recv_from`] this allows passing multiple buffers.
     ///
     /// [`recv_from`]: Socket::recv_from
+    ///
+    #[doc = man_links!(recvmsg(2))] // FIXME: fix Windows link.
     #[cfg(not(target_os = "redox"))]
     pub fn recv_from_vectored(
         &self,
@@ -383,6 +427,8 @@ impl Socket {
     /// arbitrary flags to the underlying `recvmsg`/`WSARecvFrom` call.
     ///
     /// [`recv_from_vectored`]: Socket::recv_from_vectored
+    ///
+    #[doc = man_links!(recvmsg(2))] // FIXME: fix Windows link.
     #[cfg(not(target_os = "redox"))]
     pub fn recv_from_vectored_with_flags(
         &self,
@@ -399,6 +445,8 @@ impl Socket {
     ///
     /// On success, returns the number of bytes peeked and the address from
     /// whence the data came.
+    ///
+    #[doc = man_links!(recv(2))]
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
         self.recv_from_with_flags(buf, sys::MSG_PEEK)
     }
@@ -409,6 +457,8 @@ impl Socket {
     /// been connected.
     ///
     /// On success returns the number of bytes that were sent.
+    ///
+    #[doc = man_links!(send(2))]
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
         self.send_with_flags(buf, 0)
     }
@@ -417,11 +467,15 @@ impl Socket {
     /// `send` call.
     ///
     /// [`send`]: #method.send
+    ///
+    #[doc = man_links!(send(2))]
     pub fn send_with_flags(&self, buf: &[u8], flags: i32) -> io::Result<usize> {
         sys::send(self.inner, buf, flags)
     }
 
     /// Send data to the connected peer. Returns the amount of bytes written.
+    ///
+    #[doc = man_links!(sendmsg(2))] // FIXME: Windows link.
     #[cfg(not(target_os = "redox"))]
     pub fn send_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         self.send_vectored_with_flags(bufs, 0)
@@ -431,6 +485,8 @@ impl Socket {
     /// flags to the underlying `sendmsg`/`WSASend` call.
     ///
     /// [`send_vectored`]: Socket::send_vectored
+    ///
+    #[doc = man_links!(sendmsg(2))] // FIXME: Windows link.
     #[cfg(not(target_os = "redox"))]
     pub fn send_vectored_with_flags(&self, bufs: &[IoSlice<'_>], flags: i32) -> io::Result<usize> {
         sys::send_vectored(self.inner, bufs, flags)
@@ -443,6 +499,8 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     /// [`out_of_band_inline`]: #method.out_of_band_inline
+    ///
+    #[doc = man_links!(send(2))]
     #[cfg(feature = "all")]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
         self.send_with_flags(buf, sys::MSG_OOB)
@@ -452,6 +510,8 @@ impl Socket {
     /// number of bytes written.
     ///
     /// This is typically used on UDP or datagram-oriented sockets.
+    ///
+    #[doc = man_links!(sendto(2))]
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         self.send_to_with_flags(buf, addr, 0)
     }
@@ -460,12 +520,16 @@ impl Socket {
     /// to the underlying `sendto` call.
     ///
     /// [`send_to`]: Socket::send_to
+    ///
+    #[doc = man_links!(sendto(2))]
     pub fn send_to_with_flags(&self, buf: &[u8], addr: &SockAddr, flags: i32) -> io::Result<usize> {
         sys::send_to(self.inner, buf, addr, flags)
     }
 
     /// Send data to a peer listening on `addr`. Returns the amount of bytes
     /// written.
+    ///
+    #[doc = man_links!(sendmsg(2))] // FIXME: windows link.
     #[cfg(not(target_os = "redox"))]
     pub fn send_to_vectored(&self, bufs: &[IoSlice<'_>], addr: &SockAddr) -> io::Result<usize> {
         self.send_to_vectored_with_flags(bufs, addr, 0)
@@ -475,6 +539,8 @@ impl Socket {
     /// arbitrary flags to the underlying `sendmsg`/`WSASendTo` call.
     ///
     /// [`send_to_vectored`]: Socket::send_to_vectored
+    ///
+    #[doc = man_links!(sendmsg(2))] // FIXME: windows link.
     #[cfg(not(target_os = "redox"))]
     pub fn send_to_vectored_with_flags(
         &self,
