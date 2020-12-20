@@ -721,14 +721,14 @@ pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
     Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
 }
 
-pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> libc::in6_addr {
-    let mut ret: libc::in6_addr = unsafe { mem::zeroed() };
+pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
+    let mut ret: in6_addr = unsafe { mem::zeroed() };
     ret.s6_addr = addr.octets();
     return ret;
 }
 
-pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
-    Ipv6Addr::from(in6_addr.s6_addr)
+pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
+    Ipv6Addr::from(addr.s6_addr)
 }
 
 /// Unix only API.
@@ -1049,12 +1049,23 @@ from!(crate::Socket, UnixListener);
 from!(crate::Socket, UnixDatagram);
 
 #[test]
-fn test_ip() {
+fn in_addr_convertion() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
-    assert_eq!(ip, from_in_addr(to_in_addr(&ip)));
+    let raw = to_in_addr(&ip);
+    assert_eq!(raw.s_addr, 127 << 0 | 1 << 24);
+    assert_eq!(from_in_addr(raw), ip);
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
-    let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
-    assert_eq!(to_in_addr(&ip).s_addr, want);
-    assert_eq!(from_in_addr(in_addr { s_addr: want }), ip);
+    let raw = to_in_addr(&ip);
+    assert_eq!(raw.s_addr, 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24);
+    assert_eq!(from_in_addr(raw), ip);
+}
+
+#[test]
+fn in6_addr_convertion() {
+    let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
+    let raw = to_in6_addr(&ip);
+    let want = [32, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7];
+    assert_eq!(raw.s6_addr, want);
+    assert_eq!(from_in6_addr(raw), ip);
 }

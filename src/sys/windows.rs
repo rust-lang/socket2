@@ -632,8 +632,8 @@ pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
     ret
 }
 
-pub(crate) fn from_in6_addr(in6_addr: in6_addr) -> Ipv6Addr {
-    Ipv6Addr::from(*unsafe { in6_addr.u.Byte() })
+pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
+    Ipv6Addr::from(*unsafe { addr.u.Byte() })
 }
 
 /// Windows only API.
@@ -686,24 +686,25 @@ impl FromRawSocket for crate::Socket {
 }
 
 #[test]
-fn test_ipv4() {
+fn in_addr_convertion() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
-    assert_eq!(ip, from_in_addr(to_in_addr(&ip)));
+    let raw = to_in_addr(&ip);
+    assert_eq!(unsafe { *raw.S_un.S_addr() }, 127 << 0 | 1 << 24);
+    assert_eq!(from_in_addr(raw), ip);
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
-    let want = 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24;
-    assert_eq!(unsafe { *to_in_addr(&ip).S_un.S_addr() }, want);
-    let mut addr: in_addr_S_un = unsafe { mem::zeroed() };
-    unsafe { *(addr.S_addr_mut()) = want };
-    assert_eq!(from_in_addr(IN_ADDR { S_un: addr }), ip);
+    let raw = to_in_addr(&ip);
+    assert_eq!(
+        unsafe { *raw.S_un.S_addr() },
+        127 << 0 | 34 << 8 | 4 << 16 | 12 << 24
+    );
+    assert_eq!(from_in_addr(raw), ip);
 }
 
 #[test]
-fn test_ipv6() {
+fn in6_addr_convertion() {
     let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
-    assert_eq!(ip, from_in6_addr(to_in6_addr(&ip)));
-
-    let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
+    let raw = to_in6_addr(&ip);
     let want = [
         0x2000u16.to_be(),
         1u16.to_be(),
@@ -714,8 +715,6 @@ fn test_ipv6() {
         6u16.to_be(),
         7u16.to_be(),
     ];
-    assert_eq!(unsafe { *to_in6_addr(&ip).u.Word() }, want);
-    let mut addr: in6_addr_u = unsafe { mem::zeroed() };
-    unsafe { *(addr.Word_mut()) = want };
-    assert_eq!(from_in6_addr(IN6_ADDR { u: addr }), ip);
+    assert_eq!(unsafe { *raw.u.Word() }, want);
+    assert_eq!(from_in6_addr(raw), ip);
 }
