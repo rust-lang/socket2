@@ -7,15 +7,12 @@ use std::io::Read;
 use std::io::Write;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
-#[cfg(feature = "all")]
-use std::net::{Ipv4Addr, SocketAddrV4};
-use std::net::{Ipv6Addr, SocketAddr, SocketAddrV6};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
 use std::str;
-#[cfg(feature = "all")]
 use std::thread;
 use std::time::Duration;
 #[cfg(all(unix, feature = "all"))]
@@ -28,9 +25,7 @@ use winapi::um::handleapi::GetHandleInformation;
 #[cfg(windows)]
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-#[cfg(feature = "all")]
-use socket2::SockAddr;
-use socket2::{Domain, Protocol, Socket, TcpKeepalive, Type};
+use socket2::{Domain, Protocol, SockAddr, Socket, TcpKeepalive, Type};
 
 #[test]
 fn domain_for_address() {
@@ -305,7 +300,6 @@ where
     assert_eq!(flags, want as _, "non-blocking option");
 }
 
-#[cfg(feature = "all")]
 const DATA: &[u8] = b"hello world";
 
 #[test]
@@ -346,7 +340,6 @@ fn unix() {
 }
 
 #[test]
-#[cfg(feature = "all")]
 fn out_of_band() {
     let listener = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     listener.bind(&any_ipv4()).unwrap();
@@ -646,7 +639,6 @@ fn device() {
     }
 }
 
-#[cfg(feature = "all")]
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }

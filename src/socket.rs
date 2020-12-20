@@ -295,7 +295,6 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`out_of_band_inline`]: Socket::out_of_band_inline
-    #[cfg(feature = "all")]
     pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_OOB)
     }
@@ -443,7 +442,6 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     /// [`out_of_band_inline`]: #method.out_of_band_inline
-    #[cfg(feature = "all")]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
         self.send_with_flags(buf, sys::MSG_OOB)
     }

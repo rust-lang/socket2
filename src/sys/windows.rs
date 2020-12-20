@@ -66,9 +66,7 @@ pub(crate) use winapi::shared::ws2ipdef::{
     IP_DROP_MEMBERSHIP, IP_MREQ as IpMreq, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
     IP_TTL,
 };
-#[cfg(all(windows, feature = "all"))]
-pub(crate) use winapi::um::winsock2::MSG_OOB;
-pub(crate) use winapi::um::winsock2::{linger, MSG_PEEK};
+pub(crate) use winapi::um::winsock2::{linger, MSG_OOB, MSG_PEEK};
 pub(crate) const IPPROTO_IPV6: c_int = winapi::shared::ws2def::IPPROTO_IPV6 as c_int;
 
 /// Type used in set/getsockopt to retrieve the `TCP_NODELAY` option.
