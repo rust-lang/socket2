@@ -2,16 +2,24 @@
 use std::ffi::CStr;
 #[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
+#[cfg(all(unix, feature = "all"))]
+use std::io::Read;
 use std::io::Write;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
+#[cfg(feature = "all")]
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::net::{Ipv6Addr, SocketAddr, SocketAddrV6};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
 use std::str;
+#[cfg(feature = "all")]
+use std::thread;
 use std::time::Duration;
+#[cfg(all(unix, feature = "all"))]
+use std::{env, fs};
 
 #[cfg(windows)]
 use winapi::shared::minwindef::DWORD;
@@ -20,7 +28,7 @@ use winapi::um::handleapi::GetHandleInformation;
 #[cfg(windows)]
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-#[cfg(all(unix, feature = "all"))]
+#[cfg(feature = "all")]
 use socket2::SockAddr;
 use socket2::{Domain, Protocol, Socket, TcpKeepalive, Type};
 
@@ -297,6 +305,77 @@ where
     assert_eq!(flags, want as _, "non-blocking option");
 }
 
+#[cfg(feature = "all")]
+const DATA: &[u8] = b"hello world";
+
+#[test]
+#[cfg(all(feature = "all", unix))]
+fn pair() {
+    let (mut a, mut b) = Socket::pair(Domain::UNIX, Type::STREAM, None).unwrap();
+    a.write(DATA).unwrap();
+    let mut buf = [0; DATA.len() + 1];
+    let n = b.read(&mut buf).unwrap();
+    assert_eq!(n, DATA.len());
+    assert_eq!(&buf[..n], DATA);
+}
+
+#[test]
+#[cfg(all(feature = "all", unix))]
+fn unix() {
+    let mut path = env::temp_dir();
+    path.push("socket2");
+    let _ = fs::remove_dir_all(&path);
+    fs::create_dir_all(&path).unwrap();
+    path.push("unix");
+
+    let addr = SockAddr::unix(path).unwrap();
+
+    let listener = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
+    listener.bind(&addr).unwrap();
+    listener.listen(10).unwrap();
+
+    let mut a = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
+    a.connect(&addr).unwrap();
+    let mut b = listener.accept().unwrap().0;
+
+    a.write(DATA).unwrap();
+    let mut buf = [0; DATA.len() + 1];
+    let n = b.read(&mut buf).unwrap();
+    assert_eq!(n, DATA.len());
+    assert_eq!(&buf[..n], DATA);
+}
+
+#[test]
+#[cfg(feature = "all")]
+fn out_of_band() {
+    let listener = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    listener.bind(&any_ipv4()).unwrap();
+    listener.listen(1).unwrap();
+
+    let sender = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    sender.bind(&any_ipv4()).unwrap();
+    sender.connect(&listener.local_addr().unwrap()).unwrap();
+
+    let (receiver, _) = listener.accept().unwrap();
+
+    sender.send(&DATA).unwrap();
+
+    const FIRST: &[u8] = b"!";
+    assert_eq!(sender.send_out_of_band(FIRST).unwrap(), FIRST.len());
+    // On macOS if no `MSG_OOB` is available it will return `EINVAL`, to prevent
+    // this from happening we'll sleep to ensure the data is present.
+    thread::sleep(Duration::from_millis(10));
+
+    let mut buf = [1; DATA.len() + 1];
+    let n = receiver.recv_out_of_band(&mut buf).unwrap();
+    assert_eq!(n, FIRST.len());
+    assert_eq!(&buf[..n], FIRST);
+
+    let n = receiver.recv(&mut buf).unwrap();
+    assert_eq!(n, DATA.len());
+    assert_eq!(&buf[..n], DATA);
+}
+
 #[test]
 #[cfg(not(target_os = "redox"))]
 fn send_recv_vectored() {
@@ -565,6 +644,11 @@ fn device() {
         // Just need to do it with one interface.
         break;
     }
+}
+
+#[cfg(feature = "all")]
+fn any_ipv4() -> SockAddr {
+    SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }
 
 /// Macro to create a simple test to set and get a socket option.

@@ -38,9 +38,6 @@ libc = "0.2.81"
 [target."cfg(windows)".dependencies]
 winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
 
-[dev-dependencies]
-tempdir = "0.3"
-
 [features]
 # Enable all API, even ones not available on all OSes.
 all = []
