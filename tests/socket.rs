@@ -5,9 +5,7 @@ use std::io;
 use std::io::Write;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
-#[cfg(not(target_os = "redox"))]
-use std::net::Ipv6Addr;
-use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{Ipv6Addr, SocketAddr, SocketAddrV6};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
@@ -22,7 +20,9 @@ use winapi::um::handleapi::GetHandleInformation;
 #[cfg(windows)]
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-use socket2::{Domain, Protocol, SockAddr, Socket, TcpKeepalive, Type};
+#[cfg(all(unix, feature = "all"))]
+use socket2::SockAddr;
+use socket2::{Domain, Protocol, Socket, TcpKeepalive, Type};
 
 #[test]
 fn domain_for_address() {
@@ -95,28 +95,6 @@ fn protocol_fmt_debug() {
         let got = str::from_utf8(&buf).unwrap();
         assert_eq!(got, *want);
     }
-}
-
-#[test]
-fn socket_address_ipv4() {
-    let string = "127.0.0.1:80";
-    let std = string.parse::<SocketAddrV4>().unwrap();
-    let addr = SockAddr::from(std);
-
-    assert_eq!(addr.as_std(), Some(SocketAddr::V4(std)));
-    assert_eq!(addr.as_inet(), Some(std));
-    assert!(addr.as_inet6().is_none());
-}
-
-#[test]
-fn socket_address_ipv6() {
-    let string = "[2001:db8::ff00:42:8329]:80";
-    let std = string.parse::<SocketAddrV6>().unwrap();
-    let addr = SockAddr::from(std);
-
-    assert_eq!(addr.as_std(), Some(SocketAddr::V6(std)));
-    assert!(addr.as_inet().is_none());
-    assert_eq!(addr.as_inet6(), Some(std));
 }
 
 #[test]
