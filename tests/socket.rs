@@ -1,3 +1,5 @@
+#[cfg(all(feature = "all", target_os = "linux"))]
+use std::ffi::CStr;
 #[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
 #[cfg(unix)]
@@ -270,4 +272,20 @@ fn keepalive() {
         )
     ))]
     assert_eq!(socket.keepalive_retries().unwrap(), 10);
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[test]
+fn device() {
+    const INTERFACE: &str = "lo0\0";
+    let interface = CStr::from_bytes_with_nul(INTERFACE.as_bytes()).unwrap();
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+
+    assert_eq!(socket.device().unwrap(), None);
+
+    socket.bind_device(Some(interface)).unwrap();
+    assert_eq!(socket.device().unwrap().as_deref(), Some(interface));
+
+    socket.bind_device(None).unwrap();
+    assert_eq!(socket.device().unwrap(), None);
 }
