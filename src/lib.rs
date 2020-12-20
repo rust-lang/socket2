@@ -123,9 +123,6 @@ mod sockaddr;
 mod socket;
 mod sockref;
 
-#[cfg(test)]
-mod tests;
-
 #[cfg(unix)]
 #[path = "sys/unix.rs"]
 mod sys;
