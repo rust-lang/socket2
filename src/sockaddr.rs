@@ -233,28 +233,40 @@ impl fmt::Debug for SockAddr {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::net::{Ipv4Addr, Ipv6Addr};
+#[test]
+fn ipv4() {
+    use std::net::Ipv4Addr;
+    let std = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+    let addr = SockAddr::from(std);
+    assert_eq!(addr.family(), AF_INET as sa_family_t);
+    assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
+    assert_eq!(addr.as_std(), Some(SocketAddr::V4(std)));
+    assert_eq!(addr.as_inet(), Some(std));
+    assert!(addr.as_inet6().is_none());
 
-    #[test]
-    fn conversion_v4() {
-        let addr = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
-        let sockaddr = SockAddr::from(addr);
-        assert_eq!(sockaddr.family(), AF_INET as sa_family_t);
-        assert!(sockaddr.as_inet6().is_none());
-        assert_eq!(sockaddr.as_inet(), Some(addr));
-        assert_eq!(sockaddr.as_std(), Some(SocketAddr::V4(addr)));
-    }
+    let addr = SockAddr::from(SocketAddr::from(std));
+    assert_eq!(addr.family(), AF_INET as sa_family_t);
+    assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
+    assert_eq!(addr.as_std(), Some(SocketAddr::V4(std)));
+    assert_eq!(addr.as_inet(), Some(std));
+    assert!(addr.as_inet6().is_none());
+}
 
-    #[test]
-    fn conversion_v6() {
-        let addr = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
-        let sockaddr = SockAddr::from(addr);
-        assert_eq!(sockaddr.family(), AF_INET6 as sa_family_t);
-        assert!(sockaddr.as_inet().is_none());
-        assert_eq!(sockaddr.as_inet6(), Some(addr));
-        assert_eq!(sockaddr.as_std(), Some(SocketAddr::V6(addr)));
-    }
+#[test]
+fn ipv6() {
+    use std::net::Ipv6Addr;
+    let std = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+    let addr = SockAddr::from(std);
+    assert_eq!(addr.family(), AF_INET6 as sa_family_t);
+    assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
+    assert_eq!(addr.as_std(), Some(SocketAddr::V6(std)));
+    assert!(addr.as_inet().is_none());
+    assert_eq!(addr.as_inet6(), Some(std));
+
+    let addr = SockAddr::from(SocketAddr::from(std));
+    assert_eq!(addr.family(), AF_INET6 as sa_family_t);
+    assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
+    assert_eq!(addr.as_std(), Some(SocketAddr::V6(std)));
+    assert!(addr.as_inet().is_none());
+    assert_eq!(addr.as_inet6(), Some(std));
 }
