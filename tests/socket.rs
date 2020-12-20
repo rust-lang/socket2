@@ -287,7 +287,7 @@ fn device() {
         let interface = CStr::from_bytes_with_nul(interface.as_bytes()).unwrap();
         if let Err(err) = socket.bind_device(Some(interface)) {
             // Network interface is not available try another.
-            if let Some(libc::ENODEV) = err.raw_os_error() {
+            if matches!(err.raw_os_error(), Some(libc::ENODEV) | Some(libc::EPERM)) {
                 continue;
             } else {
                 panic!("unexpected error binding device: {}", err);
