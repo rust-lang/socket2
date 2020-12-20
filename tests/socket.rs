@@ -277,15 +277,27 @@ fn keepalive() {
 #[cfg(all(feature = "all", target_os = "linux"))]
 #[test]
 fn device() {
-    const INTERFACE: &str = "lo0\0";
-    let interface = CStr::from_bytes_with_nul(INTERFACE.as_bytes()).unwrap();
+    // Some common network interface on Linux.
+    const INTERFACES: &[&str] = &["lo\0", "lo0\0", "eth0\0", "wlan0\0"];
+
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-
     assert_eq!(socket.device().unwrap(), None);
 
-    socket.bind_device(Some(interface)).unwrap();
-    assert_eq!(socket.device().unwrap().as_deref(), Some(interface));
+    for interface in INTERFACES.iter() {
+        let interface = CStr::from_bytes_with_nul(interface.as_bytes()).unwrap();
+        if let Err(err) = socket.bind_device(Some(interface)) {
+            // Network interface is not available try another.
+            if let Some(libc::ENODEV) = err.raw_os_error() {
+                continue;
+            } else {
+                panic!("unexpected error binding device: {}", err);
+            }
+        }
+        assert_eq!(socket.device().unwrap().as_deref(), Some(interface));
 
-    socket.bind_device(None).unwrap();
-    assert_eq!(socket.device().unwrap(), None);
+        socket.bind_device(None).unwrap();
+        assert_eq!(socket.device().unwrap(), None);
+        // Just need to do it with one interface.
+        break;
+    }
 }
