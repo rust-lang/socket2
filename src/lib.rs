@@ -6,13 +6,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-// # Source code structure.
-//
-// All types and methods that are available on tier 1 all platforms are defined
-// in the first level of the source, i.e. `src/*.rs` files. Additional API that
-// is platform specific, e.g. `Domain::UNIX`, is defined in `src/sys/*.rs` and
-// only for the platforms that support it.
-
 //! Utilities for creating and using sockets.
 //!
 //! The goal of this crate is to create and use a socket using advanced
