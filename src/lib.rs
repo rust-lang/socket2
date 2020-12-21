@@ -20,14 +20,14 @@
 //! standard library) without using any unsafe code.
 //!
 //! This crate provides as direct as possible access to the system's
-//! functionality for sockets, this means **no** effort to provide
-//! cross-platform utilities, no extra goodies, no creature comforts. It is up
-//! to the user to know how to use sockets when using this crate. *If you don't
-//! know how to create a socket using libc/system calls then this crate is not
-//! for you*. Most, if not all, functions directly relate to the equivalent
-//! system call with no error handling applied, so no handling errors such as
-//! [`EINTR`]. As a result using this crate can be a little wordy, but it should
-//! give you maximal flexibility over configuration of sockets.
+//! functionality for sockets, this means little effort to provide
+//! cross-platform utilities. It is up to the user to know how to use sockets
+//! when using this crate. *If you don't know how to create a socket using
+//! libc/system calls then this crate is not for you*. Most, if not all,
+//! functions directly relate to the equivalent system call with no error
+//! handling applied, so no handling errors such as [`EINTR`]. As a result using
+//! this crate can be a little wordy, but it should give you maximal flexibility
+//! over configuration of sockets.
 //!
 //! [`EINTR`]: std::io::ErrorKind::Interrupted
 //!
