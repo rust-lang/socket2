@@ -7,6 +7,7 @@ use std::io::Read;
 use std::io::Write;
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
+use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
@@ -359,14 +360,14 @@ fn out_of_band() {
     // this from happening we'll sleep to ensure the data is present.
     thread::sleep(Duration::from_millis(10));
 
-    let mut buf = [1; DATA.len() + 1];
+    let mut buf = [MaybeUninit::new(1); DATA.len() + 1];
     let n = receiver.recv_out_of_band(&mut buf).unwrap();
     assert_eq!(n, FIRST.len());
-    assert_eq!(&buf[..n], FIRST);
+    assert_eq!(unsafe { assume_init(&buf[..n]) }, FIRST);
 
     let n = receiver.recv(&mut buf).unwrap();
     assert_eq!(n, DATA.len());
-    assert_eq!(&buf[..n], DATA);
+    assert_eq!(unsafe { assume_init(&buf[..n]) }, DATA);
 }
 
 #[test]
@@ -641,6 +642,12 @@ fn device() {
 
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
+}
+
+/// Assume the `buf`fer to be initialised.
+// TODO: replace with `MaybeUninit::slice_assume_init_ref` once stable.
+unsafe fn assume_init(buf: &[MaybeUninit<u8>]) -> &[u8] {
+    &*(buf as *const [MaybeUninit<u8>] as *const [u8])
 }
 
 /// Macro to create a simple test to set and get a socket option.

@@ -10,6 +10,7 @@ use std::fmt;
 use std::io::{self, Read, Write};
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
+use std::mem::MaybeUninit;
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 #[cfg(unix)]
 use std::os::unix::io::{FromRawFd, IntoRawFd};
@@ -284,7 +285,20 @@ impl Socket {
     /// This method might fail if the socket is not connected.
     ///
     /// [`connect`]: Socket::connect
-    pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
+    ///
+    /// # Safety
+    ///
+    /// Normally casting a `&mut [u8]` to `&mut [MaybeUninit<u8>]` would be
+    /// unsound, as that allows us to write uninitialised bytes to the buffer.
+    /// However this implementation promises to not write uninitialised bytes to
+    /// the `buf`fer and passes it directly to `recv(2)` system call. This
+    /// promise ensures that this function can be called using a `buf`fer of
+    /// type `&mut [u8]`.
+    ///
+    /// Note that the [`io::Read::read`] implementation calls this function with
+    /// a `buf`fer of type `&mut [u8]`, allowing initialised buffers to be used
+    /// without using `unsafe`.
+    pub fn recv(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
         self.recv_with_flags(buf, 0)
     }
 
@@ -295,7 +309,7 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`out_of_band_inline`]: Socket::out_of_band_inline
-    pub fn recv_out_of_band(&self, buf: &mut [u8]) -> io::Result<usize> {
+    pub fn recv_out_of_band(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_OOB)
     }
 
@@ -303,7 +317,11 @@ impl Socket {
     /// the underlying `recv` call.
     ///
     /// [`recv`]: Socket::recv
-    pub fn recv_with_flags(&self, buf: &mut [u8], flags: sys::c_int) -> io::Result<usize> {
+    pub fn recv_with_flags(
+        &self,
+        buf: &mut [MaybeUninit<u8>],
+        flags: sys::c_int,
+    ) -> io::Result<usize> {
         sys::recv(self.inner, buf, flags)
     }
 
@@ -343,13 +361,27 @@ impl Socket {
     ///
     /// Successive calls return the same data. This is accomplished by passing
     /// `MSG_PEEK` as a flag to the underlying `recv` system call.
-    pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+    ///
+    /// # Safety
+    ///
+    /// `peek` makes the same safety guarantees regarding the `buf`fer as
+    /// [`recv`].
+    ///
+    /// [`recv`]: Socket::recv
+    pub fn peek(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_PEEK)
     }
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
-    pub fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
+    ///
+    /// # Safety
+    ///
+    /// `recv_from` makes the same safety guarantees regarding the `buf`fer as
+    /// [`recv`].
+    ///
+    /// [`recv`]: Socket::recv
+    pub fn recv_from(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<(usize, SockAddr)> {
         self.recv_from_with_flags(buf, 0)
     }
 
@@ -359,7 +391,7 @@ impl Socket {
     /// [`recv_from`]: Socket::recv_from
     pub fn recv_from_with_flags(
         &self,
-        buf: &mut [u8],
+        buf: &mut [MaybeUninit<u8>],
         flags: i32,
     ) -> io::Result<(usize, SockAddr)> {
         sys::recv_from(self.inner, buf, flags)
@@ -398,7 +430,14 @@ impl Socket {
     ///
     /// On success, returns the number of bytes peeked and the address from
     /// whence the data came.
-    pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
+    ///
+    /// # Safety
+    ///
+    /// `peek_from` makes the same safety guarantees regarding the `buf`fer as
+    /// [`recv`].
+    ///
+    /// [`recv`]: Socket::recv
+    pub fn peek_from(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<(usize, SockAddr)> {
         self.recv_from_with_flags(buf, sys::MSG_PEEK)
     }
 
@@ -1241,6 +1280,9 @@ impl Socket {
 
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        // Safety: the `recv` implementation promises not to write uninitialised
+        // bytes to the `buf`fer, so this casting is safe.
+        let buf = unsafe { &mut *(buf as *mut [u8] as *mut [MaybeUninit<u8>]) };
         self.recv(buf)
     }
 
@@ -1252,6 +1294,8 @@ impl Read for Socket {
 
 impl<'a> Read for &'a Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        // Safety: see other `Read::read` impl.
+        let buf = unsafe { &mut *(buf as *mut [u8] as *mut [MaybeUninit<u8>]) };
         self.recv(buf)
     }
 
