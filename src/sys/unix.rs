@@ -419,7 +419,7 @@ pub(crate) fn shutdown(fd: Socket, how: Shutdown) -> io::Result<()> {
     syscall!(shutdown(fd, how)).map(|_| ())
 }
 
-pub(crate) fn recv(fd: Socket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+pub(crate) fn recv(fd: Socket, buf: &mut [MaybeUninit<u8>], flags: c_int) -> io::Result<usize> {
     syscall!(recv(
         fd,
         buf.as_mut_ptr().cast(),
@@ -429,7 +429,11 @@ pub(crate) fn recv(fd: Socket, buf: &mut [u8], flags: c_int) -> io::Result<usize
     .map(|n| n as usize)
 }
 
-pub(crate) fn recv_from(fd: Socket, buf: &mut [u8], flags: c_int) -> io::Result<(usize, SockAddr)> {
+pub(crate) fn recv_from(
+    fd: Socket,
+    buf: &mut [MaybeUninit<u8>],
+    flags: c_int,
+) -> io::Result<(usize, SockAddr)> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::init(|addr, addrlen| {

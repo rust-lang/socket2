@@ -273,7 +273,7 @@ pub(crate) fn shutdown(socket: Socket, how: Shutdown) -> io::Result<()> {
     syscall!(shutdown(socket, how), PartialEq::eq, sock::SOCKET_ERROR).map(|_| ())
 }
 
-pub(crate) fn recv(socket: Socket, buf: &mut [u8], flags: c_int) -> io::Result<usize> {
+pub(crate) fn recv(socket: Socket, buf: &mut [MaybeUninit<u8>], flags: c_int) -> io::Result<usize> {
     let res = syscall!(
         recv(
             socket,
@@ -325,7 +325,7 @@ pub(crate) fn recv_vectored(
 
 pub(crate) fn recv_from(
     socket: Socket,
-    buf: &mut [u8],
+    buf: &mut [MaybeUninit<u8>],
     flags: c_int,
 ) -> io::Result<(usize, SockAddr)> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.
