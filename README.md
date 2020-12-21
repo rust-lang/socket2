@@ -19,6 +19,44 @@ See the [API documentation] for more.
 
 [API documentation]: https://docs.rs/socket2
 
+# OS support
+
+Socket2 attempts to support the same OS/architectures as Rust does, see
+https://doc.rust-lang.org/nightly/rustc/platform-support.html. However this is
+not always possible, below is current list of support OSs.
+
+*If your favorite OS is not on the list consider contributing it! See [issue
+#78].*
+
+[issue #78]: https://github.com/rust-lang/socket2/issues/78
+
+### Tier 1
+
+These OSs are tested with each commit in the CI and must always pass the tests.
+All functions/types/etc., excluding ones behind the `all` feature, must work on
+these OSs.
+
+* Linux
+* macOS
+* Windows
+
+### Tier 2
+
+These OSs are currently build in the CI, but not tested. Not all
+functions/types/etc. may work on these OSs, even ones **not** behind the `all`
+feature flag.
+
+* Redox
+
+### Tier 3
+
+Theses OSs are supported, but are not checked in the CI.
+
+* Android
+* FreeBSD
+* iOS
+* NetBSD
+
 # License
 
 This project is licensed under either of
