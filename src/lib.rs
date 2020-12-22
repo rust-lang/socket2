@@ -66,7 +66,10 @@
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
+use std::fmt;
+use std::mem::MaybeUninit;
 use std::net::SocketAddr;
+use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
@@ -274,6 +277,47 @@ impl RecvFlags {
     /// On Windows this corresponds to the `WSAEMSGSIZE` error code.
     pub const fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
+    }
+}
+
+/// A version of [`IoSliceMut`] that allows the buffer to be uninitialised.
+///
+/// [`IoSliceMut`]: std::io::IoSliceMut
+#[repr(transparent)]
+pub struct MaybeUninitSlice<'a>(sys::MaybeUninitSlice<'a>);
+
+unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
+
+unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
+
+impl<'a> fmt::Debug for MaybeUninitSlice<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.0.as_slice(), fmt)
+    }
+}
+
+impl<'a> MaybeUninitSlice<'a> {
+    /// Creates a new `MaybeUninitSlice` wrapping a byte slice.
+    ///
+    /// # Panics
+    ///
+    /// Panics on Windows if the slice is larger than 4GB.
+    pub fn new(buf: &'a mut [MaybeUninit<u8>]) -> MaybeUninitSlice<'a> {
+        MaybeUninitSlice(sys::MaybeUninitSlice::new(buf))
+    }
+}
+
+impl<'a> Deref for MaybeUninitSlice<'a> {
+    type Target = [MaybeUninit<u8>];
+
+    fn deref(&self) -> &[MaybeUninit<u8>] {
+        self.0.as_slice()
+    }
+}
+
+impl<'a> DerefMut for MaybeUninitSlice<'a> {
+    fn deref_mut(&mut self) -> &mut [MaybeUninit<u8>] {
+        self.0.as_mut_slice()
     }
 }
 

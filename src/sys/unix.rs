@@ -10,7 +10,8 @@ use std::cmp::min;
 #[cfg(all(feature = "all", target_os = "linux"))]
 use std::ffi::{CStr, CString};
 #[cfg(not(target_os = "redox"))]
-use std::io::{IoSlice, IoSliceMut};
+use std::io::IoSlice;
+use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -21,10 +22,8 @@ use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
-#[cfg(all(feature = "all", target_os = "linux"))]
-use std::slice;
 use std::time::Duration;
-use std::{io, ptr};
+use std::{io, ptr, slice};
 
 #[cfg(not(target_vendor = "apple"))]
 use libc::ssize_t;
@@ -308,6 +307,32 @@ impl std::fmt::Debug for RecvFlags {
     }
 }
 
+#[repr(transparent)]
+pub struct MaybeUninitSlice<'a> {
+    vec: libc::iovec,
+    _lifetime: PhantomData<&'a mut [MaybeUninit<u8>]>,
+}
+
+impl<'a> MaybeUninitSlice<'a> {
+    pub(crate) fn new(buf: &'a mut [MaybeUninit<u8>]) -> MaybeUninitSlice<'a> {
+        MaybeUninitSlice {
+            vec: libc::iovec {
+                iov_base: buf.as_mut_ptr().cast(),
+                iov_len: buf.len(),
+            },
+            _lifetime: PhantomData,
+        }
+    }
+
+    pub(crate) fn as_slice(&self) -> &[MaybeUninit<u8>] {
+        unsafe { slice::from_raw_parts(self.vec.iov_base.cast(), self.vec.iov_len) }
+    }
+
+    pub(crate) fn as_mut_slice(&mut self) -> &mut [MaybeUninit<u8>] {
+        unsafe { slice::from_raw_parts_mut(self.vec.iov_base.cast(), self.vec.iov_len) }
+    }
+}
+
 /// Unix only API.
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
@@ -453,7 +478,7 @@ pub(crate) fn recv_from(
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn recv_vectored(
     fd: Socket,
-    bufs: &mut [IoSliceMut<'_>],
+    bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
     recvmsg(fd, ptr::null_mut(), bufs, flags).map(|(n, _, recv_flags)| (n, recv_flags))
@@ -462,7 +487,7 @@ pub(crate) fn recv_vectored(
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn recv_from_vectored(
     fd: Socket,
-    bufs: &mut [IoSliceMut<'_>],
+    bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
     // Safety: `recvmsg` initialises the address storage and we set the length
@@ -484,7 +509,7 @@ pub(crate) fn recv_from_vectored(
 fn recvmsg(
     fd: Socket,
     msg_name: *mut sockaddr_storage,
-    bufs: &mut [IoSliceMut<'_>],
+    bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, libc::socklen_t, RecvFlags)> {
     let msg_namelen = if msg_name.is_null() {
