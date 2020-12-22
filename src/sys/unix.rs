@@ -22,8 +22,10 @@ use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
 use std::path::Path;
+#[cfg(not(all(target_os = "redox", not(feature = "all"))))]
+use std::ptr;
 use std::time::Duration;
-use std::{io, ptr, slice};
+use std::{io, slice};
 
 #[cfg(not(target_vendor = "apple"))]
 use libc::ssize_t;
@@ -51,14 +53,14 @@ pub(crate) use libc::{
 };
 // Used in `RecvFlags`.
 #[cfg(not(target_os = "redox"))]
-pub(crate) use libc::MSG_TRUNC;
+pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
 // Used in `Socket`.
 pub(crate) use libc::{
     ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
     IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
     IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_LINGER,
-    SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
+    SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
 };
 #[cfg(not(any(
     target_os = "dragonfly",

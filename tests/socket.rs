@@ -8,7 +8,9 @@ use std::io::IoSlice;
 use std::io::Read;
 use std::io::Write;
 use std::mem::MaybeUninit;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+#[cfg(not(target_os = "redox"))]
+use std::net::{Ipv6Addr, SocketAddrV6};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
@@ -26,7 +28,9 @@ use winapi::um::handleapi::GetHandleInformation;
 #[cfg(windows)]
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-use socket2::{Domain, MaybeUninitSlice, Protocol, SockAddr, Socket, TcpKeepalive, Type};
+#[cfg(not(target_os = "redox"))]
+use socket2::MaybeUninitSlice;
+use socket2::{Domain, Protocol, SockAddr, Socket, TcpKeepalive, Type};
 
 #[test]
 fn domain_for_address() {
@@ -722,7 +726,7 @@ test!(reuse_address, set_reuse_address(true));
     not(any(windows, target_os = "solaris", target_os = "illumos"))
 ))]
 test!(reuse_port, set_reuse_port(true));
-#[cfg(all(feature = "all", unix))]
+#[cfg(all(feature = "all", unix, not(target_os = "redox")))]
 test!(
     #[cfg_attr(target_os = "linux", ignore = "Different value returned")]
     mss,

@@ -55,8 +55,8 @@ jobs:
     - name: Install Rust
       run: rustup update nightly && rustup default nightly
     - run: rustup target add ${{ matrix.target }}
-    - run: cargo check --target ${{ matrix.target }}
-    - run: cargo check --target ${{ matrix.target }} --features all
+    - run: cargo check --target ${{ matrix.target }} --all-targets --examples --bins --tests --no-default-features
+    - run: cargo check --target ${{ matrix.target }} --all-targets --examples --bins --tests --all-features
       continue-on-error: true
 
   publish_docs:
