@@ -78,7 +78,7 @@ impl SockAddr {
     }
 
     /// Returns a raw pointer to the address storage.
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "redox")))]
     pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
         &self.storage
     }

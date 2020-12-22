@@ -19,9 +19,9 @@ use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
+use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
-use crate::RecvFlags;
-use crate::{Domain, MaybeUninitSlice, Protocol, SockAddr, TcpKeepalive, Type};
+use crate::{MaybeUninitSlice, RecvFlags};
 
 /// Owned wrapper around a system socket.
 ///
