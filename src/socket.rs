@@ -21,7 +21,7 @@ use std::time::Duration;
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
-use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+use crate::{Domain, MaybeUninitSlice, Protocol, SockAddr, TcpKeepalive, Type};
 
 /// Owned wrapper around a system socket.
 ///
@@ -339,8 +339,24 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`connect`]: Socket::connect
+    ///
+    /// # Safety
+    ///
+    /// Normally casting a `IoSliceMut` to `MaybeUninitSlice` would be unsound,
+    /// as that allows us to write uninitialised bytes to the buffer. However
+    /// this implementation promises to not write uninitialised bytes to the
+    /// `bufs` and passes it directly to `recvmsg(2)` system call. This promise
+    /// ensures that this function can be called using `bufs` of type `&mut
+    /// [IoSliceMut]`.
+    ///
+    /// Note that the [`io::Read::read_vectored`] implementation calls this
+    /// function with `buf`s of type `&mut [IoSliceMut]`, allowing initialised
+    /// buffers to be used without using `unsafe`.
     #[cfg(not(target_os = "redox"))]
-    pub fn recv_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<(usize, RecvFlags)> {
+    pub fn recv_vectored(
+        &self,
+        bufs: &mut [MaybeUninitSlice<'_>],
+    ) -> io::Result<(usize, RecvFlags)> {
         self.recv_vectored_with_flags(bufs, 0)
     }
 
@@ -348,10 +364,17 @@ impl Socket {
     /// flags to the underlying `recvmsg`/`WSARecv` call.
     ///
     /// [`recv_vectored`]: Socket::recv_vectored
+    ///
+    /// # Safety
+    ///
+    /// `recv_from_vectored` makes the same safety guarantees regarding `bufs`
+    /// as [`recv_vectored`].
+    ///
+    /// [`recv_vectored`]: Socket::recv_vectored
     #[cfg(not(target_os = "redox"))]
     pub fn recv_vectored_with_flags(
         &self,
-        bufs: &mut [IoSliceMut<'_>],
+        bufs: &mut [MaybeUninitSlice<'_>],
         flags: i32,
     ) -> io::Result<(usize, RecvFlags)> {
         sys::recv_vectored(self.inner, bufs, flags)
@@ -404,10 +427,17 @@ impl Socket {
     /// [`recv_from`] this allows passing multiple buffers.
     ///
     /// [`recv_from`]: Socket::recv_from
+    ///
+    /// # Safety
+    ///
+    /// `recv_from_vectored` makes the same safety guarantees regarding `bufs`
+    /// as [`recv_vectored`].
+    ///
+    /// [`recv_vectored`]: Socket::recv_vectored
     #[cfg(not(target_os = "redox"))]
     pub fn recv_from_vectored(
         &self,
-        bufs: &mut [IoSliceMut<'_>],
+        bufs: &mut [MaybeUninitSlice<'_>],
     ) -> io::Result<(usize, RecvFlags, SockAddr)> {
         self.recv_from_vectored_with_flags(bufs, 0)
     }
@@ -416,10 +446,17 @@ impl Socket {
     /// arbitrary flags to the underlying `recvmsg`/`WSARecvFrom` call.
     ///
     /// [`recv_from_vectored`]: Socket::recv_from_vectored
+    ///
+    /// # Safety
+    ///
+    /// `recv_from_vectored` makes the same safety guarantees regarding `bufs`
+    /// as [`recv_vectored`].
+    ///
+    /// [`recv_vectored`]: Socket::recv_vectored
     #[cfg(not(target_os = "redox"))]
     pub fn recv_from_vectored_with_flags(
         &self,
-        bufs: &mut [IoSliceMut<'_>],
+        bufs: &mut [MaybeUninitSlice<'_>],
         flags: i32,
     ) -> io::Result<(usize, RecvFlags, SockAddr)> {
         sys::recv_from_vectored(self.inner, bufs, flags)
@@ -1292,6 +1329,11 @@ impl Read for Socket {
 
     #[cfg(not(target_os = "redox"))]
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
+        // Safety: both `IoSliceMut` and `MaybeUninitSlice` promise to have the
+        // same layout, that of `iovec`/`WSABUF`. Furthermore `recv_vectored`
+        // promises to not write unitialised bytes to the `bufs` and pass it
+        // directly to the `recvmsg` system call, so this is safe.
+        let bufs = unsafe { &mut *(bufs as *mut [IoSliceMut<'_>] as *mut [MaybeUninitSlice<'_>]) };
         self.recv_vectored(bufs).map(|(n, _)| n)
     }
 }
@@ -1305,6 +1347,8 @@ impl<'a> Read for &'a Socket {
 
     #[cfg(not(target_os = "redox"))]
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
+        // Safety: see other `Read::read` impl.
+        let bufs = unsafe { &mut *(bufs as *mut [IoSliceMut<'_>] as *mut [MaybeUninitSlice<'_>]) };
         self.recv_vectored(bufs).map(|(n, _)| n)
     }
 }

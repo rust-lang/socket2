@@ -7,21 +7,24 @@
 // except according to those terms.
 
 use std::cmp::min;
-use std::io::{self, IoSlice, IoSliceMut};
+use std::io::{self, IoSlice};
+use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
-use std::ptr;
 use std::sync::Once;
 use std::time::Duration;
+use std::{ptr, slice};
 
 use winapi::ctypes::c_long;
 use winapi::shared::in6addr::*;
 use winapi::shared::inaddr::*;
 use winapi::shared::minwindef::DWORD;
+use winapi::shared::minwindef::ULONG;
 use winapi::shared::mstcpip::{tcp_keepalive, SIO_KEEPALIVE_VALS};
 use winapi::shared::ntdef::HANDLE;
 use winapi::shared::ws2def;
+use winapi::shared::ws2def::WSABUF;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::{self, INFINITE};
@@ -141,6 +144,33 @@ impl std::fmt::Debug for RecvFlags {
         f.debug_struct("RecvFlags")
             .field("is_truncated", &self.is_truncated())
             .finish()
+    }
+}
+
+#[repr(transparent)]
+pub struct MaybeUninitSlice<'a> {
+    vec: WSABUF,
+    _lifetime: PhantomData<&'a mut [MaybeUninit<u8>]>,
+}
+
+impl<'a> MaybeUninitSlice<'a> {
+    pub fn new(buf: &'a mut [MaybeUninit<u8>]) -> MaybeUninitSlice<'a> {
+        assert!(buf.len() <= ULONG::MAX as usize);
+        MaybeUninitSlice {
+            vec: WSABUF {
+                len: buf.len() as ULONG,
+                buf: buf.as_mut_ptr().cast(),
+            },
+            _lifetime: PhantomData,
+        }
+    }
+
+    pub fn as_slice(&self) -> &[MaybeUninit<u8>] {
+        unsafe { slice::from_raw_parts(self.vec.buf.cast(), self.vec.len as usize) }
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [MaybeUninit<u8>] {
+        unsafe { slice::from_raw_parts_mut(self.vec.buf.cast(), self.vec.len as usize) }
     }
 }
 
@@ -293,7 +323,7 @@ pub(crate) fn recv(socket: Socket, buf: &mut [MaybeUninit<u8>], flags: c_int) ->
 
 pub(crate) fn recv_vectored(
     socket: Socket,
-    bufs: &mut [IoSliceMut<'_>],
+    bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
     let mut nread = 0;
@@ -354,7 +384,7 @@ pub(crate) fn recv_from(
 
 pub(crate) fn recv_from_vectored(
     socket: Socket,
-    bufs: &mut [IoSliceMut<'_>],
+    bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.

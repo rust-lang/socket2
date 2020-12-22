@@ -2,11 +2,11 @@
 use std::ffi::CStr;
 #[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
+#[cfg(not(target_os = "redox"))]
+use std::io::IoSlice;
 #[cfg(all(unix, feature = "all"))]
 use std::io::Read;
 use std::io::Write;
-#[cfg(not(target_os = "redox"))]
-use std::io::{IoSlice, IoSliceMut};
 use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 #[cfg(unix)]
@@ -26,7 +26,7 @@ use winapi::um::handleapi::GetHandleInformation;
 #[cfg(windows)]
 use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-use socket2::{Domain, Protocol, SockAddr, Socket, TcpKeepalive, Type};
+use socket2::{Domain, MaybeUninitSlice, Protocol, SockAddr, Socket, TcpKeepalive, Type};
 
 #[test]
 fn domain_for_address() {
@@ -385,21 +385,21 @@ fn send_recv_vectored() {
         .unwrap();
     assert_eq!(sent, 23);
 
-    let mut the = [0u8; 3];
-    let mut wee = [0u8; 3];
-    let mut knight = [0u8; 6];
-    let mut would = [0u8; 5];
-    let mut yell = [0u8; 4];
-    let mut ow = [0u8; 2];
+    let mut the = [MaybeUninit::new(1); 3];
+    let mut wee = [MaybeUninit::new(2); 3];
+    let mut knight = [MaybeUninit::new(3); 6];
+    let mut would = [MaybeUninit::new(4); 5];
+    let mut yell = [MaybeUninit::new(5); 4];
+    let mut ow = [MaybeUninit::new(6); 2];
 
     let (received, flags) = socket_b
         .recv_vectored(&mut [
-            IoSliceMut::new(&mut the),
-            IoSliceMut::new(&mut wee),
-            IoSliceMut::new(&mut knight),
-            IoSliceMut::new(&mut would),
-            IoSliceMut::new(&mut yell),
-            IoSliceMut::new(&mut ow),
+            MaybeUninitSlice::new(&mut the),
+            MaybeUninitSlice::new(&mut wee),
+            MaybeUninitSlice::new(&mut knight),
+            MaybeUninitSlice::new(&mut would),
+            MaybeUninitSlice::new(&mut yell),
+            MaybeUninitSlice::new(&mut ow),
         ])
         .unwrap();
     assert_eq!(received, 23);
@@ -409,12 +409,12 @@ fn send_recv_vectored() {
     assert_eq!(flags.is_out_of_band(), false);
     assert_eq!(flags.is_truncated(), false);
 
-    assert_eq!(&the, b"the");
-    assert_eq!(&wee, b"wee");
-    assert_eq!(&knight, b"knight");
-    assert_eq!(&would, b"would");
-    assert_eq!(&yell, b"yell");
-    assert_eq!(&ow, b"ow");
+    assert_eq!(unsafe { assume_init(&the) }, b"the");
+    assert_eq!(unsafe { assume_init(&wee) }, b"wee");
+    assert_eq!(unsafe { assume_init(&knight) }, b"knight");
+    assert_eq!(unsafe { assume_init(&would) }, b"would");
+    assert_eq!(unsafe { assume_init(&yell) }, b"yell");
+    assert_eq!(unsafe { assume_init(&ow) }, b"ow");
 }
 
 #[test]
@@ -436,16 +436,16 @@ fn send_from_recv_to_vectored() {
         .unwrap();
     assert_eq!(sent, 18);
 
-    let mut surgeon = [0u8; 7];
-    let mut has = [0u8; 3];
-    let mut men = [0u8; 3];
-    let mut swear = [0u8; 5];
+    let mut surgeon = [MaybeUninit::new(10); 7];
+    let mut has = [MaybeUninit::new(11); 3];
+    let mut men = [MaybeUninit::new(12); 3];
+    let mut swear = [MaybeUninit::new(13); 5];
     let (received, flags, addr) = socket_b
         .recv_from_vectored(&mut [
-            IoSliceMut::new(&mut surgeon),
-            IoSliceMut::new(&mut has),
-            IoSliceMut::new(&mut men),
-            IoSliceMut::new(&mut swear),
+            MaybeUninitSlice::new(&mut surgeon),
+            MaybeUninitSlice::new(&mut has),
+            MaybeUninitSlice::new(&mut men),
+            MaybeUninitSlice::new(&mut swear),
         ])
         .unwrap();
 
@@ -456,10 +456,11 @@ fn send_from_recv_to_vectored() {
     assert_eq!(flags.is_out_of_band(), false);
     assert_eq!(flags.is_truncated(), false);
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
-    assert_eq!(&surgeon, b"surgeon");
-    assert_eq!(&has, b"has");
-    assert_eq!(&men, b"men");
-    assert_eq!(&swear, b"swear");
+
+    assert_eq!(unsafe { assume_init(&surgeon) }, b"surgeon");
+    assert_eq!(unsafe { assume_init(&has) }, b"has");
+    assert_eq!(unsafe { assume_init(&men) }, b"men");
+    assert_eq!(unsafe { assume_init(&swear) }, b"swear");
 }
 
 #[test]
@@ -472,14 +473,14 @@ fn recv_vectored_truncated() {
         .unwrap();
     assert_eq!(sent, 39);
 
-    let mut buffer = [0u8; 24];
+    let mut buffer = [MaybeUninit::new(20); 24];
 
     let (received, flags) = socket_b
-        .recv_vectored(&mut [IoSliceMut::new(&mut buffer)])
+        .recv_vectored(&mut [MaybeUninitSlice::new(&mut buffer)])
         .unwrap();
     assert_eq!(received, 24);
     assert_eq!(flags.is_truncated(), true);
-    assert_eq!(&buffer, b"do not feed the gremlins");
+    assert_eq!(unsafe { assume_init(&buffer) }, b"do not feed the gremlins");
 }
 
 #[test]
@@ -494,15 +495,15 @@ fn recv_from_vectored_truncated() {
         .unwrap();
     assert_eq!(sent, 39);
 
-    let mut buffer = [0u8; 24];
+    let mut buffer = [MaybeUninit::new(30); 24];
 
     let (received, flags, addr) = socket_b
-        .recv_from_vectored(&mut [IoSliceMut::new(&mut buffer)])
+        .recv_from_vectored(&mut [MaybeUninitSlice::new(&mut buffer)])
         .unwrap();
     assert_eq!(received, 24);
     assert_eq!(flags.is_truncated(), true);
     assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
-    assert_eq!(&buffer, b"do not feed the gremlins");
+    assert_eq!(unsafe { assume_init(&buffer) }, b"do not feed the gremlins");
 }
 
 /// Create a pair of non-connected UDP sockets suitable for unit tests.
