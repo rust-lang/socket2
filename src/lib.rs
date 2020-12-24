@@ -369,6 +369,7 @@ impl TcpKeepalive {
         feature = "all",
         any(
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
@@ -390,6 +391,7 @@ impl TcpKeepalive {
         feature = "all",
         any(
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
