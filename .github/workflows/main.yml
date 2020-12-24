@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64-unknown-redox]
+        target: [x86_64-unknown-redox, x86_64-fuchsia]
     steps:
     - uses: actions/checkout@master
     - name: Install Rust

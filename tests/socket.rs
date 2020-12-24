@@ -1,4 +1,4 @@
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 use std::ffi::CStr;
 #[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
@@ -50,7 +50,7 @@ fn domain_fmt_debug() {
         (Domain::IPV6, "AF_INET6"),
         #[cfg(unix)]
         (Domain::UNIX, "AF_UNIX"),
-        #[cfg(all(feature = "all", target_os = "linux"))]
+        #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
         (Domain::PACKET, "AF_PACKET"),
         (0.into(), "AF_UNSPEC"),
         (500.into(), "500"),
@@ -154,6 +154,7 @@ fn no_default_flags() {
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd"
@@ -202,6 +203,7 @@ fn set_cloexec() {
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd"
@@ -560,6 +562,7 @@ fn tcp_keepalive() {
         feature = "all",
         any(
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
@@ -572,6 +575,7 @@ fn tcp_keepalive() {
         feature = "all",
         any(
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
@@ -591,6 +595,7 @@ fn tcp_keepalive() {
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
@@ -608,6 +613,7 @@ fn tcp_keepalive() {
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
@@ -617,7 +623,7 @@ fn tcp_keepalive() {
     assert_eq!(socket.keepalive_retries().unwrap(), 10);
 }
 
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 #[test]
 fn device() {
     // Some common network interface on Linux.
@@ -732,7 +738,7 @@ test!(
     mss,
     set_mss(256)
 );
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(
     #[ignore = "setting `SO_MARK` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
     mark,
@@ -744,7 +750,7 @@ test!(
     set_read_timeout(Some(Duration::from_secs(10)))
 );
 test!(keepalive, set_keepalive(true));
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(freebind, set_freebind(true));
 
 test!(IPv4 ttl, set_ttl(40));

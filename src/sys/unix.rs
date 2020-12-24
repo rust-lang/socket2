@@ -7,7 +7,7 @@
 // except according to those terms.
 
 use std::cmp::min;
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 use std::ffi::{CStr, CString};
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
@@ -90,6 +90,7 @@ pub(crate) use libc::{
     feature = "all",
     any(
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "linux",
         target_os = "netbsd",
         target_vendor = "apple",
@@ -142,6 +143,7 @@ type IovLen = usize;
     all(target_os = "linux", target_env = "musl"),
     target_os = "dragonfly",
     target_os = "freebsd",
+    target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
@@ -159,8 +161,8 @@ impl Domain {
     ///
     /// # Notes
     ///
-    /// This function is only available on Linux.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// This function is only available on Fuchsia and Linux.
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub const PACKET: Domain = Domain(libc::AF_PACKET);
 }
 
@@ -169,7 +171,7 @@ impl_debug!(
     libc::AF_INET,
     libc::AF_INET6,
     libc::AF_UNIX,
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "fuchsia", target_os = "linux"))]
     libc::AF_PACKET,
     libc::AF_UNSPEC, // = 0.
 );
@@ -180,14 +182,15 @@ impl Type {
     ///
     /// # Notes
     ///
-    /// This function is only available on Android, DragonFlyBSD, FreeBSD,
-    /// Linux, NetBSD and OpenBSD.
+    /// This function is only available on Android, DragonFlyBSD, Fuchsia,
+    /// FreeBSD, Linux, NetBSD and OpenBSD.
     #[cfg(all(
         feature = "all",
         any(
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
@@ -202,14 +205,15 @@ impl Type {
     ///
     /// # Notes
     ///
-    /// This function is only available on Android, DragonFlyBSD, FreeBSD,
-    /// Linux, NetBSD and OpenBSD.
+    /// This function is only available on Android, DragonFlyBSD, Fuchsia,
+    /// FreeBSD, Linux, NetBSD and OpenBSD.
     #[cfg(all(
         feature = "all",
         any(
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
@@ -224,6 +228,7 @@ impl Type {
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
@@ -248,6 +253,7 @@ impl_debug!(
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd"
@@ -257,6 +263,7 @@ impl_debug!(
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd"
@@ -519,15 +526,12 @@ fn recvmsg(
     } else {
         size_of::<libc::sockaddr_storage>() as libc::socklen_t
     };
-    let mut msg = libc::msghdr {
-        msg_name: msg_name.cast(),
-        msg_namelen,
-        msg_iov: bufs.as_mut_ptr().cast(),
-        msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
-        msg_control: ptr::null_mut(),
-        msg_controllen: 0,
-        msg_flags: 0,
-    };
+    // libc::msghdr contains unexported padding fields on Fuchsia.
+    let mut msg: libc::msghdr = unsafe { mem::zeroed() };
+    msg.msg_name = msg_name.cast();
+    msg.msg_namelen = msg_namelen;
+    msg.msg_iov = bufs.as_mut_ptr().cast();
+    msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
     syscall!(recvmsg(fd, &mut msg, flags))
         .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
 }
@@ -578,19 +582,16 @@ fn sendmsg(
     bufs: &[IoSlice<'_>],
     flags: c_int,
 ) -> io::Result<usize> {
-    let mut msg = libc::msghdr {
-        // Safety: we're creating a `*mut` pointer from a reference, which is UB
-        // once actually used. However the OS should not write to it in the
-        // `sendmsg` system call.
-        msg_name: (msg_name as *mut sockaddr_storage).cast(),
-        msg_namelen,
-        // Safety: Same as above about `*const` -> `*mut`.
-        msg_iov: bufs.as_ptr() as *mut _,
-        msg_iovlen: min(bufs.len(), IovLen::MAX as usize) as IovLen,
-        msg_control: ptr::null_mut(),
-        msg_controllen: 0,
-        msg_flags: 0,
-    };
+    // libc::msghdr contains unexported padding fields on Fuchsia.
+    let mut msg: libc::msghdr = unsafe { mem::zeroed() };
+    // Safety: we're creating a `*mut` pointer from a reference, which is UB
+    // once actually used. However the OS should not write to it in the
+    // `sendmsg` system call.
+    msg.msg_name = (msg_name as *mut sockaddr_storage).cast();
+    msg.msg_namelen = msg_namelen;
+    // Safety: Same as above about `*const` -> `*mut`.
+    msg.msg_iov = bufs.as_ptr() as *mut _;
+    msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
     syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
 }
 
@@ -651,6 +652,7 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
@@ -778,6 +780,7 @@ impl crate::Socket {
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
+            target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
@@ -792,6 +795,7 @@ impl crate::Socket {
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
+        target_os = "fuchsia",
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
@@ -881,9 +885,9 @@ impl crate::Socket {
     /// This value gets the socket mark field for each packet sent through
     /// this socket.
     ///
-    /// This function is only available on Linux and requires the
-    /// `CAP_NET_ADMIN` capability.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// This function is only available on Fuchsia and Linux. On Linux it
+    /// requires the `CAP_NET_ADMIN` capability.
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub fn mark(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK).map(|mark| mark as u32)
@@ -896,9 +900,9 @@ impl crate::Socket {
     /// this socket. Changing the mark can be used for mark-based routing
     /// without netfilter or for packet filtering.
     ///
-    /// This function is only available on Linux and requires the
-    /// `CAP_NET_ADMIN` capability.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// This function is only available on Fuchsia and Linux. On Linux it
+    /// requires the `CAP_NET_ADMIN` capability.
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         unsafe { setsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
     }
@@ -907,8 +911,8 @@ impl crate::Socket {
     ///
     /// This value gets the socket binded device's interface name.
     ///
-    /// This function is only available on Linux.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// This function is only available on Fuchsia and Linux.
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub fn device(&self) -> io::Result<Option<CString>> {
         // TODO: replace with `MaybeUninit::uninit_array` once stable.
         let mut buf: [MaybeUninit<u8>; libc::IFNAMSIZ] =
@@ -952,8 +956,8 @@ impl crate::Socket {
     ///
     /// If `interface` is `None` or an empty string it removes the binding.
     ///
-    /// This function is only available on Linux.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// This function is only available on Fuchsia and Linux.
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub fn bind_device(&self, interface: Option<&CStr>) -> io::Result<()> {
         let (value, len) = if let Some(interface) = interface {
             (interface.as_ptr(), interface.to_bytes_with_nul().len())
@@ -1014,10 +1018,10 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_freebind`].
     ///
-    /// This function is only available on Linux.
+    /// This function is only available on Fuchsia and Linux.
     ///
     /// [`set_freebind`]: Socket::set_freebind
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub fn freebind(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::IP_FREEBIND)
@@ -1033,8 +1037,8 @@ impl crate::Socket {
     /// dynamic IP address to be up at the time that the application is trying
     /// to bind to it.
     ///
-    /// This function is only available on Linux.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// This function is only available on Fuchsia and Linux.
+    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
     pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
