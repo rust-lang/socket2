@@ -172,7 +172,7 @@ impl Socket {
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
-    pub fn listen(&self, backlog: i32) -> io::Result<()> {
+    pub fn listen(&self, backlog: c_int) -> io::Result<()> {
         sys::listen(self.inner, backlog)
     }
 
@@ -375,7 +375,7 @@ impl Socket {
     pub fn recv_vectored_with_flags(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
-        flags: i32,
+        flags: c_int,
     ) -> io::Result<(usize, RecvFlags)> {
         sys::recv_vectored(self.inner, bufs, flags)
     }
@@ -417,7 +417,7 @@ impl Socket {
     pub fn recv_from_with_flags(
         &self,
         buf: &mut [MaybeUninit<u8>],
-        flags: i32,
+        flags: c_int,
     ) -> io::Result<(usize, SockAddr)> {
         sys::recv_from(self.inner, buf, flags)
     }
@@ -457,7 +457,7 @@ impl Socket {
     pub fn recv_from_vectored_with_flags(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
-        flags: i32,
+        flags: c_int,
     ) -> io::Result<(usize, RecvFlags, SockAddr)> {
         sys::recv_from_vectored(self.inner, bufs, flags)
     }
@@ -494,7 +494,7 @@ impl Socket {
     /// `send` call.
     ///
     /// [`send`]: #method.send
-    pub fn send_with_flags(&self, buf: &[u8], flags: i32) -> io::Result<usize> {
+    pub fn send_with_flags(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         sys::send(self.inner, buf, flags)
     }
 
@@ -509,7 +509,11 @@ impl Socket {
     ///
     /// [`send_vectored`]: Socket::send_vectored
     #[cfg(not(target_os = "redox"))]
-    pub fn send_vectored_with_flags(&self, bufs: &[IoSlice<'_>], flags: i32) -> io::Result<usize> {
+    pub fn send_vectored_with_flags(
+        &self,
+        bufs: &[IoSlice<'_>],
+        flags: c_int,
+    ) -> io::Result<usize> {
         sys::send_vectored(self.inner, bufs, flags)
     }
 
@@ -536,7 +540,12 @@ impl Socket {
     /// to the underlying `sendto` call.
     ///
     /// [`send_to`]: Socket::send_to
-    pub fn send_to_with_flags(&self, buf: &[u8], addr: &SockAddr, flags: i32) -> io::Result<usize> {
+    pub fn send_to_with_flags(
+        &self,
+        buf: &[u8],
+        addr: &SockAddr,
+        flags: c_int,
+    ) -> io::Result<usize> {
         sys::send_to(self.inner, buf, addr, flags)
     }
 
@@ -556,7 +565,7 @@ impl Socket {
         &self,
         bufs: &[IoSlice<'_>],
         addr: &SockAddr,
-        flags: i32,
+        flags: c_int,
     ) -> io::Result<usize> {
         sys::send_to_vectored(self.inner, bufs, addr, flags)
     }

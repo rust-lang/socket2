@@ -220,7 +220,7 @@ pub(crate) fn connect(socket: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
-pub(crate) fn listen(socket: Socket, backlog: i32) -> io::Result<()> {
+pub(crate) fn listen(socket: Socket, backlog: c_int) -> io::Result<()> {
     syscall!(listen(socket, backlog), PartialEq::ne, 0).map(|_| ())
 }
 
