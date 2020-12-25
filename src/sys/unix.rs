@@ -404,7 +404,7 @@ pub(crate) fn connect(fd: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
 }
 
-pub(crate) fn listen(fd: Socket, backlog: i32) -> io::Result<()> {
+pub(crate) fn listen(fd: Socket, backlog: c_int) -> io::Result<()> {
     syscall!(listen(fd, backlog)).map(|_| ())
 }
 
