@@ -56,15 +56,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64-unknown-redox, x86_64-fuchsia]
+        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-fuchsia", "x86_64-pc-windows-msvc", "x86_64-sun-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd", "x86_64-unknown-redox"]
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
-      run: rustup update nightly && rustup default nightly
-    - run: rustup target add ${{ matrix.target }}
-    - run: cargo check --target ${{ matrix.target }} --all-targets --examples --bins --tests --no-default-features
-    - run: cargo check --target ${{ matrix.target }} --all-targets --examples --bins --tests --all-features
-      continue-on-error: true
+      run: rustup update stable && rustup default stable
+    - name: Install cargo-hack
+      run: cargo install cargo-hack
+    - name: Install Target
+      run: rustup target add ${{ matrix.target }}
+    - name: Run check
+      run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
 
   Publish_docs:
     name: Publish Documentation
