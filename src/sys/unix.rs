@@ -1113,12 +1113,15 @@ from!(crate::Socket, UnixDatagram);
 fn in_addr_convertion() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let raw = to_in_addr(&ip);
-    assert_eq!(raw.s_addr, 127 << 0 | 1 << 24);
+    // NOTE: `in_addr` is packed on NetBSD and it's unsafe to borrow.
+    let a = raw.s_addr;
+    assert_eq!(a, 127 << 0 | 1 << 24);
     assert_eq!(from_in_addr(raw), ip);
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
     let raw = to_in_addr(&ip);
-    assert_eq!(raw.s_addr, 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24);
+    let a = raw.s_addr;
+    assert_eq!(a, 127 << 0 | 34 << 8 | 4 << 16 | 12 << 24);
     assert_eq!(from_in_addr(raw), ip);
 }
 
