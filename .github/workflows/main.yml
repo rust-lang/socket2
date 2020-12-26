@@ -36,8 +36,10 @@ jobs:
     - name: Install Rust (rustup)
       run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
       shell: bash
-    - run: cargo test
-    - run: cargo test --features all
+    - name: Install cargo-hack
+      run: cargo install cargo-hack
+    - name: Run tests
+      run: cargo hack test --feature-powerset && cargo hack test --feature-powerset --release
 
   Rustfmt:
     name: Rustfmt
