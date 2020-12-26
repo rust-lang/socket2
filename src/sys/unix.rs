@@ -7,7 +7,10 @@
 // except according to those terms.
 
 use std::cmp::min;
-#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
 use std::ffi::{CStr, CString};
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
@@ -163,7 +166,10 @@ impl Domain {
     /// # Notes
     ///
     /// This function is only available on Fuchsia and Linux.
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub const PACKET: Domain = Domain(libc::AF_PACKET);
 }
 
@@ -172,7 +178,7 @@ impl_debug!(
     libc::AF_INET,
     libc::AF_INET6,
     libc::AF_UNIX,
-    #[cfg(any(target_os = "fuchsia", target_os = "linux"))]
+    #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
     libc::AF_PACKET,
     libc::AF_UNSPEC, // = 0.
 );
@@ -888,7 +894,10 @@ impl crate::Socket {
     ///
     /// This function is only available on Fuchsia and Linux. On Linux it
     /// requires the `CAP_NET_ADMIN` capability.
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub fn mark(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK).map(|mark| mark as u32)
@@ -903,7 +912,10 @@ impl crate::Socket {
     ///
     /// This function is only available on Fuchsia and Linux. On Linux it
     /// requires the `CAP_NET_ADMIN` capability.
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         unsafe { setsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
     }
@@ -913,7 +925,10 @@ impl crate::Socket {
     /// This value gets the socket binded device's interface name.
     ///
     /// This function is only available on Fuchsia and Linux.
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub fn device(&self) -> io::Result<Option<CString>> {
         // TODO: replace with `MaybeUninit::uninit_array` once stable.
         let mut buf: [MaybeUninit<u8>; libc::IFNAMSIZ] =
@@ -958,7 +973,10 @@ impl crate::Socket {
     /// If `interface` is `None` or an empty string it removes the binding.
     ///
     /// This function is only available on Fuchsia and Linux.
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub fn bind_device(&self, interface: Option<&CStr>) -> io::Result<()> {
         let (value, len) = if let Some(interface) = interface {
             (interface.as_ptr(), interface.to_bytes_with_nul().len())
@@ -1022,7 +1040,10 @@ impl crate::Socket {
     /// This function is only available on Fuchsia and Linux.
     ///
     /// [`set_freebind`]: Socket::set_freebind
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub fn freebind(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::IP_FREEBIND)
@@ -1039,7 +1060,10 @@ impl crate::Socket {
     /// to bind to it.
     ///
     /// This function is only available on Fuchsia and Linux.
-    #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
