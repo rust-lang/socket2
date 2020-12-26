@@ -1,11 +1,15 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [ master, v0.3.x ]
+  pull_request:
+    branches: [ master, v0.3.x ]
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: full
 
 jobs:
-  test:
+  Test:
     name: Test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -35,7 +39,7 @@ jobs:
     - run: cargo test
     - run: cargo test --features all
 
-  rustfmt:
+  Rustfmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
@@ -45,7 +49,7 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
 
-  check:
+  Check:
     name: Check
     runs-on: ubuntu-latest
     strategy:
@@ -62,7 +66,7 @@ jobs:
     - name: Run check:
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
 
-  publish_docs:
+  Publish_docs:
     name: Publish Documentation
     runs-on: ubuntu-latest
     steps:
