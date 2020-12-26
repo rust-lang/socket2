@@ -95,6 +95,7 @@ pub(crate) use libc::{
         target_os = "android",
         target_os = "freebsd",
         target_os = "fuchsia",
+        target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
         target_vendor = "apple",
