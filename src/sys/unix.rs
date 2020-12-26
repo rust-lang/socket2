@@ -89,6 +89,7 @@ pub(crate) use libc::{
 #[cfg(all(
     feature = "all",
     any(
+        target_os = "android",
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
