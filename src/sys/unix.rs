@@ -360,42 +360,54 @@ impl SockAddr {
     ///
     /// Returns an error if the path is longer than `SUN_LEN`.
     #[cfg(feature = "all")]
+    #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
     pub fn unix<P>(path: P) -> io::Result<SockAddr>
     where
         P: AsRef<Path>,
     {
-        // Safety: zeroed `sockaddr_un` is valid.
-        let mut addr: libc::sockaddr_un = unsafe { mem::zeroed() };
-
-        let bytes = path.as_ref().as_os_str().as_bytes();
-        if bytes.len() >= addr.sun_path.len() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "path must be shorter than SUN_LEN",
-            ));
-        }
-
-        addr.sun_family = libc::AF_UNIX as sa_family_t;
-        // Safety: `bytes` and `addr.sun_path` are not overlapping and `bytes`
-        // points to valid memory.
         unsafe {
-            ptr::copy_nonoverlapping(
-                bytes.as_ptr(),
-                addr.sun_path.as_mut_ptr() as *mut u8,
-                bytes.len(),
-            )
-        };
-        // Zeroed memory above, so the path is already null terminated.
+            SockAddr::init(|storage, len| {
+                // Safety: `SockAddr::init` zeros the address, which is a valid
+                // representation.
+                let storage: &mut libc::sockaddr_un = unsafe { &mut *storage.cast() };
+                let len: &mut socklen_t = unsafe { &mut *len };
 
-        let base = &addr as *const _ as usize;
-        let path = &addr.sun_path as *const _ as usize;
-        let sun_path_offset = path - base;
-        let mut len = sun_path_offset + bytes.len();
-        match bytes.first() {
-            Some(&0) | None => {}
-            Some(_) => len += 1,
-        };
-        Ok(unsafe { SockAddr::from_raw_parts(&addr as *const _ as *const _, len as socklen_t) })
+                let bytes = path.as_ref().as_os_str().as_bytes();
+                if bytes.len() >= storage.sun_path.len() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "path must be shorter than SUN_LEN",
+                    ));
+                }
+
+                storage.sun_family = libc::AF_UNIX as sa_family_t;
+                // Safety: `bytes` and `addr.sun_path` are not overlapping and
+                // both point to valid memory.
+                // `SockAddr::init` zeroes the memory, so the path is already
+                // null terminated.
+                unsafe {
+                    ptr::copy_nonoverlapping(
+                        bytes.as_ptr(),
+                        storage.sun_path.as_mut_ptr() as *mut u8,
+                        bytes.len(),
+                    )
+                };
+
+                let base = storage as *const _ as usize;
+                let path = &storage.sun_path as *const _ as usize;
+                let sun_path_offset = path - base;
+                let length = sun_path_offset
+                    + bytes.len()
+                    + match bytes.first() {
+                        Some(&0) | None => 0,
+                        Some(_) => 1,
+                    };
+                *len = length as socklen_t;
+
+                Ok(())
+            })
+        }
+        .map(|(_, addr)| addr)
     }
 }
 
