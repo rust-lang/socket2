@@ -39,5 +39,5 @@ libc = "0.2.81"
 winapi = { version = "0.3.9", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
 
 [features]
-# Enable all API, even ones not available on all OSes.
+# Enable all API, even ones not available on all OSs.
 all = []

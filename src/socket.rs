@@ -714,7 +714,7 @@ impl Socket {
     /// immediately and the closing is done in the background. When the socket
     /// is closed as part of exit(2), it always lingers in the background.
     ///
-    /// Note that the duration only has a precision of seconds on most OSes.
+    /// Note that the duration only has a precision of seconds on most OSs.
     pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
         let linger = into_linger(linger);
         unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_LINGER, linger) }
@@ -1011,7 +1011,7 @@ impl Socket {
 impl Socket {
     /// Join a multicast group using `IPV6_ADD_MEMBERSHIP` option on this socket.
     ///
-    /// Some OSes use `IPV6_JOIN_GROUP` for this option.
+    /// Some OSs use `IPV6_JOIN_GROUP` for this option.
     ///
     /// This function specifies a new multicast group for this socket to join.
     /// The address must be a valid multicast address, and `interface` is the
@@ -1019,7 +1019,7 @@ impl Socket {
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let mreq = sys::Ipv6Mreq {
             ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
-            // NOTE: some OSes use `c_int`, others use `c_uint`.
+            // NOTE: some OSs use `c_int`, others use `c_uint`.
             ipv6mr_interface: interface as _,
         };
         unsafe {
@@ -1034,7 +1034,7 @@ impl Socket {
 
     /// Leave a multicast group using `IPV6_DROP_MEMBERSHIP` option on this socket.
     ///
-    /// Some OSes use `IPV6_LEAVE_GROUP` for this option.
+    /// Some OSs use `IPV6_LEAVE_GROUP` for this option.
     ///
     /// For more information about this option, see [`join_multicast_v6`].
     ///
@@ -1042,7 +1042,7 @@ impl Socket {
     pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let mreq = sys::Ipv6Mreq {
             ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
-            // NOTE: some OSes use `c_int`, others use `c_uint`.
+            // NOTE: some OSs use `c_int`, others use `c_uint`.
             ipv6mr_interface: interface as _,
         };
         unsafe {
