@@ -532,7 +532,7 @@ fn recvmsg(
     let msg_namelen = if msg_name.is_null() {
         0
     } else {
-        size_of::<libc::sockaddr_storage>() as libc::socklen_t
+        size_of::<sockaddr_storage>() as libc::socklen_t
     };
     // libc::msghdr contains unexported padding fields on Fuchsia.
     let mut msg: libc::msghdr = unsafe { mem::zeroed() };

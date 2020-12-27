@@ -39,19 +39,53 @@ impl SockAddr {
         }
     }
 
-    /// Initilaise a `SockAddr` by calling the function `f`.
+    /// Initialise a `SockAddr` by calling the function `init`.
+    ///
+    /// The type of the address storage and length passed to the function `init`
+    /// is OS/architecture specific.
     ///
     /// # Safety
     ///
     /// Caller must initialise the provided address storage and set the length
-    /// properly.
-    pub(crate) unsafe fn init<F, T>(f: F) -> io::Result<(T, SockAddr)>
+    /// properly. The address is zeroed before `init` is called and is thus
+    /// valid to dereference and read from. The length initialised to the
+    /// maximum length of the storage.
+    ///
+    /// # Examples
+    ///
+    #[cfg_attr(unix, doc = "```")]
+    #[cfg_attr(not(unix), doc = "```ignore")]
+    /// use std::io;
+    /// use std::os::unix::io::AsRawFd;
+    ///
+    /// use socket2::{SockAddr, Socket, Domain, Type};
+    ///
+    /// # fn main() -> io::Result<()> {
+    /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+    ///
+    /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
+    /// let (_, address) = unsafe {
+    ///     SockAddr::init(|addr_storage, len| {
+    ///         // The `getsockname(2)` system call will intiliase `storage` for
+    ///         // us, setting `len` to the correct length.
+    ///         if libc::getsockname(socket.as_raw_fd(), addr_storage.cast(), len) == -1 {
+    ///             Err(io::Error::last_os_error())
+    ///         } else {
+    ///             Ok(())
+    ///         }
+    ///     })
+    /// }?;
+    /// # drop(address);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub unsafe fn init<F, T>(init: F) -> io::Result<(T, SockAddr)>
     where
         F: FnOnce(*mut sockaddr_storage, *mut socklen_t) -> io::Result<T>,
     {
         let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
         let mut len = size_of::<sockaddr_storage>() as socklen_t;
-        f(storage.as_mut_ptr(), &mut len).map(|res| {
+        init(storage.as_mut_ptr(), &mut len).map(|res| {
             let addr = SockAddr {
                 // Safety: zeroed-out `sockaddr_storage` is valid, caller must
                 // ensure at least `len` bytes are valid.
