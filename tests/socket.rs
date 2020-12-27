@@ -110,8 +110,8 @@ fn protocol_fmt_debug() {
 fn socket_address_unix() {
     let string = "/tmp/socket";
     let addr = SockAddr::unix(string).unwrap();
-    assert!(addr.as_inet().is_none());
-    assert!(addr.as_inet6().is_none());
+    assert!(addr.as_socket_ipv4().is_none());
+    assert!(addr.as_socket_ipv6().is_none());
 }
 
 #[test]
@@ -461,7 +461,10 @@ fn send_from_recv_to_vectored() {
     #[cfg(all(unix, not(target_os = "redox")))]
     assert_eq!(flags.is_out_of_band(), false);
     assert_eq!(flags.is_truncated(), false);
-    assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
+    assert_eq!(
+        addr.as_socket_ipv6().unwrap(),
+        addr_a.as_socket_ipv6().unwrap()
+    );
 
     assert_eq!(unsafe { assume_init(&surgeon) }, b"surgeon");
     assert_eq!(unsafe { assume_init(&has) }, b"has");
@@ -508,7 +511,10 @@ fn recv_from_vectored_truncated() {
         .unwrap();
     assert_eq!(received, 24);
     assert_eq!(flags.is_truncated(), true);
-    assert_eq!(addr.as_inet6().unwrap(), addr_a.as_inet6().unwrap());
+    assert_eq!(
+        addr.as_socket_ipv6().unwrap(),
+        addr_a.as_socket_ipv6().unwrap()
+    );
     assert_eq!(unsafe { assume_init(&buffer) }, b"do not feed the gremlins");
 }
 
