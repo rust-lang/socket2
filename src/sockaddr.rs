@@ -1,6 +1,6 @@
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::{fmt, io, ptr};
+use std::{fmt, io};
 
 use crate::sys::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
@@ -19,26 +19,6 @@ pub struct SockAddr {
 }
 
 impl SockAddr {
-    /// Constructs a `SockAddr` from its raw components.
-    ///
-    /// # Safety
-    ///
-    /// It is up to the user to ensure the `addr` pointer and `len` length are
-    /// correct.
-    pub unsafe fn from_raw_parts(addr: *const sockaddr, len: socklen_t) -> SockAddr {
-        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
-        ptr::copy_nonoverlapping(
-            addr as *const _ as *const u8,
-            storage.as_mut_ptr() as *mut u8,
-            len as usize,
-        );
-        SockAddr {
-            // This is safe as we written the address to `storage` above.
-            storage: storage.assume_init(),
-            len,
-        }
-    }
-
     /// Initialise a `SockAddr` by calling the function `init`.
     ///
     /// The type of the address storage and length passed to the function `init`
