@@ -55,7 +55,7 @@
 //! ## Features
 //!
 //! This crate has a single feature `all`, which enables all functions even ones
-//! that are not available on all OSes.
+//! that are not available on all OSs.
 
 #![doc(html_root_url = "https://docs.rs/socket2/0.3")]
 #![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
