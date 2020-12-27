@@ -83,9 +83,11 @@ impl SockAddr {
     where
         F: FnOnce(*mut sockaddr_storage, *mut socklen_t) -> io::Result<T>,
     {
+        const STORAGE_SIZE: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
         let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
-        let mut len = size_of::<sockaddr_storage>() as socklen_t;
+        let mut len = STORAGE_SIZE;
         init(storage.as_mut_ptr(), &mut len).map(|res| {
+            debug_assert!(len <= STORAGE_SIZE, "overflown address storage");
             let addr = SockAddr {
                 // Safety: zeroed-out `sockaddr_storage` is valid, caller must
                 // ensure at least `len` bytes are valid.
