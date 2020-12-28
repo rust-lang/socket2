@@ -612,7 +612,7 @@ fn sendmsg(
     // Safety: Same as above about `*const` -> `*mut`.
     msg.msg_iov = bufs.as_ptr() as *mut _;
     msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
-    syscall!(sendmsg(fd, &mut msg, flags)).map(|n| n as usize)
+    syscall!(sendmsg(fd, &msg, flags)).map(|n| n as usize)
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
