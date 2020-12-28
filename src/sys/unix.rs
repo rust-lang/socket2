@@ -13,8 +13,30 @@ use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fucsia",
+        target_os = "linux",
+        target_vendor = "apple",
+    )
+))]
+use std::num::NonZeroUsize;
 #[cfg(feature = "all")]
 use std::os::unix::ffi::OsStrExt;
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fucsia",
+        target_os = "linux",
+        target_vendor = "apple",
+    )
+))]
+use std::os::unix::io::RawFd;
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
 #[cfg(feature = "all")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
@@ -1126,6 +1148,115 @@ impl crate::Socket {
                 reuse as c_int,
             )
         }
+    }
+
+    /// Copies data between a `file` and this socket using the `sendfile(2)`
+    /// system call. Because this copying is done within the kernel,
+    /// `sendfile()` is more efficient than the combination of `read(2)` and
+    /// `write(2)`, which would require transferring data to and from user
+    /// space.
+    ///
+    /// Different OSs support different kinds of `file`s, see the OS
+    /// documentation for what kind of files are supported. Generally *regular*
+    /// files are supported by all OSs.
+    ///
+    /// The `offset` is the absolute offset into the `file` to use as starting
+    /// point.
+    ///
+    /// Depending on the OS this function *may* change the offset of `file`. For
+    /// the best results reset the offset of the file before using it again.
+    ///
+    /// The `length` determines how many bytes to send, where a length of `None`
+    /// means it will try to send all bytes.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fucsia",
+            target_os = "linux",
+            target_vendor = "apple",
+        )
+    ))]
+    pub fn sendfile<F>(
+        &self,
+        file: &F,
+        offset: usize,
+        length: Option<NonZeroUsize>,
+    ) -> io::Result<usize>
+    where
+        F: AsRawFd,
+    {
+        self._sendfile(file.as_raw_fd(), offset as _, length)
+    }
+
+    #[cfg(all(feature = "all", target_vendor = "apple"))]
+    fn _sendfile(
+        &self,
+        file: RawFd,
+        offset: libc::off_t,
+        length: Option<NonZeroUsize>,
+    ) -> io::Result<usize> {
+        // On macOS `length` is value-result parameter. It determines the number
+        // of bytes to write and returns the number of bytes written.
+        let mut length = match length {
+            Some(n) => n.get() as libc::off_t,
+            // A value of `0` means send all bytes.
+            None => 0,
+        };
+        syscall!(sendfile(
+            file,
+            self.inner,
+            offset,
+            &mut length,
+            ptr::null_mut(),
+            0,
+        ))
+        .map(|_| length as usize)
+    }
+
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fucsia", target_os = "linux")
+    ))]
+    fn _sendfile(
+        &self,
+        file: RawFd,
+        offset: libc::off_t,
+        length: Option<NonZeroUsize>,
+    ) -> io::Result<usize> {
+        let count = match length {
+            Some(n) => n.get() as libc::size_t,
+            // The maximum the Linux kernel will write in a single call.
+            None => 0x7ffff000, // 2,147,479,552 bytes.
+        };
+        let mut offset = offset;
+        syscall!(sendfile(self.inner, file, &mut offset, count)).map(|n| n as usize)
+    }
+
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    fn _sendfile(
+        &self,
+        file: RawFd,
+        offset: libc::off_t,
+        length: Option<NonZeroUsize>,
+    ) -> io::Result<usize> {
+        let nbytes = match length {
+            Some(n) => n.get() as libc::size_t,
+            // A value of `0` means send all bytes.
+            None => 0,
+        };
+        let mut sbytes: libc::off_t = 0;
+        syscall!(sendfile(
+            file,
+            self.inner,
+            offset,
+            nbytes,
+            ptr::null_mut(),
+            &mut sbytes,
+            0,
+        ))
+        .map(|_| sbytes as usize)
     }
 }
 
