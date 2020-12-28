@@ -864,6 +864,33 @@ fn domain() {
     assert_eq!(socket.domain().unwrap(), Domain::UNIX);
 }
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+    )
+))]
+#[test]
+fn protocol() {
+    let socket = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
+    assert_eq!(socket.protocol().unwrap(), None);
+
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::ICMPV4)).unwrap();
+    assert_eq!(socket.protocol().unwrap(), Some(Protocol::ICMPV4));
+
+    let socket = Socket::new(Domain::IPV6, Type::DGRAM, Some(Protocol::ICMPV6)).unwrap();
+    assert_eq!(socket.protocol().unwrap(), Some(Protocol::ICMPV6));
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
+    assert_eq!(socket.protocol().unwrap(), Some(Protocol::TCP));
+
+    let socket = Socket::new(Domain::IPV6, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+    assert_eq!(socket.protocol().unwrap(), Some(Protocol::UDP));
+}
+
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }
