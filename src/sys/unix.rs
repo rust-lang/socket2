@@ -265,7 +265,7 @@ impl Type {
 }
 
 impl_debug!(
-    crate::Type,
+    Type,
     libc::SOCK_STREAM,
     libc::SOCK_DGRAM,
     #[cfg(not(target_os = "redox"))]
@@ -1024,6 +1024,21 @@ impl crate::Socket {
                 p => Some(Protocol(p)),
             })
         }
+    }
+
+    /// Returns the [`Type`] of this socket by checking the `SO_TYPE` option on
+    /// this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    pub fn r#type(&self) -> io::Result<Type> {
+        unsafe { getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_TYPE).map(Type) }
     }
 
     /// Gets the value for the `SO_MARK` option on this socket.
