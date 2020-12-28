@@ -974,6 +974,23 @@ impl crate::Socket {
         }
     }
 
+    /// Returns `true` if `listen(2)` was called on this socket by checking the
+    /// `SO_ACCEPTCONN` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    pub fn is_listener(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_ACCEPTCONN).map(|v| v != 0)
+        }
+    }
+
     /// Gets the value for the `SO_MARK` option on this socket.
     ///
     /// This value gets the socket mark field for each packet sent through
