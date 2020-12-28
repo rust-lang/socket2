@@ -645,7 +645,7 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     match duration {
         Some(duration) => libc::timeval {
             tv_sec: min(duration.as_secs(), libc::time_t::max_value() as u64) as libc::time_t,
-            tv_usec: (duration.subsec_nanos() / 1000) as libc::suseconds_t,
+            tv_usec: duration.subsec_micros() as libc::suseconds_t,
         },
         None => libc::timeval {
             tv_sec: 0,
