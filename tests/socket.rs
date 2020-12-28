@@ -1,3 +1,14 @@
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fucsia",
+        target_os = "linux",
+        target_vendor = "apple",
+    )
+))]
+use std::fs::File;
 use std::io;
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
@@ -8,6 +19,17 @@ use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 #[cfg(not(target_os = "redox"))]
 use std::net::{Ipv6Addr, SocketAddrV6};
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fucsia",
+        target_os = "linux",
+        target_vendor = "apple",
+    )
+))]
+use std::num::NonZeroUsize;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
@@ -706,6 +728,101 @@ fn device() {
     }
 
     panic!("failed to bind to any device.");
+}
+
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fucsia",
+        target_os = "linux",
+        target_vendor = "apple",
+    )
+))]
+#[test]
+fn sendfile() {
+    #[derive(Debug)]
+    struct TestFile {
+        path: &'static str,
+        data: &'static [u8],
+    }
+
+    const HELLO_WORLD: TestFile = TestFile {
+        path: "tests/data/hello_world.txt",
+        data: include_bytes!("data/hello_world.txt"),
+    };
+
+    const LOREM: TestFile = TestFile {
+        path: "tests/data/lorem_ipsum.txt",
+        data: include_bytes!("data/lorem_ipsum.txt"),
+    };
+
+    let listener = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
+    listener.bind(&any_ipv4()).unwrap();
+    listener.listen(1).unwrap();
+    let address = listener.local_addr().unwrap();
+
+    let sender = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
+    sender.connect(&address).unwrap();
+
+    let (receiver, _) = listener.accept().unwrap();
+
+    // Send a simple hello world file.
+    {
+        let file = File::open(HELLO_WORLD.path).unwrap();
+        let n = sender.sendfile(&file, 0, None).unwrap();
+        assert_eq!(n, HELLO_WORLD.data.len());
+
+        let mut buf = Vec::with_capacity(HELLO_WORLD.data.len() + 1);
+        let n = receiver.recv(spare_capacity_mut(&mut buf)).unwrap();
+        assert_eq!(n, HELLO_WORLD.data.len());
+        unsafe { buf.set_len(n) };
+        assert_eq!(buf, HELLO_WORLD.data);
+    }
+
+    // Send a larger file in two calls.
+    {
+        let file = File::open(LOREM.path).unwrap();
+        let n = sender
+            .sendfile(&file, 0, NonZeroUsize::new(LOREM.data.len() / 2))
+            .unwrap();
+        assert_eq!(n, LOREM.data.len() / 2);
+
+        let offset = n;
+        let n = sender.sendfile(&file, offset, None).unwrap();
+        assert_eq!(offset + n, LOREM.data.len());
+
+        let mut buf = Vec::with_capacity(LOREM.data.len() + 1);
+        let mut total = 0;
+        while total < LOREM.data.len() {
+            let n = receiver.recv(spare_capacity_mut(&mut buf)).unwrap();
+            unsafe { buf.set_len(buf.len() + n) };
+            total += n;
+        }
+        assert_eq!(total, LOREM.data.len());
+        assert_eq!(buf, LOREM.data);
+    }
+}
+
+// TODO: use `Vec::spare_capacity_mut` once stable.
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fucsia",
+        target_os = "linux",
+        target_vendor = "apple",
+    )
+))]
+fn spare_capacity_mut(buf: &mut Vec<u8>) -> &mut [MaybeUninit<u8>] {
+    unsafe {
+        std::slice::from_raw_parts_mut(
+            buf.as_mut_ptr().add(buf.len()) as *mut MaybeUninit<u8>,
+            buf.capacity() - buf.len(),
+        )
+    }
 }
 
 fn any_ipv4() -> SockAddr {
