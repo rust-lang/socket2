@@ -940,9 +940,16 @@ impl crate::Socket {
     pub fn device(&self) -> io::Result<Option<Vec<u8>>> {
         use std::convert::TryInto as _;
 
+        // TODO(https://github.com/rust-lang/libc/pull/2010): Remove this.
+        #[cfg(target_os = "fuchsia")]
+        const IFNAMSIZ: libc::size_t = 16;
+
+        #[cfg(not(target_os = "fuchsia"))]
+        const IFNAMSIZ: libc::size_t = libc::IFNAMSIZ;
+
         // TODO: replace with `MaybeUninit::uninit_array` once stable.
-        let mut buf: MaybeUninit<[u8; libc::IFNAMSIZ]> = MaybeUninit::uninit();
-        let mut len = libc::IFNAMSIZ.try_into().unwrap();
+        let mut buf: MaybeUninit<[u8; IFNAMSIZ]> = MaybeUninit::uninit();
+        let mut len = IFNAMSIZ.try_into().unwrap();
         unsafe {
             syscall!(getsockopt(
                 self.inner,
@@ -1046,9 +1053,15 @@ impl crate::Socket {
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
     pub fn freebind(&self) -> io::Result<bool> {
+        // TODO(https://github.com/rust-lang/libc/pull/2011): Remove this.
+        #[cfg(target_os = "fuchsia")]
+        const IP_FREEBIND: c_int = 15;
+
+        #[cfg(not(target_os = "fuchsia"))]
+        const IP_FREEBIND: c_int = libc::IP_FREEBIND;
+
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::IP_FREEBIND)
-                .map(|reuse| reuse != 0)
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, IP_FREEBIND).map(|reuse| reuse != 0)
         }
     }
 
@@ -1066,14 +1079,14 @@ impl crate::Socket {
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
     pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.inner,
-                libc::SOL_SOCKET,
-                libc::IP_FREEBIND,
-                reuse as c_int,
-            )
-        }
+        // TODO(https://github.com/rust-lang/libc/pull/2011): Remove this.
+        #[cfg(target_os = "fuchsia")]
+        const IP_FREEBIND: c_int = 15;
+
+        #[cfg(not(target_os = "fuchsia"))]
+        const IP_FREEBIND: c_int = libc::IP_FREEBIND;
+
+        unsafe { setsockopt(self.inner, libc::SOL_SOCKET, IP_FREEBIND, reuse as c_int) }
     }
 }
 
