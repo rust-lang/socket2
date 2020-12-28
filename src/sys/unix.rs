@@ -991,6 +991,21 @@ impl crate::Socket {
         }
     }
 
+    /// Returns the [`Domain`] of this socket by checking the `SO_DOMAIN` option
+    /// on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    pub fn domain(&self) -> io::Result<Domain> {
+        unsafe { getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_DOMAIN).map(Domain) }
+    }
+
     /// Gets the value for the `SO_MARK` option on this socket.
     ///
     /// This value gets the socket mark field for each packet sent through
