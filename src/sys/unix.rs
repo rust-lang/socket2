@@ -776,9 +776,9 @@ pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
 }
 
 pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
-    let mut ret: in6_addr = unsafe { mem::zeroed() };
-    ret.s6_addr = addr.octets();
-    return ret;
+    in6_addr {
+        s6_addr: addr.octets(),
+    }
 }
 
 pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
@@ -1128,7 +1128,7 @@ fn in_addr_convertion() {
     let raw = to_in_addr(&ip);
     // NOTE: `in_addr` is packed on NetBSD and it's unsafe to borrow.
     let a = raw.s_addr;
-    assert_eq!(a, 127 << 0 | 1 << 24);
+    assert_eq!(a, 127 | 1 << 24);
     assert_eq!(from_in_addr(raw), ip);
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
