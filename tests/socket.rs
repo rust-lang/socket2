@@ -1,5 +1,3 @@
-#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
-use std::ffi::CStr;
 #[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
 #[cfg(not(target_os = "redox"))]
@@ -631,30 +629,40 @@ fn tcp_keepalive() {
 
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 #[test]
+#[ignore = "setting `SO_BINDTODEVICE` requires the `CAP_NET_RAW` capability (works when running as root)"]
 fn device() {
     // Some common network interface on Linux.
-    const INTERFACES: &[&str] = &["lo\0", "lo0\0", "eth0\0", "wlan0\0"];
+    const INTERFACES: &[&str] = &["lo", "lo0", "eth0", "wlan0"];
 
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_eq!(socket.device().unwrap(), None);
 
     for interface in INTERFACES.iter() {
-        let interface = CStr::from_bytes_with_nul(interface.as_bytes()).unwrap();
-        if let Err(err) = socket.bind_device(Some(interface)) {
+        if let Err(err) = socket.bind_device(Some(interface.as_bytes())) {
             // Network interface is not available try another.
             if matches!(err.raw_os_error(), Some(libc::ENODEV) | Some(libc::EPERM)) {
+                eprintln!("error binding to device (`{}`): {}", interface, err);
                 continue;
             } else {
                 panic!("unexpected error binding device: {}", err);
             }
         }
-        assert_eq!(socket.device().unwrap().as_deref(), Some(interface));
+        assert_eq!(
+            socket.device().unwrap().as_deref(),
+            Some(interface.as_bytes())
+        );
 
         socket.bind_device(None).unwrap();
         assert_eq!(socket.device().unwrap(), None);
         // Just need to do it with one interface.
-        break;
+        return;
     }
+
+    panic!(
+        "failing to bind to any device. \
+        Note that on Linux this requires the `CAP_NET_RAW` permission. \
+        This can be given using `sudo setcap cap_net_raw=ep $test_bin`."
+    );
 }
 
 fn any_ipv4() -> SockAddr {
