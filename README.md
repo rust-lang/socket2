@@ -53,16 +53,14 @@ These OSs are currently build in the CI, but not tested. Not all
 functions/types/etc. may work on these OSs, even ones **not** behind the `all`
 feature flag.
 
-* Redox
-
-### Tier 3
-
-Theses OSs are supported, but are not checked in the CI.
-
 * Android
 * FreeBSD
+* Fuchsia
 * iOS
+* illumos
 * NetBSD
+* Redox
+* Solaris
 
 # License
 
