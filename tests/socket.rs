@@ -843,6 +843,27 @@ fn is_listener() {
     assert_eq!(socket.is_listener().unwrap(), true);
 }
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+    )
+))]
+#[test]
+fn domain() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    assert_eq!(socket.domain().unwrap(), Domain::IPV4);
+
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    assert_eq!(socket.domain().unwrap(), Domain::IPV6);
+
+    let socket = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
+    assert_eq!(socket.domain().unwrap(), Domain::UNIX);
+}
+
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }
