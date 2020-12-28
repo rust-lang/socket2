@@ -825,6 +825,24 @@ fn spare_capacity_mut(buf: &mut Vec<u8>) -> &mut [MaybeUninit<u8>] {
     }
 }
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+    )
+))]
+#[test]
+fn is_listener() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
+    assert_eq!(socket.is_listener().unwrap(), false);
+
+    socket.listen(1).unwrap();
+    assert_eq!(socket.is_listener().unwrap(), true);
+}
+
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }
