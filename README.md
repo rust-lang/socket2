@@ -19,6 +19,13 @@ See the [API documentation] for more.
 
 [API documentation]: https://docs.rs/socket2
 
+# Two branches
+
+Currently Socket2 supports two versions: v0.4 and v0.3. Version 0.4 is developed
+in the master branch, version 0.3 in the [v0.3.x branch].
+
+[v0.3.x branch]: https://github.com/rust-lang/socket2/tree/v0.3.x
+
 # OS support
 
 Socket2 attempts to support the same OS/architectures as Rust does, see
