@@ -7,11 +7,6 @@
 // except according to those terms.
 
 use std::cmp::min;
-#[cfg(all(
-    feature = "all",
-    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
-))]
-use std::ffi::{CStr, CString};
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
 use std::marker::PhantomData;
@@ -942,11 +937,12 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn device(&self) -> io::Result<Option<CString>> {
+    pub fn device(&self) -> io::Result<Option<Vec<u8>>> {
+        use std::convert::TryInto as _;
+
         // TODO: replace with `MaybeUninit::uninit_array` once stable.
-        let mut buf: [MaybeUninit<u8>; libc::IFNAMSIZ] =
-            unsafe { MaybeUninit::<[MaybeUninit<u8>; libc::IFNAMSIZ]>::uninit().assume_init() };
-        let mut len = buf.len() as libc::socklen_t;
+        let mut buf: MaybeUninit<[u8; libc::IFNAMSIZ]> = MaybeUninit::uninit();
+        let mut len = libc::IFNAMSIZ.try_into().unwrap();
         unsafe {
             syscall!(getsockopt(
                 self.inner,
@@ -959,21 +955,13 @@ impl crate::Socket {
         if len == 0 {
             Ok(None)
         } else {
-            // Allocate a buffer for `CString` with the length including the
-            // null terminator.
-            let len = len as usize;
-            let mut name = Vec::with_capacity(len);
-
             // TODO: use `MaybeUninit::slice_assume_init_ref` once stable.
             // Safety: `len` bytes are writen by the OS, this includes a null
             // terminator. However we don't copy the null terminator because
             // `CString::from_vec_unchecked` adds its own null terminator.
-            let buf = unsafe { slice::from_raw_parts(buf.as_ptr().cast(), len - 1) };
-            name.extend_from_slice(buf);
-
-            // Safety: the OS initialised the string for us, which shouldn't
-            // include any null bytes.
-            Ok(Some(unsafe { CString::from_vec_unchecked(name) }))
+            Ok(Some(
+                unsafe { buf.assume_init() }[..len.try_into().unwrap()].into(),
+            ))
         }
     }
 
@@ -990,9 +978,9 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn bind_device(&self, interface: Option<&CStr>) -> io::Result<()> {
+    pub fn bind_device(&self, interface: Option<&[u8]>) -> io::Result<()> {
         let (value, len) = if let Some(interface) = interface {
-            (interface.as_ptr(), interface.to_bytes_with_nul().len())
+            (interface.as_ptr(), interface.len())
         } else {
             (ptr::null(), 0)
         };

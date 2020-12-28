@@ -1,5 +1,3 @@
-#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
-use std::ffi::CStr;
 #[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
 #[cfg(not(target_os = "redox"))]
@@ -633,13 +631,13 @@ fn tcp_keepalive() {
 #[test]
 fn device() {
     // Some common network interface on Linux.
-    const INTERFACES: &[&str] = &["lo\0", "lo0\0", "eth0\0", "wlan0\0"];
+    const INTERFACES: &[&str] = &["lo", "lo0", "eth0", "wlan0"];
 
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_eq!(socket.device().unwrap(), None);
 
     for interface in INTERFACES.iter() {
-        let interface = CStr::from_bytes_with_nul(interface.as_bytes()).unwrap();
+        let interface = interface.as_bytes();
         if let Err(err) = socket.bind_device(Some(interface)) {
             // Network interface is not available try another.
             if matches!(err.raw_os_error(), Some(libc::ENODEV) | Some(libc::EPERM)) {
