@@ -53,7 +53,7 @@ use libc::{c_void, in6_addr, in_addr};
 
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
-use crate::{Domain, SockAddr, TcpKeepalive, Type};
+use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 
 pub(crate) use libc::c_int;
 
@@ -298,7 +298,7 @@ impl_debug!(
 );
 
 impl_debug!(
-    crate::Protocol,
+    Protocol,
     libc::IPPROTO_ICMP,
     libc::IPPROTO_ICMPV6,
     libc::IPPROTO_TCP,
@@ -1004,6 +1004,26 @@ impl crate::Socket {
     ))]
     pub fn domain(&self) -> io::Result<Domain> {
         unsafe { getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_DOMAIN).map(Domain) }
+    }
+
+    /// Returns the [`Protocol`] of this socket by checking the `SO_PROTOCOL`
+    /// option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    pub fn protocol(&self) -> io::Result<Option<Protocol>> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_PROTOCOL).map(|v| match v {
+                0 => None,
+                p => Some(Protocol(p)),
+            })
+        }
     }
 
     /// Gets the value for the `SO_MARK` option on this socket.
