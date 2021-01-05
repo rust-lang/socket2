@@ -66,6 +66,9 @@ impl SockAddr {
         const STORAGE_SIZE: socklen_t = size_of::<sockaddr_storage>() as socklen_t;
         // NOTE: `SockAddr::unix` depends on the storage being zeroed before
         // calling `init`.
+        // NOTE: calling `recvfrom` with an empty buffer also depends on the
+        // storage being zeroed before calling `init` as the OS might not
+        // initialise it.
         let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
         let mut len = STORAGE_SIZE;
         init(storage.as_mut_ptr(), &mut len).map(|res| {
