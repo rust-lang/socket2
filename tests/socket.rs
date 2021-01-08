@@ -640,7 +640,7 @@ fn device() {
     for interface in INTERFACES.iter() {
         if let Err(err) = socket.bind_device(Some(interface.as_bytes())) {
             // Network interface is not available try another.
-            if matches!(err.raw_os_error(), Some(libc::ENODEV) | Some(libc::EPERM)) {
+            if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
                 eprintln!("error binding to device (`{}`): {}", interface, err);
                 continue;
             } else {
@@ -658,11 +658,7 @@ fn device() {
         return;
     }
 
-    panic!(
-        "failing to bind to any device. \
-        Note that on Linux this requires the `CAP_NET_RAW` permission. \
-        This can be given using `sudo setcap cap_net_raw=ep $test_bin`."
-    );
+    panic!("failed to bind to any device.");
 }
 
 fn any_ipv4() -> SockAddr {
