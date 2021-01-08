@@ -96,7 +96,8 @@
 
 ## Fixes
 
-* Fixes the Andoid, Fuchsia, Haiku, iOS, illumos, NetBSD and Redox targets.
+* Fixes the Andoid, Fuchsia, Haiku, iOS, illumos, NetBSD and Redox (nightly
+  only) targets.
 * Correctly call `recv_from` in `Socket::recv_from_with_flags` (called `recv`
   previously).
 * Correctly call `send_to` in `Socket::send_to_with_flags` (called `recv`
@@ -106,3 +107,9 @@
 * Use `IPPROTO_IPV6` in `Socket::join_multicast_v6` on Windows.
 * Don't assume the memory layout of `std::net::SocketAddr`.
 * Use `c_int` instead of `i32` where appropriate.
+
+## From v0.4.0-alpha.1 to v0.4.0-alpha.2
+
+* Fixes the Fuchsia target.
+* `Socket::device` now returns a `Vec<u8>` rather then `CString`.
+* `Socket::bind_device` now accepts a `&[u8]` rather then `&CStr`.
