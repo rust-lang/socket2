@@ -1,4 +1,3 @@
-#[cfg(any(windows, target_vendor = "apple"))]
 use std::io;
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
@@ -306,6 +305,54 @@ where
 }
 
 const DATA: &[u8] = b"hello world";
+
+#[test]
+fn connect_timeout_unrouteable() {
+    // this IP is unroutable, so connections should always time out
+    let addr = "10.255.255.1:80".parse::<SocketAddr>().unwrap().into();
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    match socket.connect_timeout(&addr, Duration::from_millis(250)) {
+        Ok(_) => panic!("unexpected success"),
+        Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {}
+        Err(e) => panic!("unexpected error {}", e),
+    }
+}
+
+#[test]
+fn connect_timeout_unbound() {
+    // bind and drop a socket to track down a "probably unassigned" port
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();
+    socket.bind(&addr).unwrap();
+    let addr = socket.local_addr().unwrap();
+    drop(socket);
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    match socket.connect_timeout(&addr, Duration::from_millis(250)) {
+        Ok(_) => panic!("unexpected success"),
+        Err(ref e)
+            if e.kind() == io::ErrorKind::ConnectionRefused
+                || e.kind() == io::ErrorKind::TimedOut => {}
+        Err(e) => panic!("unexpected error {}", e),
+    }
+}
+
+#[test]
+fn connect_timeout_valid() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    socket
+        .bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
+        .unwrap();
+    socket.listen(128).unwrap();
+
+    let addr = socket.local_addr().unwrap();
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    socket
+        .connect_timeout(&addr, Duration::from_millis(250))
+        .unwrap();
+}
 
 #[test]
 #[cfg(all(feature = "all", unix))]

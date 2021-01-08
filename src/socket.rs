@@ -164,6 +164,29 @@ impl Socket {
         sys::connect(self.inner, address)
     }
 
+    /// Initiate a connection on this socket to the specified address, only
+    /// only waiting for a certain period of time for the connection to be
+    /// established.
+    ///
+    /// Unlike many other methods on `Socket`, this does *not* correspond to a
+    /// single C function. It sets the socket to nonblocking mode, connects via
+    /// connect(2), and then waits for the connection to complete with poll(2)
+    /// on Unix and select on Windows. When the connection is complete, the
+    /// socket is set back to blocking mode. On Unix, this will loop over
+    /// `EINTR` errors.
+    ///
+    /// # Warnings
+    ///
+    /// The non-blocking state of the socket is overridden by this function -
+    /// it will be returned in blocking mode on success, and in an indeterminate
+    /// state on failure.
+    ///
+    /// If the connection request times out, it may still be processing in the
+    /// background - a second call to `connect` or `connect_timeout` may fail.
+    pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
+        sys::connect_timeout(self.inner, addr, timeout)
+    }
+
     /// Mark a socket as ready to accept incoming connection requests using
     /// [`Socket::accept()`].
     ///
@@ -662,11 +685,7 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        match unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_ERROR) } {
-            Ok(0) => Ok(None),
-            Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
-            Err(err) => Err(err),
-        }
+        sys::take_error(self.inner)
     }
 
     /// Get the value of the `SO_KEEPALIVE` option on this socket.

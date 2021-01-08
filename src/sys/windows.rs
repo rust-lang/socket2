@@ -220,6 +220,63 @@ pub(crate) fn connect(socket: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
+pub(crate) fn connect_timeout(
+    socket: Socket,
+    addr: &SockAddr,
+    timeout: Duration,
+) -> io::Result<()> {
+    set_nonblocking(socket, true)?;
+    let r = connect(socket, addr);
+    set_nonblocking(socket, false)?;
+
+    match r {
+        Ok(()) => return Ok(()),
+        Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
+        Err(e) => return Err(e),
+    }
+
+    if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "cannot set a 0 duration timeout",
+        ));
+    }
+
+    let mut timeout = sock::timeval {
+        tv_sec: timeout.as_secs() as c_long,
+        tv_usec: (timeout.subsec_nanos() / 1000) as c_long,
+    };
+    if timeout.tv_sec == 0 && timeout.tv_usec == 0 {
+        timeout.tv_usec = 1;
+    }
+
+    let fds = unsafe {
+        let mut fds = MaybeUninit::<sock::fd_set>::zeroed().assume_init();
+        fds.fd_count = 1;
+        fds.fd_array[0] = socket;
+        fds
+    };
+
+    let mut writefds = fds;
+    let mut errorfds = fds;
+
+    match unsafe { sock::select(1, ptr::null_mut(), &mut writefds, &mut errorfds, &timeout) } {
+        sock::SOCKET_ERROR => Err(io::Error::last_os_error()),
+        0 => Err(io::Error::new(
+            io::ErrorKind::TimedOut,
+            "connection timed out",
+        )),
+        _ => {
+            if writefds.fd_count != 1 {
+                if let Some(e) = take_error(socket)? {
+                    return Err(e);
+                }
+            }
+            Ok(())
+        }
+    }
+}
+
 pub(crate) fn listen(socket: Socket, backlog: c_int) -> io::Result<()> {
     syscall!(listen(socket, backlog), PartialEq::ne, 0).map(|_| ())
 }
@@ -292,6 +349,14 @@ pub(crate) fn try_clone(socket: Socket) -> io::Result<Socket> {
 pub(crate) fn set_nonblocking(socket: Socket, nonblocking: bool) -> io::Result<()> {
     let mut nonblocking = nonblocking as u_long;
     ioctlsocket(socket, sock::FIONBIO, &mut nonblocking)
+}
+
+pub(crate) fn take_error(socket: Socket) -> io::Result<Option<io::Error>> {
+    match unsafe { getsockopt::<c_int>(socket, SOL_SOCKET, SO_ERROR) } {
+        Ok(0) => Ok(None),
+        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
+        Err(err) => Err(err),
+    }
 }
 
 pub(crate) fn shutdown(socket: Socket, how: Shutdown) -> io::Result<()> {
