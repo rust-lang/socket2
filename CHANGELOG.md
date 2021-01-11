@@ -88,9 +88,6 @@
     * `Socket::into_unix_stream` => `UnixStream::from(socket)`.
     * `Socket::into_unix_listener` => `UnixListener::from(socket)`.
     * `Socket::into_unix_datagram` => `UnixDatagram::from(socket)`.
-* **BREAKING:** Removed `Socket::connect_timeout`: it didn't correspond to a
-  single system call and thus doesn't belong in a low-level library like
-  socket2.
 * Removed `cfg-if` dependency.
 * Remove `redox_syscall` depdency.
 

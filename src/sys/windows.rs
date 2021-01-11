@@ -13,7 +13,7 @@ use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
 use std::sync::Once;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::{ptr, slice};
 
 use winapi::ctypes::c_long;
@@ -28,7 +28,10 @@ use winapi::shared::ws2def::WSABUF;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::{self, INFINITE};
-use winapi::um::winsock2::{self as sock, u_long, SD_BOTH, SD_RECEIVE, SD_SEND};
+use winapi::um::winsock2::{
+    self as sock, u_long, POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND,
+    WSAPOLLFD,
+};
 
 use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
 
@@ -218,6 +221,67 @@ pub(crate) fn bind(socket: Socket, addr: &SockAddr) -> io::Result<()> {
 
 pub(crate) fn connect(socket: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
+}
+
+pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Result<()> {
+    let start = Instant::now();
+
+    let mut fd_array = WSAPOLLFD {
+        fd: socket.inner,
+        events: POLLRDNORM | POLLWRNORM,
+        revents: 0,
+    };
+
+    loop {
+        let elapsed = start.elapsed();
+        if elapsed >= timeout {
+            return Err(io::ErrorKind::TimedOut.into());
+        }
+
+        let timeout = (timeout - elapsed).as_millis();
+        let timeout = clamp(timeout, 1, c_int::max_value() as u128) as c_int;
+
+        match syscall!(
+            WSAPoll(&mut fd_array, 1, timeout),
+            PartialEq::eq,
+            sock::SOCKET_ERROR
+        ) {
+            Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
+            Ok(_) => {
+                // Error or hang up indicates an error (or failure to connect).
+                if (fd_array.revents & POLLERR) != 0 || (fd_array.revents & POLLHUP) != 0 {
+                    match socket.take_error() {
+                        Ok(Some(err)) => return Err(err),
+                        Ok(None) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                "no error set after POLLHUP",
+                            ))
+                        }
+                        Err(err) => return Err(err),
+                    }
+                }
+                return Ok(());
+            }
+            // Got interrupted, try again.
+            Err(ref err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
+        }
+    }
+}
+
+// TODO: use clamp from std lib, stable since 1.50.
+fn clamp<T>(value: T, min: T, max: T) -> T
+where
+    T: Ord,
+{
+    if value <= min {
+        min
+    } else if value >= max {
+        max
+    } else {
+        value
+    }
 }
 
 pub(crate) fn listen(socket: Socket, backlog: c_int) -> io::Result<()> {

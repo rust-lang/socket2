@@ -22,7 +22,7 @@ use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::path::Path;
 #[cfg(not(all(target_os = "redox", not(feature = "all"))))]
 use std::ptr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::{io, slice};
 
 #[cfg(not(target_vendor = "apple"))]
@@ -424,6 +424,63 @@ pub(crate) fn bind(fd: Socket, addr: &SockAddr) -> io::Result<()> {
 
 pub(crate) fn connect(fd: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
+}
+
+pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Result<()> {
+    let start = Instant::now();
+
+    let mut pollfd = libc::pollfd {
+        fd: socket.inner,
+        events: libc::POLLIN | libc::POLLOUT,
+        revents: 0,
+    };
+
+    loop {
+        let elapsed = start.elapsed();
+        if elapsed >= timeout {
+            return Err(io::ErrorKind::TimedOut.into());
+        }
+
+        let timeout = (timeout - elapsed).as_millis();
+        let timeout = clamp(timeout, 1, c_int::max_value() as u128) as c_int;
+
+        match syscall!(poll(&mut pollfd, 1, timeout)) {
+            Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
+            Ok(_) => {
+                // Error or hang up indicates an error (or failure to connect).
+                if (pollfd.revents & libc::POLLHUP) != 0 || (pollfd.revents & libc::POLLERR) != 0 {
+                    match socket.take_error() {
+                        Ok(Some(err)) => return Err(err),
+                        Ok(None) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                "no error set after POLLHUP",
+                            ))
+                        }
+                        Err(err) => return Err(err),
+                    }
+                }
+                return Ok(());
+            }
+            // Got interrupted, try again.
+            Err(ref err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
+        }
+    }
+}
+
+// TODO: use clamp from std lib, stable since 1.50.
+fn clamp<T>(value: T, min: T, max: T) -> T
+where
+    T: Ord,
+{
+    if value <= min {
+        min
+    } else if value >= max {
+        max
+    } else {
+        value
+    }
 }
 
 pub(crate) fn listen(fd: Socket, backlog: c_int) -> io::Result<()> {
