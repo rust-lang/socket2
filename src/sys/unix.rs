@@ -463,8 +463,20 @@ impl SockAddr {
         }
         .map(|(_, addr)| addr)
     }
-}
 
+    /// Returns this address VSOCK CID/port if it is in the `AF_VSOCK` family,
+    /// otherwise return `None`.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    pub fn vsock_address(&self) -> Option<(u32, u32)> {
+        if self.family() == libc::AF_VSOCK as sa_family_t {
+            // Safety: if the ss_family field is AF_VSOCK then storage must be a sockaddr_vm.
+            let addr = unsafe { &*(self.as_ptr() as *const libc::sockaddr_vm) };
+            Some((addr.svm_cid, addr.svm_port))
+        } else {
+            None
+        }
+    }
+}
 
 pub(crate) type Socket = c_int;
 

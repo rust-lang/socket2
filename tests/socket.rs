@@ -141,6 +141,7 @@ fn socket_address_vsock() {
     let addr = SockAddr::vsock(1, 9999).unwrap();
     assert!(addr.as_socket_ipv4().is_none());
     assert!(addr.as_socket_ipv6().is_none());
+    assert_eq!(addr.vsock_address().unwrap(), (1, 9999));
 }
 
 #[test]
