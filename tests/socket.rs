@@ -136,6 +136,14 @@ fn socket_address_unix() {
 }
 
 #[test]
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+fn socket_address_vsock() {
+    let addr = SockAddr::vsock(1, 9999).unwrap();
+    assert!(addr.as_socket_ipv4().is_none());
+    assert!(addr.as_socket_ipv6().is_none());
+}
+
+#[test]
 fn set_nonblocking() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_nonblocking(&socket, false);
