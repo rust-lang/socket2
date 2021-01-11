@@ -111,5 +111,5 @@
 ## From v0.4.0-alpha.1 to v0.4.0-alpha.2
 
 * Fixes the Fuchsia target.
-* `Socket::device` now returns a `Vec<u8>` rather then `CString`.
-* `Socket::bind_device` now accepts a `&[u8]` rather then `&CStr`.
+* `Socket::device` now returns a `Vec<u8>` rather than `CString`.
+* `Socket::bind_device` now accepts a `&[u8]` rather than `&CStr`.
