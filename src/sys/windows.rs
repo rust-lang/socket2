@@ -239,7 +239,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
         }
 
         let timeout = (timeout - elapsed).as_millis();
-        let timeout = timeout.clamp(1, c_int::max_value() as u128) as c_int;
+        let timeout = clamp(timeout, 1, c_int::max_value() as u128) as c_int;
 
         match syscall!(
             WSAPoll(&mut fd_array, 1, timeout),
@@ -267,6 +267,20 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
             Err(ref err) if err.kind() == io::ErrorKind::Interrupted => continue,
             Err(err) => return Err(err),
         }
+    }
+}
+
+// TODO: use clamp from std lib, stable since 1.50.
+fn clamp<T>(value: T, min: T, max: T) -> T
+where
+    T: Ord,
+{
+    if value <= min {
+        min
+    } else if value >= max {
+        max
+    } else {
+        value
     }
 }
 
