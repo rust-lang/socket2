@@ -308,7 +308,7 @@ const DATA: &[u8] = b"hello world";
 
 #[test]
 fn connect_timeout_unrouteable() {
-    // this IP is unroutable, so connections should always time out
+    // This IP is unroutable, so connections should always time out.
     let addr = "10.255.255.1:80".parse::<SocketAddr>().unwrap().into();
 
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
@@ -321,7 +321,7 @@ fn connect_timeout_unrouteable() {
 
 #[test]
 fn connect_timeout_unbound() {
-    // bind and drop a socket to track down a "probably unassigned" port
+    // Bind and drop a socket to track down a "probably unassigned" port.
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();
     socket.bind(&addr).unwrap();

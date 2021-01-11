@@ -13,7 +13,7 @@ use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::prelude::*;
 use std::sync::Once;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::{ptr, slice};
 
 use winapi::ctypes::c_long;
@@ -28,7 +28,10 @@ use winapi::shared::ws2def::WSABUF;
 use winapi::um::handleapi::SetHandleInformation;
 use winapi::um::processthreadsapi::GetCurrentProcessId;
 use winapi::um::winbase::{self, INFINITE};
-use winapi::um::winsock2::{self as sock, u_long, SD_BOTH, SD_RECEIVE, SD_SEND};
+use winapi::um::winsock2::{
+    self as sock, u_long, POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND,
+    WSAPOLLFD,
+};
 
 use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
 
@@ -220,59 +223,49 @@ pub(crate) fn connect(socket: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(socket, addr.as_ptr(), addr.len()), PartialEq::ne, 0).map(|_| ())
 }
 
-pub(crate) fn connect_timeout(
-    socket: Socket,
-    addr: &SockAddr,
-    timeout: Duration,
-) -> io::Result<()> {
-    set_nonblocking(socket, true)?;
-    let r = connect(socket, addr);
-    set_nonblocking(socket, false)?;
+pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Result<()> {
+    let start = Instant::now();
 
-    match r {
-        Ok(()) => return Ok(()),
-        Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
-        Err(e) => return Err(e),
-    }
-
-    if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "cannot set a 0 duration timeout",
-        ));
-    }
-
-    let mut timeout = sock::timeval {
-        tv_sec: timeout.as_secs() as c_long,
-        tv_usec: (timeout.subsec_nanos() / 1000) as c_long,
-    };
-    if timeout.tv_sec == 0 && timeout.tv_usec == 0 {
-        timeout.tv_usec = 1;
-    }
-
-    let fds = unsafe {
-        let mut fds = MaybeUninit::<sock::fd_set>::zeroed().assume_init();
-        fds.fd_count = 1;
-        fds.fd_array[0] = socket;
-        fds
+    let mut fd_array = WSAPOLLFD {
+        fd: socket.inner,
+        events: POLLRDNORM | POLLWRNORM,
+        revents: 0,
     };
 
-    let mut writefds = fds;
-    let mut errorfds = fds;
+    loop {
+        let elapsed = start.elapsed();
+        if elapsed >= timeout {
+            return Err(io::ErrorKind::TimedOut.into());
+        }
 
-    match unsafe { sock::select(1, ptr::null_mut(), &mut writefds, &mut errorfds, &timeout) } {
-        sock::SOCKET_ERROR => Err(io::Error::last_os_error()),
-        0 => Err(io::Error::new(
-            io::ErrorKind::TimedOut,
-            "connection timed out",
-        )),
-        _ => {
-            if writefds.fd_count != 1 {
-                if let Some(e) = take_error(socket)? {
-                    return Err(e);
+        let timeout = (timeout - elapsed).as_millis();
+        let timeout = timeout.clamp(1, c_int::max_value() as u128) as c_int;
+
+        match syscall!(
+            WSAPoll(&mut fd_array, 1, timeout),
+            PartialEq::eq,
+            sock::SOCKET_ERROR
+        ) {
+            Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
+            Ok(_) => {
+                // Error or hang up indicates an error (or failure to connect).
+                if (fd_array.revents & POLLERR) != 0 || (fd_array.revents & POLLHUP) != 0 {
+                    match socket.take_error() {
+                        Ok(Some(err)) => return Err(err),
+                        Ok(None) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                "no error set after POLLHUP",
+                            ))
+                        }
+                        Err(err) => return Err(err),
+                    }
                 }
+                return Ok(());
             }
-            Ok(())
+            // Got interrupted, try again.
+            Err(ref err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
         }
     }
 }
@@ -349,14 +342,6 @@ pub(crate) fn try_clone(socket: Socket) -> io::Result<Socket> {
 pub(crate) fn set_nonblocking(socket: Socket, nonblocking: bool) -> io::Result<()> {
     let mut nonblocking = nonblocking as u_long;
     ioctlsocket(socket, sock::FIONBIO, &mut nonblocking)
-}
-
-pub(crate) fn take_error(socket: Socket) -> io::Result<Option<io::Error>> {
-    match unsafe { getsockopt::<c_int>(socket, SOL_SOCKET, SO_ERROR) } {
-        Ok(0) => Ok(None),
-        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
-        Err(err) => Err(err),
-    }
 }
 
 pub(crate) fn shutdown(socket: Socket, how: Shutdown) -> io::Result<()> {

@@ -184,7 +184,19 @@ impl Socket {
     /// If the connection request times out, it may still be processing in the
     /// background - a second call to `connect` or `connect_timeout` may fail.
     pub fn connect_timeout(&self, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
-        sys::connect_timeout(self.inner, addr, timeout)
+        self.set_nonblocking(true)?;
+        let res = self.connect(addr);
+        self.set_nonblocking(false)?;
+
+        match res {
+            Ok(()) => return Ok(()),
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
+            #[cfg(unix)]
+            Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
+            Err(e) => return Err(e),
+        }
+
+        sys::poll_connect(self, timeout)
     }
 
     /// Mark a socket as ready to accept incoming connection requests using
@@ -685,7 +697,11 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        sys::take_error(self.inner)
+        match unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_ERROR) } {
+            Ok(0) => Ok(None),
+            Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
+            Err(err) => Err(err),
+        }
     }
 
     /// Get the value of the `SO_KEEPALIVE` option on this socket.

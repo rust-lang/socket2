@@ -426,75 +426,45 @@ pub(crate) fn connect(fd: Socket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
 }
 
-pub(crate) fn connect_timeout(fd: Socket, addr: &SockAddr, timeout: Duration) -> io::Result<()> {
-    set_nonblocking(fd, true)?;
-    let r = connect(fd, addr);
-    set_nonblocking(fd, false)?;
-
-    match r {
-        Ok(()) => return Ok(()),
-        // there's no io::ErrorKind conversion registered for EINPROGRESS :(
-        Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
-        Err(e) => return Err(e),
-    }
+pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Result<()> {
+    let start = Instant::now();
 
     let mut pollfd = libc::pollfd {
-        fd,
-        events: libc::POLLOUT,
+        fd: socket.inner,
+        events: libc::POLLIN | libc::POLLOUT,
         revents: 0,
     };
-
-    if timeout.as_secs() == 0 && timeout.subsec_nanos() == 0 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "cannot set a 0 duration timeout",
-        ));
-    }
-
-    let start = Instant::now();
 
     loop {
         let elapsed = start.elapsed();
         if elapsed >= timeout {
-            return Err(io::Error::new(
-                io::ErrorKind::TimedOut,
-                "connection timed out",
-            ));
+            return Err(io::ErrorKind::TimedOut.into());
         }
 
-        let timeout = timeout - elapsed;
-        let mut timeout = timeout
-            .as_secs()
-            .saturating_mul(1_000)
-            .saturating_add(timeout.subsec_nanos() as u64 / 1_000_000);
-        if timeout == 0 {
-            timeout = 1;
-        }
+        let timeout = (timeout - elapsed).as_millis();
+        let timeout = timeout.clamp(1, c_int::max_value() as u128) as c_int;
 
-        let timeout = min(timeout, c_int::max_value() as u64) as c_int;
-
-        match unsafe { libc::poll(&mut pollfd, 1, timeout) } {
-            -1 => {
-                let err = io::Error::last_os_error();
-                if err.kind() != io::ErrorKind::Interrupted {
-                    return Err(err);
+        match syscall!(poll(&mut pollfd, 1, timeout)) {
+            Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
+            Ok(_) => {
+                // Error or hang up indicates an error (or failure to connect).
+                if (pollfd.revents & libc::POLLHUP) != 0 || (pollfd.revents & libc::POLLERR) != 0 {
+                    match socket.take_error() {
+                        Ok(Some(err)) => return Err(err),
+                        Ok(None) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                "no error set after POLLHUP",
+                            ))
+                        }
+                        Err(err) => return Err(err),
+                    }
                 }
-            }
-            0 => {
-                // Timeout error will be returned on the next loop iteration
-            }
-            _ => {
-                // linux returns POLLOUT|POLLERR|POLLHUP for refused connections (!), so look
-                // for POLLHUP rather than read readiness
-                if pollfd.revents & libc::POLLHUP != 0 {
-                    let e = take_error(fd)?.unwrap_or_else(|| {
-                        io::Error::new(io::ErrorKind::Other, "no error set after POLLHUP")
-                    });
-                    return Err(e);
-                }
-
                 return Ok(());
             }
+            // Got interrupted, try again.
+            Err(ref err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
         }
     }
 }
@@ -529,14 +499,6 @@ pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
         fcntl_add(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
     } else {
         fcntl_remove(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
-    }
-}
-
-pub(crate) fn take_error(fd: Socket) -> io::Result<Option<io::Error>> {
-    match unsafe { getsockopt::<c_int>(fd, SOL_SOCKET, SO_ERROR) } {
-        Ok(0) => Ok(None),
-        Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
-        Err(err) => Err(err),
     }
 }
 
