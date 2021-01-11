@@ -425,6 +425,29 @@ fn unix() {
 }
 
 #[test]
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+#[ignore = "using VSOCK family requires optional kernel support (works when enabled)"]
+fn vsock() {
+    let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, libc::VMADDR_PORT_ANY).unwrap();
+
+    let listener = Socket::new(Domain::VSOCK, Type::STREAM, None).unwrap();
+    listener.bind(&addr).unwrap();
+    listener.listen(10).unwrap();
+
+    let (_, port) = listener.local_addr().unwrap().vsock_address().unwrap();
+    let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, port).unwrap();
+    let mut a = Socket::new(Domain::VSOCK, Type::STREAM, None).unwrap();
+    a.connect(&addr).unwrap();
+    let mut b = listener.accept().unwrap().0;
+
+    a.write(DATA).unwrap();
+    let mut buf = [0; DATA.len() + 1];
+    let n = b.read(&mut buf).unwrap();
+    assert_eq!(n, DATA.len());
+    assert_eq!(&buf[..n], DATA);
+}
+
+#[test]
 fn out_of_band() {
     let listener = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     listener.bind(&any_ipv4()).unwrap();
