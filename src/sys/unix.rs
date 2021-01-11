@@ -189,6 +189,14 @@ impl Domain {
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
     pub const PACKET: Domain = Domain(libc::AF_PACKET);
+
+    /// Domain for low-level VSOCK interface, corresponding to `AF_VSOCK`.
+    ///
+    /// # Notes
+    ///
+    /// This function is only available on Linux.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    pub const VSOCK: Domain = Domain(libc::AF_VSOCK);
 }
 
 impl_debug!(
@@ -198,6 +206,8 @@ impl_debug!(
     libc::AF_UNIX,
     #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
     libc::AF_PACKET,
+    #[cfg(any(target_os = "android", target_os = "linux"))]
+    libc::AF_VSOCK,
     libc::AF_UNSPEC, // = 0.
 );
 

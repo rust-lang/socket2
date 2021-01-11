@@ -71,6 +71,8 @@ fn domain_fmt_debug() {
         (Domain::UNIX, "AF_UNIX"),
         #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
         (Domain::PACKET, "AF_PACKET"),
+        #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+        (Domain::VSOCK, "AF_VSOCK"),
         (0.into(), "AF_UNSPEC"),
         (500.into(), "500"),
     ];
