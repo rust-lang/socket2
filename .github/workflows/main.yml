@@ -58,7 +58,7 @@ jobs:
       matrix:
         # TODO: add the following targets, currently broken.
         # "x86_64-unknown-redox"
-        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-fuchsia", "x86_64-pc-windows-msvc", "x86_64-sun-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd"]
+        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-fuchsia", "x86_64-pc-windows-msvc", "x86_64-sun-solaris", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd"]
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
@@ -88,6 +88,26 @@ jobs:
       run: rustup target add ${{ matrix.target }}
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
+
+  Test_FreeBSD:
+    name: Test
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: ["x86_64-unknown-freebsd"]
+    steps:
+    - uses: actions/checkout@master
+    - name: Run check
+      uses: vmactions/freebsd-vm@v0.1.0
+      with:
+        prepare: |
+          pkg install -y curl
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+        run: |
+          set path=($HOME/.cargo/bin $path)
+          cargo install cargo-hack
+          cargo hack test --feature-powerset --target ${{ matrix.target }}
+          cargo hack test --feature-powerset --release --target ${{ matrix.target }}
 
   Publish_docs:
     name: Publish Documentation
