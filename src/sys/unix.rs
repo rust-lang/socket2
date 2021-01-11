@@ -438,6 +438,34 @@ impl SockAddr {
     }
 }
 
+impl SockAddr {
+    /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
+    ///
+    /// This function is only available on Linux.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
+    pub fn vsock(cid: u32, port: u32) -> io::Result<SockAddr> {
+        unsafe {
+            SockAddr::init(|storage, len| {
+                // Safety: `SockAddr::init` zeros the address, which is a valid
+                // representation.
+                let storage: &mut libc::sockaddr_vm = unsafe { &mut *storage.cast() };
+                let len: &mut socklen_t = unsafe { &mut *len };
+
+                storage.svm_family = libc::AF_VSOCK as sa_family_t;
+                storage.svm_cid = cid;
+                storage.svm_port = port;
+
+                *len = mem::size_of::<libc::sockaddr_vm>() as socklen_t;
+
+                Ok(())
+            })
+        }
+        .map(|(_, addr)| addr)
+    }
+}
+
+
 pub(crate) type Socket = c_int;
 
 pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
