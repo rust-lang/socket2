@@ -768,7 +768,8 @@ test!(IPv4 ttl, set_ttl(40));
 test!(IPv4 broadcast, set_broadcast(true));
 
 test!(IPv6 unicast_hops_v6, set_unicast_hops_v6(20));
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "freebsd")))]
 test!(IPv6 only_v6, set_only_v6(true));
-#[cfg(windows)] // IPv6 socket are already IPv6 only on Windows.
+// IPv6 socket are already IPv6 only on FreeBSD and Windows.
+#[cfg(any(windows, target_os = "freebsd"))]
 test!(IPv6 only_v6, set_only_v6(false));
