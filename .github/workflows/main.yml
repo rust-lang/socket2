@@ -102,7 +102,7 @@ jobs:
       with:
         prepare: |
           pkg install -y curl
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
         run: |
           set path=($HOME/.cargo/bin $path)
           cargo install cargo-hack
