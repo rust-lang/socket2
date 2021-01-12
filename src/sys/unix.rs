@@ -997,7 +997,8 @@ impl crate::Socket {
         feature = "all",
         any(
             target_os = "android",
-            target_os = "freebsd",
+            // TODO: add FreeBSD.
+            // target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
         )
