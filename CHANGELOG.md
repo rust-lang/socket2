@@ -14,6 +14,7 @@
 * `Socket::new_raw`, `Socket::pair_raw` and `Socket::accept_raw` methods
   that don't set common flags, such as the close-on-exec flag.
 * `Socket::accept4`: `accept4(2)` system call.
+* `Socket::sendfile`: the `sendfile(2)` system call.
 * `Socket::set_cloexec`: set the close-on-exec flag on Unix.
 * `Socket::set_no_inherit`: set inherit handle flag on Windows.
 * `Socket::set_nosigpipe`: set `SO_NOSIGPIPE` on Apple targets.
@@ -30,6 +31,10 @@
   * `Socket::keepalive_interval`,
   * `Socket::keepalive_retries`,
   * `Socket::set_tcp_keepalive`.
+* `Socket::is_listener` getting the `SO_ACCEPTCONN` socket option.
+* `Socket::domain` getting the `SO_DOMAIN` socket option.
+* `Socket::protocol` getting the `SO_PROTOCOL` socket option.
+* `Socket::type` getting the `SO_TYPE` socket option.
 * `Domain::for_address`: the correct `Domain` for a `std::net::SocketAddr`.
 * `Type::nonblocking`: set `SOCK_NONBLOCK`.
 * `Type::cloexec`: set `SOCK_CLOEXEC`.
@@ -110,3 +115,7 @@
 * Fixes the Fuchsia target.
 * `Socket::device` now returns a `Vec<u8>` rather than `CString`.
 * `Socket::bind_device` now accepts a `&[u8]` rather than `&CStr`.
+
+## From v0.4.0-alpha.2 to v0.4.0-alpha.3
+
+* `Socket::connect_timeout` was added back.
