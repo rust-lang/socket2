@@ -1186,6 +1186,38 @@ impl crate::Socket {
         .map(|_| ())
     }
 
+    /// Get the value of the `SO_INCOMING_CPU` option on this socket.
+    ///
+    /// For more information about this option, see [`set_cpu_affinity`].
+    ///
+    /// This function is only available on Linux.
+    ///
+    /// [`set_cpu_affinity`]: crate::Socket::set_cpu_affinity
+    #[cfg(all(feature = "all", any(target_os = "linux")))]
+    pub fn cpu_affinity(&mut self) -> io::Result<usize> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_INCOMING_CPU)
+                .map(|cpu| cpu as usize)
+        }
+    }
+
+    /// Set value for the `SO_INCOMING_CPU` option on this socket.
+    ///
+    /// Sets the CPU affinity of the socket.
+    ///
+    /// This function is only available on Linux.
+    #[cfg(all(feature = "all", any(target_os = "linux")))]
+    pub fn set_cpu_affinity(&mut self, cpu: usize) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                libc::SOL_SOCKET,
+                libc::SO_INCOMING_CPU,
+                cpu as c_int,
+            )
+        }
+    }
+
     /// Get the value of the `SO_REUSEPORT` option on this socket.
     ///
     /// For more information about this option, see [`set_reuse_port`].
