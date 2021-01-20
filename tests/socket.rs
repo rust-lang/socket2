@@ -949,6 +949,19 @@ fn r#type() {
     assert_eq!(socket.r#type().unwrap(), Type::SEQPACKET);
 }
 
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[test]
+fn cpu_affinity() {
+    let mut socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+
+    // NOTE: This requires at least 2 CPU cores.
+    let cpu = socket.cpu_affinity().unwrap();
+    let want = if cpu == 0 { 1 } else { 0 };
+
+    socket.set_cpu_affinity(want).unwrap();
+    assert_eq!(socket.cpu_affinity().unwrap(), want);
+}
+
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }
