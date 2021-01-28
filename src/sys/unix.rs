@@ -1194,7 +1194,7 @@ impl crate::Socket {
     ///
     /// [`set_cpu_affinity`]: crate::Socket::set_cpu_affinity
     #[cfg(all(feature = "all", any(target_os = "linux")))]
-    pub fn cpu_affinity(&mut self) -> io::Result<usize> {
+    pub fn cpu_affinity(&self) -> io::Result<usize> {
         unsafe {
             getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_INCOMING_CPU)
                 .map(|cpu| cpu as usize)
@@ -1207,7 +1207,7 @@ impl crate::Socket {
     ///
     /// This function is only available on Linux.
     #[cfg(all(feature = "all", any(target_os = "linux")))]
-    pub fn set_cpu_affinity(&mut self, cpu: usize) -> io::Result<()> {
+    pub fn set_cpu_affinity(&self, cpu: usize) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.inner,
