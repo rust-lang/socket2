@@ -121,3 +121,8 @@
 ## From v0.4.0-alpha.2 to v0.4.0-alpha.3
 
 * `Socket::connect_timeout` was added back.
+
+## From v0.4.0-alpha.4 to v0.4.0-alpha.5
+
+* Changed `Socket::set_cpu_affinity` and `Socket::cpu_affinity` to use an
+  immutable reference.
