@@ -20,6 +20,8 @@
 * `Socket::set_nosigpipe`: set `SO_NOSIGPIPE` on Apple targets.
 * `Socket::set_mark` and `Socket::mark`, setting/getting the `SO_MARK` socket
   option.
+* `Socket::set_cpu_affinity` and `Socket::cpu_affinity`, setting/getting the
+  `SO_INCOMING_CPU` socket option.
 * `Socket::set_mss` and `Socket::mss`, setting/getting the `TCP_MAXSEG` socket
   option.
 * `Socket::set_freebind` and `Socket::freebind`, setting/getting the
