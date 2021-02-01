@@ -3,7 +3,6 @@
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "fucsia",
         target_os = "linux",
         target_vendor = "apple",
     )
@@ -24,7 +23,6 @@ use std::net::{Ipv6Addr, SocketAddrV6};
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "fucsia",
         target_os = "linux",
         target_vendor = "apple",
     )
@@ -769,7 +767,6 @@ fn device() {
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "fucsia",
         target_os = "linux",
         target_vendor = "apple",
     )
@@ -845,7 +842,6 @@ fn sendfile() {
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "fucsia",
         target_os = "linux",
         target_vendor = "apple",
     )

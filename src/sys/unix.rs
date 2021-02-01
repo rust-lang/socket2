@@ -18,7 +18,6 @@ use std::net::{Ipv4Addr, Ipv6Addr};
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "fucsia",
         target_os = "linux",
         target_vendor = "apple",
     )
@@ -31,7 +30,6 @@ use std::os::unix::ffi::OsStrExt;
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "fucsia",
         target_os = "linux",
         target_vendor = "apple",
     )
@@ -1323,7 +1321,6 @@ impl crate::Socket {
         any(
             target_os = "android",
             target_os = "freebsd",
-            target_os = "fucsia",
             target_os = "linux",
             target_vendor = "apple",
         )
@@ -1365,10 +1362,7 @@ impl crate::Socket {
         .map(|_| length as usize)
     }
 
-    #[cfg(all(
-        feature = "all",
-        any(target_os = "android", target_os = "fucsia", target_os = "linux")
-    ))]
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     fn _sendfile(
         &self,
         file: RawFd,
