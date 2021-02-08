@@ -749,7 +749,12 @@ impl Socket {
     /// immediately and the closing is done in the background. When the socket
     /// is closed as part of exit(2), it always lingers in the background.
     ///
-    /// Note that the duration only has a precision of seconds on most OSs.
+    /// # Notes
+    ///
+    /// On most OSs the duration only has a precision of seconds and will be
+    /// silently truncated.
+    ///
+    /// On Apple platforms (e.g. macOS, iOS, etc) this uses `SO_LINGER_SEC`.
     pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
         let linger = into_linger(linger);
         unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_LINGER, linger) }
