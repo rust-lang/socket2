@@ -126,3 +126,7 @@
 
 * Changed `Socket::set_cpu_affinity` and `Socket::cpu_affinity` to use an
   immutable reference.
+
+## From v0.4.0-alpha.5 to v0.4.0
+
+* Use `SO_LINGER_SEC` on macOS for `Socket::get/set_linger`.
