@@ -769,6 +769,8 @@ pub(crate) fn set_timeout_opt(
 
 fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     match duration {
+        // https://github.com/rust-lang/libc/issues/1848
+        #[cfg_attr(target_env = "musl", allow(deprecated))]
         Some(duration) => libc::timeval {
             tv_sec: min(duration.as_secs(), libc::time_t::max_value() as u64) as libc::time_t,
             tv_usec: duration.subsec_micros() as libc::suseconds_t,
