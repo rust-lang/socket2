@@ -15,11 +15,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, beta, nightly, macos, windows]
+        build: [stable, 1.46.0, beta, nightly, macos, windows]
         include:
           - build: stable
             os: ubuntu-latest
             rust: stable
+          - build: 1.46.0
+            os: ubuntu-latest
+            rust: 1.46.0
           - build: beta
             os: ubuntu-latest
             rust: beta
