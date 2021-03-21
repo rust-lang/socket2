@@ -62,6 +62,10 @@ feature flag.
 * Redox
 * Solaris
 
+# Minimum Supported Rust Version (MSRV)
+
+Socket2 uses 1.46.0 as MSRV.
+
 # License
 
 This project is licensed under either of
