@@ -280,6 +280,12 @@ impl Socket {
         sys::getpeername(self.inner)
     }
 
+    /// Returns the [`Type`] of this socket by checking the `SO_TYPE` option on
+    /// this socket.
+    pub fn r#type(&self) -> io::Result<Type> {
+        unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_TYPE).map(Type) }
+    }
+
     /// Creates a new independently owned handle to the underlying socket.
     ///
     /// # Notes
