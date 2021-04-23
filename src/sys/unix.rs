@@ -82,7 +82,7 @@ pub(crate) use libc::{
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
     IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
     IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
-    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, TCP_NODELAY,
+    SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 #[cfg(not(any(
     target_os = "dragonfly",
@@ -1079,21 +1079,6 @@ impl crate::Socket {
                 p => Some(Protocol(p)),
             })
         }
-    }
-
-    /// Returns the [`Type`] of this socket by checking the `SO_TYPE` option on
-    /// this socket.
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "android",
-            target_os = "freebsd",
-            target_os = "fuchsia",
-            target_os = "linux",
-        )
-    ))]
-    pub fn r#type(&self) -> io::Result<Type> {
-        unsafe { getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_TYPE).map(Type) }
     }
 
     /// Gets the value for the `SO_MARK` option on this socket.

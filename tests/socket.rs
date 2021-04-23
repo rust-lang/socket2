@@ -924,15 +924,6 @@ fn protocol() {
     assert_eq!(socket.protocol().unwrap(), Some(Protocol::UDP));
 }
 
-#[cfg(all(
-    feature = "all",
-    any(
-        target_os = "android",
-        target_os = "freebsd",
-        target_os = "fuchsia",
-        target_os = "linux",
-    )
-))]
 #[test]
 fn r#type() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
@@ -941,8 +932,12 @@ fn r#type() {
     let socket = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
     assert_eq!(socket.r#type().unwrap(), Type::DGRAM);
 
-    let socket = Socket::new(Domain::UNIX, Type::SEQPACKET, None).unwrap();
-    assert_eq!(socket.r#type().unwrap(), Type::SEQPACKET);
+    // macos doesn't support seqpacket
+    #[cfg(all(unix, not(target_vendor = "apple"), feature = "all"))]
+    {
+        let socket = Socket::new(Domain::UNIX, Type::SEQPACKET, None).unwrap();
+        assert_eq!(socket.r#type().unwrap(), Type::SEQPACKET);
+    }
 }
 
 #[cfg(all(feature = "all", target_os = "linux"))]
