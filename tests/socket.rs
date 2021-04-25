@@ -953,6 +953,15 @@ fn cpu_affinity() {
     assert_eq!(socket.cpu_affinity().unwrap(), want);
 }
 
+#[test]
+#[cfg(unix)]
+fn niche() {
+    assert_eq!(
+        std::mem::size_of::<Option<Socket>>(),
+        std::mem::size_of::<Socket>()
+    );
+}
+
 fn any_ipv4() -> SockAddr {
     SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0).into()
 }

@@ -68,8 +68,25 @@ use crate::{MaybeUninitSlice, RecvFlags};
 /// # Ok(()) }
 /// ```
 pub struct Socket {
-    // The `sys` module most have access to the socket.
-    pub(crate) inner: sys::Socket,
+    inner: Inner,
+}
+
+/// Store a `TcpStream` internally to take advantage of its niche optimizations on Unix platforms.
+pub(crate) type Inner = std::net::TcpStream;
+
+// The `sys` module must have access to these functions.
+impl Socket {
+    pub(crate) fn from_raw(raw: sys::Socket) -> Socket {
+        Socket {
+            inner: sys::socket_from_raw(raw),
+        }
+    }
+    pub(crate) fn as_raw(&self) -> sys::Socket {
+        sys::socket_as_raw(&self.inner)
+    }
+    pub(crate) fn into_raw(self) -> sys::Socket {
+        sys::socket_into_raw(self.inner)
+    }
 }
 
 impl Socket {
@@ -94,7 +111,7 @@ impl Socket {
     /// Windows and simply creates a new socket, no other configuration is done.
     pub fn new_raw(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
-        sys::socket(domain.0, ty.0, protocol).map(|inner| Socket { inner })
+        sys::socket(domain.0, ty.0, protocol).map(Socket::from_raw)
     }
 
     /// Creates a pair of sockets which are connected to each other.
@@ -135,7 +152,7 @@ impl Socket {
     ) -> io::Result<(Socket, Socket)> {
         let protocol = protocol.map(|p| p.0).unwrap_or(0);
         sys::socketpair(domain.0, ty.0, protocol)
-            .map(|fds| (Socket { inner: fds[0] }, Socket { inner: fds[1] }))
+            .map(|[a, b]| (Socket::from_raw(a), Socket::from_raw(b)))
     }
 
     /// Binds this socket to the specified address.
@@ -143,7 +160,7 @@ impl Socket {
     /// This function directly corresponds to the `bind(2)` function on Windows
     /// and Unix.
     pub fn bind(&self, address: &SockAddr) -> io::Result<()> {
-        sys::bind(self.inner, address)
+        sys::bind(self.as_raw(), address)
     }
 
     /// Initiate a connection on this socket to the specified address.
@@ -161,7 +178,7 @@ impl Socket {
     /// set *while connecting*. This will cause errors on Windows. Socket
     /// options can be safely set before and after connecting the socket.
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
-        sys::connect(self.inner, address)
+        sys::connect(self.as_raw(), address)
     }
 
     /// Initiate a connection on this socket to the specified address, only
@@ -208,7 +225,7 @@ impl Socket {
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
     pub fn listen(&self, backlog: c_int) -> io::Result<()> {
-        sys::listen(self.inner, backlog)
+        sys::listen(self.as_raw(), backlog)
     }
 
     /// Accept a new incoming connection from this listener.
@@ -254,7 +271,7 @@ impl Socket {
     /// This function directly corresponds to the `accept(2)` function on
     /// Windows and Unix.
     pub fn accept_raw(&self) -> io::Result<(Socket, SockAddr)> {
-        sys::accept(self.inner).map(|(inner, addr)| (Socket { inner }, addr))
+        sys::accept(self.as_raw()).map(|(inner, addr)| (Socket::from_raw(inner), addr))
     }
 
     /// Returns the socket address of the local half of this socket.
@@ -266,7 +283,7 @@ impl Socket {
     ///
     /// [bound]: Socket::bind
     pub fn local_addr(&self) -> io::Result<SockAddr> {
-        sys::getsockname(self.inner)
+        sys::getsockname(self.as_raw())
     }
 
     /// Returns the socket address of the remote peer of this socket.
@@ -277,13 +294,13 @@ impl Socket {
     ///
     /// [`connect`ed]: Socket::connect
     pub fn peer_addr(&self) -> io::Result<SockAddr> {
-        sys::getpeername(self.inner)
+        sys::getpeername(self.as_raw())
     }
 
     /// Returns the [`Type`] of this socket by checking the `SO_TYPE` option on
     /// this socket.
     pub fn r#type(&self) -> io::Result<Type> {
-        unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_TYPE).map(Type) }
+        unsafe { getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_TYPE).map(Type) }
     }
 
     /// Creates a new independently owned handle to the underlying socket.
@@ -300,7 +317,7 @@ impl Socket {
     /// QOS-enabled socket, see
     /// <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw>.
     pub fn try_clone(&self) -> io::Result<Socket> {
-        sys::try_clone(self.inner).map(|inner| Socket { inner })
+        sys::try_clone(self.as_raw()).map(Socket::from_raw)
     }
 
     /// Moves this TCP stream into or out of nonblocking mode.
@@ -312,7 +329,7 @@ impl Socket {
     /// On Windows this corresponds to calling `ioctlsocket` (un)setting
     /// `FIONBIO`.
     pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
-        sys::set_nonblocking(self.inner, nonblocking)
+        sys::set_nonblocking(self.as_raw(), nonblocking)
     }
 
     /// Shuts down the read, write, or both halves of this connection.
@@ -320,7 +337,7 @@ impl Socket {
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
-        sys::shutdown(self.inner, how)
+        sys::shutdown(self.as_raw(), how)
     }
 
     /// Receives data on the socket from the remote address to which it is
@@ -367,7 +384,7 @@ impl Socket {
         buf: &mut [MaybeUninit<u8>],
         flags: sys::c_int,
     ) -> io::Result<usize> {
-        sys::recv(self.inner, buf, flags)
+        sys::recv(self.as_raw(), buf, flags)
     }
 
     /// Receives data on the socket from the remote address to which it is
@@ -420,7 +437,7 @@ impl Socket {
         bufs: &mut [MaybeUninitSlice<'_>],
         flags: c_int,
     ) -> io::Result<(usize, RecvFlags)> {
-        sys::recv_vectored(self.inner, bufs, flags)
+        sys::recv_vectored(self.as_raw(), bufs, flags)
     }
 
     /// Receives data on the socket from the remote adress to which it is
@@ -462,7 +479,7 @@ impl Socket {
         buf: &mut [MaybeUninit<u8>],
         flags: c_int,
     ) -> io::Result<(usize, SockAddr)> {
-        sys::recv_from(self.inner, buf, flags)
+        sys::recv_from(self.as_raw(), buf, flags)
     }
 
     /// Receives data from the socket. Returns the amount of bytes read, the
@@ -502,7 +519,7 @@ impl Socket {
         bufs: &mut [MaybeUninitSlice<'_>],
         flags: c_int,
     ) -> io::Result<(usize, RecvFlags, SockAddr)> {
-        sys::recv_from_vectored(self.inner, bufs, flags)
+        sys::recv_from_vectored(self.as_raw(), bufs, flags)
     }
 
     /// Receives data from the socket, without removing it from the queue.
@@ -538,7 +555,7 @@ impl Socket {
     ///
     /// [`send`]: #method.send
     pub fn send_with_flags(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
-        sys::send(self.inner, buf, flags)
+        sys::send(self.as_raw(), buf, flags)
     }
 
     /// Send data to the connected peer. Returns the amount of bytes written.
@@ -557,7 +574,7 @@ impl Socket {
         bufs: &[IoSlice<'_>],
         flags: c_int,
     ) -> io::Result<usize> {
-        sys::send_vectored(self.inner, bufs, flags)
+        sys::send_vectored(self.as_raw(), bufs, flags)
     }
 
     /// Sends out-of-band (OOB) data on the socket to connected peer
@@ -589,7 +606,7 @@ impl Socket {
         addr: &SockAddr,
         flags: c_int,
     ) -> io::Result<usize> {
-        sys::send_to(self.inner, buf, addr, flags)
+        sys::send_to(self.as_raw(), buf, addr, flags)
     }
 
     /// Send data to a peer listening on `addr`. Returns the amount of bytes
@@ -610,7 +627,7 @@ impl Socket {
         addr: &SockAddr,
         flags: c_int,
     ) -> io::Result<usize> {
-        sys::send_to_vectored(self.inner, bufs, addr, flags)
+        sys::send_to_vectored(self.as_raw(), bufs, addr, flags)
     }
 }
 
@@ -677,7 +694,7 @@ impl Socket {
     /// [`set_broadcast`]: Socket::set_broadcast
     pub fn broadcast(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_BROADCAST)
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_BROADCAST)
                 .map(|broadcast| broadcast != 0)
         }
     }
@@ -689,7 +706,7 @@ impl Socket {
     pub fn set_broadcast(&self, broadcast: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::SOL_SOCKET,
                 sys::SO_BROADCAST,
                 broadcast as c_int,
@@ -703,7 +720,7 @@ impl Socket {
     /// the field in the process. This can be useful for checking errors between
     /// calls.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        match unsafe { getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_ERROR) } {
+        match unsafe { getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_ERROR) } {
             Ok(0) => Ok(None),
             Ok(errno) => Ok(Some(io::Error::from_raw_os_error(errno))),
             Err(err) => Err(err),
@@ -717,7 +734,7 @@ impl Socket {
     /// [`set_keepalive`]: Socket::set_keepalive
     pub fn keepalive(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<Bool>(self.inner, sys::SOL_SOCKET, sys::SO_KEEPALIVE)
+            getsockopt::<Bool>(self.as_raw(), sys::SOL_SOCKET, sys::SO_KEEPALIVE)
                 .map(|keepalive| keepalive != 0)
         }
     }
@@ -728,7 +745,7 @@ impl Socket {
     pub fn set_keepalive(&self, keepalive: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::SOL_SOCKET,
                 sys::SO_KEEPALIVE,
                 keepalive as c_int,
@@ -743,7 +760,8 @@ impl Socket {
     /// [`set_linger`]: Socket::set_linger
     pub fn linger(&self) -> io::Result<Option<Duration>> {
         unsafe {
-            getsockopt::<sys::linger>(self.inner, sys::SOL_SOCKET, sys::SO_LINGER).map(from_linger)
+            getsockopt::<sys::linger>(self.as_raw(), sys::SOL_SOCKET, sys::SO_LINGER)
+                .map(from_linger)
         }
     }
 
@@ -763,7 +781,7 @@ impl Socket {
     /// On Apple platforms (e.g. macOS, iOS, etc) this uses `SO_LINGER_SEC`.
     pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
         let linger = into_linger(linger);
-        unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_LINGER, linger) }
+        unsafe { setsockopt(self.as_raw(), sys::SOL_SOCKET, sys::SO_LINGER, linger) }
     }
 
     /// Get value for the `SO_OOBINLINE` option on this socket.
@@ -774,7 +792,7 @@ impl Socket {
     #[cfg(not(target_os = "redox"))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_OOBINLINE)
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_OOBINLINE)
                 .map(|oob_inline| oob_inline != 0)
         }
     }
@@ -789,7 +807,7 @@ impl Socket {
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::SOL_SOCKET,
                 sys::SO_OOBINLINE,
                 oob_inline as c_int,
@@ -804,7 +822,7 @@ impl Socket {
     /// [`set_recv_buffer_size`]: Socket::set_recv_buffer_size
     pub fn recv_buffer_size(&self) -> io::Result<usize> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_RCVBUF)
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_RCVBUF)
                 .map(|size| size as usize)
         }
     }
@@ -814,7 +832,14 @@ impl Socket {
     /// Changes the size of the operating system's receive buffer associated
     /// with the socket.
     pub fn set_recv_buffer_size(&self, size: usize) -> io::Result<()> {
-        unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_RCVBUF, size as c_int) }
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::SOL_SOCKET,
+                sys::SO_RCVBUF,
+                size as c_int,
+            )
+        }
     }
 
     /// Get value for the `SO_RCVTIMEO` option on this socket.
@@ -822,7 +847,7 @@ impl Socket {
     /// If the returned timeout is `None`, then `read` and `recv` calls will
     /// block indefinitely.
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        sys::timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_RCVTIMEO)
+        sys::timeout_opt(self.as_raw(), sys::SOL_SOCKET, sys::SO_RCVTIMEO)
     }
 
     /// Set value for the `SO_RCVTIMEO` option on this socket.
@@ -830,7 +855,7 @@ impl Socket {
     /// If `timeout` is `None`, then `read` and `recv` calls will block
     /// indefinitely.
     pub fn set_read_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
-        sys::set_timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_RCVTIMEO, duration)
+        sys::set_timeout_opt(self.as_raw(), sys::SOL_SOCKET, sys::SO_RCVTIMEO, duration)
     }
 
     /// Get the value of the `SO_REUSEADDR` option on this socket.
@@ -840,7 +865,7 @@ impl Socket {
     /// [`set_reuse_address`]: Socket::set_reuse_address
     pub fn reuse_address(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_REUSEADDR)
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_REUSEADDR)
                 .map(|reuse| reuse != 0)
         }
     }
@@ -853,7 +878,7 @@ impl Socket {
     pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::SOL_SOCKET,
                 sys::SO_REUSEADDR,
                 reuse as c_int,
@@ -868,7 +893,7 @@ impl Socket {
     /// [`set_send_buffer_size`]: Socket::set_send_buffer_size
     pub fn send_buffer_size(&self) -> io::Result<usize> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::SOL_SOCKET, sys::SO_SNDBUF)
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_SNDBUF)
                 .map(|size| size as usize)
         }
     }
@@ -878,7 +903,14 @@ impl Socket {
     /// Changes the size of the operating system's send buffer associated with
     /// the socket.
     pub fn set_send_buffer_size(&self, size: usize) -> io::Result<()> {
-        unsafe { setsockopt(self.inner, sys::SOL_SOCKET, sys::SO_SNDBUF, size as c_int) }
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::SOL_SOCKET,
+                sys::SO_SNDBUF,
+                size as c_int,
+            )
+        }
     }
 
     /// Get value for the `SO_SNDTIMEO` option on this socket.
@@ -886,7 +918,7 @@ impl Socket {
     /// If the returned timeout is `None`, then `write` and `send` calls will
     /// block indefinitely.
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        sys::timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_SNDTIMEO)
+        sys::timeout_opt(self.as_raw(), sys::SOL_SOCKET, sys::SO_SNDTIMEO)
     }
 
     /// Set value for the `SO_SNDTIMEO` option on this socket.
@@ -894,7 +926,7 @@ impl Socket {
     /// If `timeout` is `None`, then `write` and `send` calls will block
     /// indefinitely.
     pub fn set_write_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
-        sys::set_timeout_opt(self.inner, sys::SOL_SOCKET, sys::SO_SNDTIMEO, duration)
+        sys::set_timeout_opt(self.as_raw(), sys::SOL_SOCKET, sys::SO_SNDTIMEO, duration)
     }
 }
 
@@ -937,7 +969,7 @@ impl Socket {
             imr_multiaddr: sys::to_in_addr(multiaddr),
             imr_interface: sys::to_in_addr(interface),
         };
-        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_ADD_MEMBERSHIP, mreq) }
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_ADD_MEMBERSHIP, mreq) }
     }
 
     /// Leave a multicast group using `IP_DROP_MEMBERSHIP` option on this socket.
@@ -950,7 +982,14 @@ impl Socket {
             imr_multiaddr: sys::to_in_addr(multiaddr),
             imr_interface: sys::to_in_addr(interface),
         };
-        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_DROP_MEMBERSHIP, mreq) }
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_DROP_MEMBERSHIP,
+                mreq,
+            )
+        }
     }
 
     /// Get the value of the `IP_MULTICAST_IF` option for this socket.
@@ -960,7 +999,7 @@ impl Socket {
     /// [`set_multicast_if_v4`]: Socket::set_multicast_if_v4
     pub fn multicast_if_v4(&self) -> io::Result<Ipv4Addr> {
         unsafe {
-            getsockopt(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_IF).map(sys::from_in_addr)
+            getsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_IF).map(sys::from_in_addr)
         }
     }
 
@@ -969,7 +1008,14 @@ impl Socket {
     /// Specifies the interface to use for routing multicast packets.
     pub fn set_multicast_if_v4(&self, interface: &Ipv4Addr) -> io::Result<()> {
         let interface = sys::to_in_addr(interface);
-        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_IF, interface) }
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_MULTICAST_IF,
+                interface,
+            )
+        }
     }
 
     /// Get the value of the `IP_MULTICAST_LOOP` option for this socket.
@@ -979,7 +1025,7 @@ impl Socket {
     /// [`set_multicast_loop_v4`]: Socket::set_multicast_loop_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
                 .map(|loop_v4| loop_v4 != 0)
         }
     }
@@ -991,7 +1037,7 @@ impl Socket {
     pub fn set_multicast_loop_v4(&self, loop_v4: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IP,
                 sys::IP_MULTICAST_LOOP,
                 loop_v4 as c_int,
@@ -1006,7 +1052,7 @@ impl Socket {
     /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
                 .map(|ttl| ttl as u32)
         }
     }
@@ -1021,7 +1067,7 @@ impl Socket {
     pub fn set_multicast_ttl_v4(&self, ttl: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IP,
                 sys::IP_MULTICAST_TTL,
                 ttl as c_int,
@@ -1036,7 +1082,7 @@ impl Socket {
     /// [`set_ttl`]: Socket::set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
         }
     }
 
@@ -1045,7 +1091,7 @@ impl Socket {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
-        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
 }
 
@@ -1070,7 +1116,7 @@ impl Socket {
         };
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_ADD_MEMBERSHIP,
                 mreq,
@@ -1093,7 +1139,7 @@ impl Socket {
         };
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_DROP_MEMBERSHIP,
                 mreq,
@@ -1108,7 +1154,7 @@ impl Socket {
     /// [`set_multicast_hops_v6`]: Socket::set_multicast_hops_v6
     pub fn multicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_HOPS)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_HOPS)
                 .map(|hops| hops as u32)
         }
     }
@@ -1121,7 +1167,7 @@ impl Socket {
     pub fn set_multicast_hops_v6(&self, hops: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_MULTICAST_HOPS,
                 hops as c_int,
@@ -1136,7 +1182,7 @@ impl Socket {
     /// [`set_multicast_if_v6`]: Socket::set_multicast_if_v6
     pub fn multicast_if_v6(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_IF)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_IF)
                 .map(|interface| interface as u32)
         }
     }
@@ -1149,7 +1195,7 @@ impl Socket {
     pub fn set_multicast_if_v6(&self, interface: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_MULTICAST_IF,
                 interface as c_int,
@@ -1164,7 +1210,7 @@ impl Socket {
     /// [`set_multicast_loop_v6`]: Socket::set_multicast_loop_v6
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_LOOP)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_MULTICAST_LOOP)
                 .map(|loop_v6| loop_v6 != 0)
         }
     }
@@ -1176,7 +1222,7 @@ impl Socket {
     pub fn set_multicast_loop_v6(&self, loop_v6: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_MULTICAST_LOOP,
                 loop_v6 as c_int,
@@ -1189,7 +1235,7 @@ impl Socket {
     /// Specifies the hop limit for ipv6 unicast packets
     pub fn unicast_hops_v6(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_UNICAST_HOPS)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_UNICAST_HOPS)
                 .map(|hops| hops as u32)
         }
     }
@@ -1200,7 +1246,7 @@ impl Socket {
     pub fn set_unicast_hops_v6(&self, hops: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_UNICAST_HOPS,
                 hops as c_int,
@@ -1215,7 +1261,7 @@ impl Socket {
     /// [`set_only_v6`]: Socket::set_only_v6
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
                 .map(|only_v6| only_v6 != 0)
         }
     }
@@ -1231,7 +1277,7 @@ impl Socket {
     pub fn set_only_v6(&self, only_v6: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_V6ONLY,
                 only_v6 as c_int,
@@ -1253,7 +1299,7 @@ impl Socket {
     /// operating systems.
     #[cfg(all(feature = "all", not(windows)))]
     pub fn keepalive_time(&self) -> io::Result<Duration> {
-        sys::keepalive_time(self.inner)
+        sys::keepalive_time(self.as_raw())
     }
 
     /// Get the value of the `TCP_KEEPINTVL` option on this socket.
@@ -1276,7 +1322,7 @@ impl Socket {
     ))]
     pub fn keepalive_interval(&self) -> io::Result<Duration> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_KEEPINTVL)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_KEEPINTVL)
                 .map(|secs| Duration::from_secs(secs as u64))
         }
     }
@@ -1301,7 +1347,7 @@ impl Socket {
     ))]
     pub fn keepalive_retries(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_TCP, sys::TCP_KEEPCNT)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_KEEPCNT)
                 .map(|retries| retries as u32)
         }
     }
@@ -1346,7 +1392,7 @@ impl Socket {
     ///
     pub fn set_tcp_keepalive(&self, params: &TcpKeepalive) -> io::Result<()> {
         self.set_keepalive(true)?;
-        sys::set_tcp_keepalive(self.inner, params)
+        sys::set_tcp_keepalive(self.as_raw(), params)
     }
 
     /// Get the value of the `TCP_NODELAY` option on this socket.
@@ -1356,7 +1402,7 @@ impl Socket {
     /// [`set_nodelay`]: Socket::set_nodelay
     pub fn nodelay(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<Bool>(self.inner, sys::IPPROTO_TCP, sys::TCP_NODELAY)
+            getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_NODELAY)
                 .map(|nodelay| nodelay != 0)
         }
     }
@@ -1371,7 +1417,7 @@ impl Socket {
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_TCP,
                 sys::TCP_NODELAY,
                 nodelay as c_int,
@@ -1447,7 +1493,7 @@ impl<'a> Write for &'a Socket {
 impl fmt::Debug for Socket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Socket")
-            .field("raw", &self.inner)
+            .field("raw", &self.as_raw())
             .field("local_addr", &self.local_addr().ok())
             .field("peer_addr", &self.peer_addr().ok())
             .finish()
@@ -1460,9 +1506,3 @@ from!(net::UdpSocket, Socket);
 from!(Socket, net::TcpStream);
 from!(Socket, net::TcpListener);
 from!(Socket, net::UdpSocket);
-
-impl Drop for Socket {
-    fn drop(&mut self) {
-        sys::close(self.inner);
-    }
-}
