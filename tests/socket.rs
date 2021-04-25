@@ -389,7 +389,7 @@ fn connect_timeout_valid() {
 #[cfg(all(feature = "all", unix))]
 fn pair() {
     let (mut a, mut b) = Socket::pair(Domain::UNIX, Type::STREAM, None).unwrap();
-    a.write(DATA).unwrap();
+    let _ = a.write(DATA).unwrap();
     let mut buf = [0; DATA.len() + 1];
     let n = b.read(&mut buf).unwrap();
     assert_eq!(n, DATA.len());
@@ -415,7 +415,7 @@ fn unix() {
     a.connect(&addr).unwrap();
     let mut b = listener.accept().unwrap().0;
 
-    a.write(DATA).unwrap();
+    let _ = a.write(DATA).unwrap();
     let mut buf = [0; DATA.len() + 1];
     let n = b.read(&mut buf).unwrap();
     assert_eq!(n, DATA.len());
@@ -438,7 +438,7 @@ fn vsock() {
     a.connect(&addr).unwrap();
     let mut b = listener.accept().unwrap().0;
 
-    a.write(DATA).unwrap();
+    let _ = a.write(DATA).unwrap();
     let mut buf = [0; DATA.len() + 1];
     let n = b.read(&mut buf).unwrap();
     assert_eq!(n, DATA.len());
@@ -943,7 +943,7 @@ fn r#type() {
 #[cfg(all(feature = "all", target_os = "linux"))]
 #[test]
 fn cpu_affinity() {
-    let mut socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 
     // NOTE: This requires at least 2 CPU cores.
     let cpu = socket.cpu_affinity().unwrap();

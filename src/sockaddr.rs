@@ -18,6 +18,7 @@ pub struct SockAddr {
     len: socklen_t,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl SockAddr {
     /// Initialise a `SockAddr` by calling the function `init`.
     ///

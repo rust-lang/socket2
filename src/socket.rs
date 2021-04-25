@@ -655,6 +655,7 @@ fn set_common_type(ty: Type) -> Type {
 
 /// Set `FD_CLOEXEC` and `NOSIGPIPE` on the `socket` for platforms that need it.
 #[inline(always)]
+#[allow(clippy::unnecessary_wraps)]
 fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
     #[cfg(all(
