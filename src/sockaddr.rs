@@ -12,7 +12,7 @@ use winapi::shared::ws2ipdef::SOCKADDR_IN6_LH_u;
 /// The address of a socket.
 ///
 /// `SockAddr`s may be constructed directly to and from the standard library
-/// `SocketAddr`, `SocketAddrV4`, and `SocketAddrV6` types.
+/// [`SocketAddr`], [`SocketAddrV4`], and [`SocketAddrV6`] types.
 pub struct SockAddr {
     storage: sockaddr_storage,
     len: socklen_t,
@@ -25,23 +25,27 @@ impl SockAddr {
     /// The type of the address storage and length passed to the function `init`
     /// is OS/architecture specific.
     ///
+    /// The address is zeroed before `init` is called and is thus valid to
+    /// dereference and read from. The length initialised to the maximum length
+    /// of the storage.
+    ///
     /// # Safety
     ///
-    /// Caller must initialise the provided address storage and set the length
-    /// properly. The address is zeroed before `init` is called and is thus
-    /// valid to dereference and read from. The length initialised to the
-    /// maximum length of the storage.
+    /// Caller must ensure that the address family and length match the type of
+    /// storage address. For example if `storage.ss_family` is set to `AF_INET`
+    /// the `storage` must be initialised as `sockaddr_in`, setting the content
+    /// and length appropriately.
     ///
     /// # Examples
     ///
-    #[cfg_attr(unix, doc = "```")]
-    #[cfg_attr(not(unix), doc = "```ignore")]
+    /// ```
+    /// # fn main() -> std::io::Result<()> {
+    /// # #[cfg(unix)] {
     /// use std::io;
     /// use std::os::unix::io::AsRawFd;
     ///
     /// use socket2::{SockAddr, Socket, Domain, Type};
     ///
-    /// # fn main() -> io::Result<()> {
     /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     ///
     /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
@@ -57,6 +61,7 @@ impl SockAddr {
     ///     })
     /// }?;
     /// # drop(address);
+    /// # }
     /// # Ok(())
     /// # }
     /// ```
@@ -137,7 +142,7 @@ impl SockAddr {
         }
     }
 
-    /// Returns this address as a `SocketAddrV4` if it is in the `AF_INET`
+    /// Returns this address as a [`SocketAddrV4`] if it is in the `AF_INET`
     /// family.
     pub fn as_socket_ipv4(&self) -> Option<SocketAddrV4> {
         match self.as_socket() {
@@ -146,7 +151,7 @@ impl SockAddr {
         }
     }
 
-    /// Returns this address as a `SocketAddrV6` if it is in the `AF_INET6`
+    /// Returns this address as a [`SocketAddrV6`] if it is in the `AF_INET6`
     /// family.
     pub fn as_socket_ipv6(&self) -> Option<SocketAddrV6> {
         match self.as_socket() {
