@@ -74,7 +74,7 @@ pub struct Socket {
 /// Store a `TcpStream` internally to take advantage of its niche optimizations on Unix platforms.
 pub(crate) type Inner = std::net::TcpStream;
 
-// The `sys` module must have access to these functions.
+// The `sys` module must have access to the below three functions.
 impl Socket {
     pub(crate) fn from_raw(raw: sys::Socket) -> Socket {
         Socket {
@@ -87,9 +87,7 @@ impl Socket {
     pub(crate) fn into_raw(self) -> sys::Socket {
         sys::socket_into_raw(self.inner)
     }
-}
 
-impl Socket {
     /// Creates a new socket and sets common flags.
     ///
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on

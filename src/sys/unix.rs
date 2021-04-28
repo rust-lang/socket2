@@ -485,9 +485,11 @@ pub(crate) type Socket = c_int;
 pub(crate) fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
     unsafe { crate::socket::Inner::from_raw_fd(socket) }
 }
+
 pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {
     socket.as_raw_fd()
 }
+
 pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> Socket {
     socket.into_raw_fd()
 }
