@@ -1172,6 +1172,9 @@ impl Socket {
     ///
     /// This value sets the type-of-service field that is used in every packet
     /// sent from this socket.
+    ///
+    /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
+    /// documents that not all versions of windows support `IP_TOS`.
     pub fn set_tos(&self, tos: u32) -> io::Result<()> {
         unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TOS, tos as c_int) }
     }
@@ -1180,6 +1183,8 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_tos`].
     ///
+    /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
+    /// documents that not all versions of windows support `IP_TOS`.
     /// [`set_tos`]: Socket::set_tos
     pub fn tos(&self) -> io::Result<u32> {
         unsafe {
