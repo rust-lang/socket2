@@ -75,6 +75,13 @@ pub(crate) use libc::{
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
 // Used in `Socket`.
+#[cfg(not(any(
+    target_os = "fuschia",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "illumos",
+)))]
+pub(crate) use libc::IP_TOS;
 #[cfg(not(target_vendor = "apple"))]
 pub(crate) use libc::SO_LINGER;
 #[cfg(target_vendor = "apple")]
@@ -83,7 +90,7 @@ pub(crate) use libc::{
     ip_mreq as IpMreq, ipv6_mreq as Ipv6Mreq, linger, IPPROTO_IP, IPPROTO_IPV6,
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY,
     IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
-    IP_TOS, IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
+    IP_TTL, MSG_OOB, MSG_PEEK, SOL_SOCKET, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF,
     SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 #[cfg(not(any(
