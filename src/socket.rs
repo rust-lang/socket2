@@ -1167,6 +1167,25 @@ impl Socket {
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
+
+    /// Set the value of the `IP_TOS` option for this socket.
+    ///
+    /// This value sets the type-of-service field that is used in every packet
+    /// sent from this socket.
+    pub fn set_tos(&self, tos: u32) -> io::Result<()> {
+        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TOS, tos as c_int) }
+    }
+
+    /// Get the value of the `IP_TOS` option for this socket.
+    ///
+    /// For more information about this option, see [`set_tos`].
+    ///
+    /// [`set_tos`]: Socket::set_tos
+    pub fn tos(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TOS).map(|tos| tos as u32)
+        }
+    }
 }
 
 /// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6`.
