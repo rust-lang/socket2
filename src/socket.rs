@@ -884,6 +884,31 @@ impl Socket {
         }
     }
 
+    /// IP_TRANSPARENT (since Linux 2.6.24)
+    /// Setting this boolean option enables transparent proxying
+    /// on this socket.  This socket option allows the calling
+    /// application to bind to a nonlocal IP address and operate
+    /// both as a client and a server with the foreign address as
+    /// the local endpoint.  NOTE: this requires that routing be
+    /// set up in a way that packets going to the foreign address
+    /// are routed through the TProxy box (i.e., the system
+    /// hosting the application that employs the IP_TRANSPARENT
+    /// socket option).  Enabling this socket option requires
+    /// superuser privileges (the CAP_NET_ADMIN capability).
+    ///
+    /// TProxy redirection with the iptables TPROXY target also
+    /// requires that this option be set on the redirected socket.
+    pub fn set_ip_transparent(&self) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.inner,
+                sys::IPPROTO_IP,
+                libc::IP_TRANSPARENT,
+                1 as c_int,
+            )
+        }
+    }
+
     /// Get the value of the `SO_SNDBUF` option on this socket.
     ///
     /// For more information about this option, see [`set_send_buffer_size`].
