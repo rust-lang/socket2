@@ -1143,6 +1143,8 @@ test!(keepalive, set_keepalive(true));
 test!(freebind, set_freebind(true));
 
 test!(IPv4 ttl, set_ttl(40));
+
+test!(IPv4 tos, set_tos(96));
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
 test!(IPv4 broadcast, set_broadcast(true));
 
