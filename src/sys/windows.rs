@@ -190,6 +190,18 @@ fn init() {
 
 pub(crate) type Socket = sock::SOCKET;
 
+pub(crate) fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
+    unsafe { crate::socket::Inner::from_raw_socket(socket as RawSocket) }
+}
+
+pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {
+    socket.as_raw_socket() as Socket
+}
+
+pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> Socket {
+    socket.into_raw_socket() as Socket
+}
+
 pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Result<Socket> {
     init();
 
@@ -227,7 +239,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
     let start = Instant::now();
 
     let mut fd_array = WSAPOLLFD {
-        fd: socket.inner,
+        fd: socket.as_raw(),
         events: POLLRDNORM | POLLWRNORM,
         revents: 0,
     };
@@ -698,12 +710,6 @@ fn ioctlsocket(socket: Socket, cmd: c_long, payload: &mut u_long) -> io::Result<
     .map(|_| ())
 }
 
-pub(crate) fn close(socket: Socket) {
-    unsafe {
-        let _ = sock::closesocket(socket);
-    }
-}
-
 pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> IN_ADDR {
     let mut s_un: in_addr_S_un = unsafe { mem::zeroed() };
     // `S_un` is stored as BE on all machines, and the array is in BE order. So
@@ -741,7 +747,7 @@ impl crate::Socket {
         // `sock::` path.
         let res = unsafe {
             SetHandleInformation(
-                self.inner as HANDLE,
+                self.as_raw() as HANDLE,
                 winbase::HANDLE_FLAG_INHERIT,
                 !no_inherit as _,
             )
@@ -757,23 +763,19 @@ impl crate::Socket {
 
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
-        self.inner as RawSocket
+        self.as_raw() as RawSocket
     }
 }
 
 impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
-        let socket = self.inner;
-        mem::forget(self);
-        socket as RawSocket
+        self.into_raw() as RawSocket
     }
 }
 
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
-        crate::Socket {
-            inner: socket as Socket,
-        }
+        crate::Socket::from_raw(socket as Socket)
     }
 }
 

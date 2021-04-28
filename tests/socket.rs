@@ -14,8 +14,8 @@ use std::io::IoSlice;
 #[cfg(all(unix, feature = "all"))]
 use std::io::Read;
 use std::io::Write;
-use std::mem::MaybeUninit;
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::mem::{self, MaybeUninit};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 #[cfg(not(target_os = "redox"))]
 use std::net::{Ipv6Addr, SocketAddrV6};
 #[cfg(all(
@@ -951,6 +951,13 @@ fn cpu_affinity() {
 
     socket.set_cpu_affinity(want).unwrap();
     assert_eq!(socket.cpu_affinity().unwrap(), want);
+}
+
+#[test]
+fn niche() {
+    if mem::size_of::<Option<TcpStream>>() == mem::size_of::<TcpStream>() {
+        assert_eq!(mem::size_of::<Option<Socket>>(), mem::size_of::<Socket>());
+    }
 }
 
 fn any_ipv4() -> SockAddr {

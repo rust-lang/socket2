@@ -482,6 +482,18 @@ impl SockAddr {
 
 pub(crate) type Socket = c_int;
 
+pub(crate) fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
+    unsafe { crate::socket::Inner::from_raw_fd(socket) }
+}
+
+pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {
+    socket.as_raw_fd()
+}
+
+pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> Socket {
+    socket.into_raw_fd()
+}
+
 pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
     syscall!(socket(family, ty, protocol))
 }
@@ -504,7 +516,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
     let start = Instant::now();
 
     let mut pollfd = libc::pollfd {
-        fd: socket.inner,
+        fd: socket.as_raw(),
         events: libc::POLLIN | libc::POLLOUT,
         revents: 0,
     };
@@ -884,12 +896,6 @@ pub(crate) unsafe fn setsockopt<T>(
     .map(|_| ())
 }
 
-pub(crate) fn close(fd: Socket) {
-    unsafe {
-        let _ = libc::close(fd);
-    }
-}
-
 pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
     // `s_addr` is stored as BE on all machines, and the array is in BE order.
     // So the native endian conversion method is used so that it's never
@@ -953,8 +959,8 @@ impl crate::Socket {
         // Safety: `accept4` initialises the `SockAddr` for us.
         unsafe {
             SockAddr::init(|storage, len| {
-                syscall!(accept4(self.inner, storage.cast(), len, flags))
-                    .map(|inner| crate::Socket { inner })
+                syscall!(accept4(self.as_raw(), storage.cast(), len, flags))
+                    .map(crate::Socket::from_raw)
             })
         }
     }
@@ -971,9 +977,19 @@ impl crate::Socket {
 
     pub(crate) fn _set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {
         if close_on_exec {
-            fcntl_add(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
+            fcntl_add(
+                self.as_raw(),
+                libc::F_GETFD,
+                libc::F_SETFD,
+                libc::FD_CLOEXEC,
+            )
         } else {
-            fcntl_remove(self.inner, libc::F_GETFD, libc::F_SETFD, libc::FD_CLOEXEC)
+            fcntl_remove(
+                self.as_raw(),
+                libc::F_GETFD,
+                libc::F_SETFD,
+                libc::FD_CLOEXEC,
+            )
         }
     }
 
@@ -991,7 +1007,7 @@ impl crate::Socket {
     pub(crate) fn _set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 libc::SOL_SOCKET,
                 libc::SO_NOSIGPIPE,
                 nosigpipe as c_int,
@@ -1007,7 +1023,7 @@ impl crate::Socket {
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn mss(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::IPPROTO_TCP, libc::TCP_MAXSEG)
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_MAXSEG)
                 .map(|mss| mss as u32)
         }
     }
@@ -1020,7 +1036,7 @@ impl crate::Socket {
     pub fn set_mss(&self, mss: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 libc::IPPROTO_TCP,
                 libc::TCP_MAXSEG,
                 mss as c_int,
@@ -1041,7 +1057,8 @@ impl crate::Socket {
     ))]
     pub fn is_listener(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_ACCEPTCONN).map(|v| v != 0)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_ACCEPTCONN)
+                .map(|v| v != 0)
         }
     }
 
@@ -1058,7 +1075,7 @@ impl crate::Socket {
         )
     ))]
     pub fn domain(&self) -> io::Result<Domain> {
-        unsafe { getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_DOMAIN).map(Domain) }
+        unsafe { getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_DOMAIN).map(Domain) }
     }
 
     /// Returns the [`Protocol`] of this socket by checking the `SO_PROTOCOL`
@@ -1074,7 +1091,8 @@ impl crate::Socket {
     ))]
     pub fn protocol(&self) -> io::Result<Option<Protocol>> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_PROTOCOL).map(|v| match v {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_PROTOCOL).map(|v| match v
+            {
                 0 => None,
                 p => Some(Protocol(p)),
             })
@@ -1094,7 +1112,8 @@ impl crate::Socket {
     ))]
     pub fn mark(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK).map(|mark| mark as u32)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_MARK)
+                .map(|mark| mark as u32)
         }
     }
 
@@ -1111,7 +1130,14 @@ impl crate::Socket {
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
-        unsafe { setsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_MARK, mark as c_int) }
+        unsafe {
+            setsockopt::<c_int>(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_MARK,
+                mark as c_int,
+            )
+        }
     }
 
     /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
@@ -1130,7 +1156,7 @@ impl crate::Socket {
         let mut len = buf.len() as libc::socklen_t;
         unsafe {
             syscall!(getsockopt(
-                self.inner,
+                self.as_raw(),
                 libc::SOL_SOCKET,
                 libc::SO_BINDTODEVICE,
                 buf.as_mut_ptr().cast(),
@@ -1166,7 +1192,7 @@ impl crate::Socket {
             (ptr::null(), 0)
         };
         syscall!(setsockopt(
-            self.inner,
+            self.as_raw(),
             libc::SOL_SOCKET,
             libc::SO_BINDTODEVICE,
             value.cast(),
@@ -1185,7 +1211,7 @@ impl crate::Socket {
     #[cfg(all(feature = "all", any(target_os = "linux")))]
     pub fn cpu_affinity(&self) -> io::Result<usize> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_INCOMING_CPU)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_INCOMING_CPU)
                 .map(|cpu| cpu as usize)
         }
     }
@@ -1199,7 +1225,7 @@ impl crate::Socket {
     pub fn set_cpu_affinity(&self, cpu: usize) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 libc::SOL_SOCKET,
                 libc::SO_INCOMING_CPU,
                 cpu as c_int,
@@ -1220,7 +1246,7 @@ impl crate::Socket {
     ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::SO_REUSEPORT)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_REUSEPORT)
                 .map(|reuse| reuse != 0)
         }
     }
@@ -1239,7 +1265,7 @@ impl crate::Socket {
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 libc::SOL_SOCKET,
                 libc::SO_REUSEPORT,
                 reuse as c_int,
@@ -1260,7 +1286,7 @@ impl crate::Socket {
     ))]
     pub fn freebind(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, libc::SOL_SOCKET, libc::IP_FREEBIND)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::IP_FREEBIND)
                 .map(|reuse| reuse != 0)
         }
     }
@@ -1281,7 +1307,7 @@ impl crate::Socket {
     pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 libc::SOL_SOCKET,
                 libc::IP_FREEBIND,
                 reuse as c_int,
@@ -1344,7 +1370,7 @@ impl crate::Socket {
         };
         syscall!(sendfile(
             file,
-            self.inner,
+            self.as_raw(),
             offset,
             &mut length,
             ptr::null_mut(),
@@ -1366,7 +1392,7 @@ impl crate::Socket {
             None => 0x7ffff000, // 2,147,479,552 bytes.
         };
         let mut offset = offset;
-        syscall!(sendfile(self.inner, file, &mut offset, count)).map(|n| n as usize)
+        syscall!(sendfile(self.as_raw(), file, &mut offset, count)).map(|n| n as usize)
     }
 
     #[cfg(all(feature = "all", target_os = "freebsd"))]
@@ -1384,7 +1410,7 @@ impl crate::Socket {
         let mut sbytes: libc::off_t = 0;
         syscall!(sendfile(
             file,
-            self.inner,
+            self.as_raw(),
             offset,
             nbytes,
             ptr::null_mut(),
@@ -1397,21 +1423,19 @@ impl crate::Socket {
 
 impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
-        self.inner
+        self.as_raw()
     }
 }
 
 impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> c_int {
-        let fd = self.inner;
-        mem::forget(self);
-        fd
+        self.into_raw()
     }
 }
 
 impl FromRawFd for crate::Socket {
     unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
-        crate::Socket { inner: fd }
+        crate::Socket::from_raw(fd)
     }
 }
 
