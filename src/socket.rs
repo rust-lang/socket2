@@ -898,6 +898,8 @@ impl Socket {
     ///
     /// TProxy redirection with the iptables TPROXY target also
     /// requires that this option be set on the redirected socket.
+    /// this feature is only available on linux
+    #[cfg(any(target_os = "linux"))]
     pub fn set_ip_transparent(&self) -> io::Result<()> {
         unsafe {
             setsockopt(
