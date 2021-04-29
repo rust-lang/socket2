@@ -900,14 +900,22 @@ impl Socket {
     /// requires that this option be set on the redirected socket.
     /// this feature is only available on linux
     #[cfg(any(target_os = "linux"))]
-    pub fn set_ip_transparent(&self) -> io::Result<()> {
+    pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.inner,
                 sys::IPPROTO_IP,
                 libc::IP_TRANSPARENT,
-                1 as c_int,
+                transparent as c_int,
             )
+        }
+    }
+    /// Get whether the IP_TRANSPARENT is set for this socket.
+    #[cfg(any(target_os = "linux"))]
+    pub fn ip_transparent(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, libc::IP_TRANSPARENT)
+                .map(|transparent| transparent != 0)
         }
     }
 
