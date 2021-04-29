@@ -968,6 +968,8 @@ impl Socket {
         }
     }
 
+    /// Set the value of the `IP_TRANSPARENTF` option on this socket.
+    ///
     /// IP_TRANSPARENT (since Linux 2.6.24)
     /// Setting this boolean option enables transparent proxying
     /// on this socket.  This socket option allows the calling
