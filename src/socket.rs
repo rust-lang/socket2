@@ -955,7 +955,7 @@ fn into_linger(duration: Option<Duration>) -> sys::linger {
 /// * Linux: <https://man7.org/linux/man-pages/man7/ip.7.html>
 /// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
 impl Socket {
-    /// Get the value of the `IP_TRANSPARENTF` option on this socket.
+    /// Get the value of the `IP_TRANSPARENT` option on this socket.
     ///
     /// For more information about this option, see [`set_ip_transparent`].
     ///
