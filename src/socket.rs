@@ -963,7 +963,7 @@ impl Socket {
     #[cfg(all(feature = "all", target_os = "linux"))]
     pub fn ip_transparent(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, libc::IP_TRANSPARENT)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, libc::IP_TRANSPARENT)
                 .map(|transparent| transparent != 0)
         }
     }
@@ -988,7 +988,7 @@ impl Socket {
     pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
-                self.inner,
+                self.as_raw(),
                 sys::IPPROTO_IP,
                 libc::IP_TRANSPARENT,
                 transparent as c_int,
