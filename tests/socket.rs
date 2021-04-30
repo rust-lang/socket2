@@ -1047,6 +1047,12 @@ test!(
     mss,
     set_mss(256)
 );
+#[cfg(all(feature = "all", target_os = "linux"))]
+test!(
+    #[ignore = "setting `IP_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
+    ip_transparent,
+    set_ip_transparent(true)
+);
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(
     #[ignore = "setting `SO_MARK` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
