@@ -20,17 +20,60 @@ pub struct SockAddr {
 
 #[allow(clippy::len_without_is_empty)]
 impl SockAddr {
-    /// Initialise a `SockAddr` by calling the function `init`.
+    /// Create a `SockAddr` from the underlying storage and its length.
     ///
     /// The type of the address storage and length passed to the function `init`
     /// is OS/architecture specific.
     ///
     /// # Safety
     ///
-    /// Caller must initialise the provided address storage and set the length
-    /// properly. The address is zeroed before `init` is called and is thus
-    /// valid to dereference and read from. The length initialised to the
-    /// maximum length of the storage.
+    /// - The `SockAddr`'s address family must match its contents.
+    /// - The given length of the `SockAddr` must be correct.
+    ///
+    /// # Examples
+    ///
+    #[cfg_attr(target_os = "linux", doc = "```")]
+    #[cfg_attr(not(target_os = "linux"), doc = "```ignore")]
+    /// use std::io;
+    /// use std::mem;
+    ///
+    /// use socket2::{SockAddr, Socket, Domain, Type, Protocol};
+    ///
+    /// # fn main() -> io::Result<()> {
+    /// // Initialise a netlink socket.
+    /// let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    /// let address: &mut libc::sockaddr_nl = unsafe { &mut *<*mut _>::cast(&mut storage) };
+    /// address.nl_family = libc::AF_NETLINK as libc::sa_family_t;
+    /// let address = unsafe { SockAddr::new(storage, mem::size_of::<libc::sockaddr_nl>() as _) };
+    ///
+    /// let socket = Socket::new(
+    ///     Domain::from(libc::AF_NETLINK),
+    ///     Type::from(libc::SOCK_DGRAM),
+    ///     Some(Protocol::from(libc::NETLINK_GENERIC)),
+    /// )?;
+    /// socket.bind(&address)?;
+    /// # drop(socket);
+    /// # Ok(())
+    /// # }
+    #[doc = "```"]
+    #[must_use]
+    pub const unsafe fn new(storage: sockaddr_storage, len: socklen_t) -> Self {
+        Self { storage, len }
+    }
+
+    /// Initialise a `SockAddr` by calling the function `init`.
+    ///
+    /// The type of the address storage and length passed to the function `init`
+    /// is OS/architecture specific.
+    ///
+    /// The address is zeroed before `init` is called and is thus valid to
+    /// dereference and read from. The length initialised to the maximum length
+    /// of the storage.
+    ///
+    /// # Safety
+    ///
+    /// - The address family of the socket address must match its contents.
+    /// - The length of the socket address must be correct.
     ///
     /// # Examples
     ///
