@@ -20,6 +20,55 @@ pub struct SockAddr {
 
 #[allow(clippy::len_without_is_empty)]
 impl SockAddr {
+    /// Create a `SockAddr` from the underlying storage and its length.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that the address family and length match the type of
+    /// storage address. For example if `storage.ss_family` is set to `AF_INET`
+    /// the `storage` must be initialised as `sockaddr_in`, setting the content
+    /// and length appropriately.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> std::io::Result<()> {
+    /// # #[cfg(unix)] {
+    /// use std::io;
+    /// use std::mem;
+    /// use std::os::unix::io::AsRawFd;
+    ///
+    /// use socket2::{SockAddr, Socket, Domain, Type};
+    ///
+    /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+    ///
+    /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
+    /// let mut addr_storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    /// let mut len = mem::size_of_val(&addr_storage) as libc::socklen_t;
+    ///
+    /// // The `getsockname(2)` system call will intiliase `storage` for
+    /// // us, setting `len` to the correct length.
+    /// let res = unsafe {
+    ///     libc::getsockname(
+    ///         socket.as_raw_fd(),
+    ///         (&mut addr_storage as *mut libc::sockaddr_storage).cast(),
+    ///         &mut len,
+    ///     )
+    /// };
+    /// if res == -1 {
+    ///     return Err(io::Error::last_os_error());
+    /// }
+    ///
+    /// let address = unsafe { SockAddr::new(addr_storage, len) };
+    /// # drop(address);
+    /// # }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub const unsafe fn new(storage: sockaddr_storage, len: socklen_t) -> SockAddr {
+        SockAddr { storage, len }
+    }
+
     /// Initialise a `SockAddr` by calling the function `init`.
     ///
     /// The type of the address storage and length passed to the function `init`
