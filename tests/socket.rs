@@ -1095,6 +1095,12 @@ test!(freebind, set_freebind(true));
 
 test!(IPv4 ttl, set_ttl(40));
 
+#[cfg(not(any(
+    target_os = "fuschia",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "illumos",
+)))]
 test!(IPv4 tos, set_tos(96));
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
 test!(IPv4 broadcast, set_broadcast(true));
