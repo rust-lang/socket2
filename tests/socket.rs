@@ -154,19 +154,19 @@ fn set_nonblocking() {
     assert_nonblocking(&socket, false);
 }
 
-fn assert_default_flags(socket: &Socket, default_flags: bool) {
+fn assert_common_flags(socket: &Socket, expected: bool) {
     #[cfg(unix)]
-    assert_close_on_exec(socket, default_flags);
+    assert_close_on_exec(socket, expected);
     #[cfg(target_vendor = "apple")]
-    assert_flag_no_sigpipe(socket, default_flags);
+    assert_flag_no_sigpipe(socket, expected);
     #[cfg(windows)]
-    assert_flag_no_inherit(socket, default_flags);
+    assert_flag_no_inherit(socket, expected);
 }
 
 #[test]
-fn default_flags() {
+fn common_flags() {
     let listener = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_default_flags(&listener, true);
+    assert_common_flags(&listener, true);
 
     listener.bind(&any_ipv4()).unwrap();
     listener.listen(1).unwrap();
@@ -175,13 +175,13 @@ fn default_flags() {
     client.connect(&listener.local_addr().unwrap()).unwrap();
 
     let accepted = listener.accept().unwrap().0;
-    assert_default_flags(&accepted, true);
+    assert_common_flags(&accepted, true);
 }
 
 #[test]
-fn no_default_flags() {
+fn no_common_flags() {
     let listener = Socket::new_raw(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_default_flags(&listener, false);
+    assert_common_flags(&listener, false);
 
     listener.bind(&any_ipv4()).unwrap();
     listener.listen(1).unwrap();
@@ -190,7 +190,7 @@ fn no_default_flags() {
     client.connect(&listener.local_addr().unwrap()).unwrap();
 
     let accepted = listener.accept_raw().unwrap().0;
-    assert_default_flags(&accepted, false);
+    assert_common_flags(&accepted, false);
 }
 
 #[cfg(all(
