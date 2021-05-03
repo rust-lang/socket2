@@ -45,7 +45,7 @@ impl SockAddr {
     ///
     /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
     /// let mut addr_storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-    /// let mut len = 0;
+    /// let mut len = mem::size_of_val(&addr_storage) as libc::socklen_t;
     ///
     /// // The `getsockname(2)` system call will intiliase `storage` for
     /// // us, setting `len` to the correct length.
