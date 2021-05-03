@@ -444,11 +444,6 @@ impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
     ///
     /// This function is only available on Linux.
-    ///
-    /// # Errors
-    ///
-    /// This function can never fail. In a future version of this library it will be made
-    /// infallible.
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
     pub fn vsock(cid: u32, port: u32) -> io::Result<SockAddr> {

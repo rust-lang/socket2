@@ -32,33 +32,42 @@ impl SockAddr {
     ///
     /// # Examples
     ///
-    #[cfg_attr(target_os = "linux", doc = "```")]
-    #[cfg_attr(not(target_os = "linux"), doc = "```ignore")]
+    /// ```
+    /// # fn main() -> std::io::Result<()> {
+    /// # #[cfg(unix)] {
     /// use std::io;
     /// use std::mem;
+    /// use std::os::unix::io::AsRawFd;
     ///
-    /// use socket2::{SockAddr, Socket, Domain, Type, Protocol};
+    /// use socket2::{SockAddr, Socket, Domain, Type};
     ///
-    /// # fn main() -> io::Result<()> {
-    /// // Initialise a netlink socket.
-    /// let mut storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
-    /// let address: &mut libc::sockaddr_nl = unsafe { &mut *<*mut _>::cast(&mut storage) };
-    /// address.nl_family = libc::AF_NETLINK as libc::sa_family_t;
-    /// let address = unsafe { SockAddr::new(storage, mem::size_of::<libc::sockaddr_nl>() as _) };
+    /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     ///
-    /// let socket = Socket::new(
-    ///     Domain::from(libc::AF_NETLINK),
-    ///     Type::from(libc::SOCK_DGRAM),
-    ///     Some(Protocol::from(libc::NETLINK_GENERIC)),
-    /// )?;
-    /// socket.bind(&address)?;
-    /// # drop(socket);
+    /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
+    /// let mut addr_storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
+    /// let mut len = 0;
+    ///
+    /// // The `getsockname(2)` system call will intiliase `storage` for
+    /// // us, setting `len` to the correct length.
+    /// let res = unsafe {
+    ///     libc::getsockname(
+    ///         socket.as_raw_fd(),
+    ///         (&mut addr_storage as *mut libc::sockaddr_storage).cast(),
+    ///         &mut len,
+    ///     )
+    /// };
+    /// if res == -1 {
+    ///     return Err(io::Error::last_os_error());
+    /// }
+    ///
+    /// let address = unsafe { SockAddr::new(addr_storage, len) };
+    /// # drop(address);
+    /// # }
     /// # Ok(())
     /// # }
-    #[doc = "```"]
-    #[must_use]
-    pub const unsafe fn new(storage: sockaddr_storage, len: socklen_t) -> Self {
-        Self { storage, len }
+    /// ```
+    pub const unsafe fn new(storage: sockaddr_storage, len: socklen_t) -> SockAddr {
+        SockAddr { storage, len }
     }
 
     /// Initialise a `SockAddr` by calling the function `init`.
@@ -77,14 +86,14 @@ impl SockAddr {
     ///
     /// # Examples
     ///
-    #[cfg_attr(unix, doc = "```")]
-    #[cfg_attr(not(unix), doc = "```ignore")]
+    /// ```
+    /// # fn main() -> std::io::Result<()> {
+    /// # #[cfg(unix)] {
     /// use std::io;
     /// use std::os::unix::io::AsRawFd;
     ///
     /// use socket2::{SockAddr, Socket, Domain, Type};
     ///
-    /// # fn main() -> io::Result<()> {
     /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     ///
     /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
@@ -100,9 +109,10 @@ impl SockAddr {
     ///     })
     /// }?;
     /// # drop(address);
+    /// # }
     /// # Ok(())
     /// # }
-    #[doc = "```"]
+    /// ```
     pub unsafe fn init<F, T>(init: F) -> io::Result<(T, SockAddr)>
     where
         F: FnOnce(*mut sockaddr_storage, *mut socklen_t) -> io::Result<T>,
