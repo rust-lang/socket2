@@ -1354,7 +1354,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_freebind`].
     ///
-    /// [`set_freebind`]: Socket::set_freebind
+    /// [`set_freebind`]: crate::Socket::set_freebind
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")

@@ -20,8 +20,9 @@ use crate::Socket;
 /// the caller must ensure the file descriptor/socket is a valid.
 ///
 /// [`TcpStream`]: std::net::TcpStream
-/// [`AsRawFd`]: std::os::unix::io::AsRawFd
-/// [`AsRawSocket`]: std::os::windows::io::AsRawSocket
+// Don't use intra-doc links because they won't build on every platform.
+/// [`AsRawFd`]: https://doc.rust-lang.org/stable/std/os/unix/io/trait.AsRawFd.html
+/// [`AsRawSocket`]: https://doc.rust-lang.org/stable/std/os/windows/io/trait.AsRawSocket.html
 ///
 /// # Examples
 ///

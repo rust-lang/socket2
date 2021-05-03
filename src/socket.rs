@@ -963,7 +963,7 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_ip_transparent`].
     ///
-    /// [`ip_transparent`]: Socket::set_ip_transparent
+    /// [`set_ip_transparent`]: Socket::set_ip_transparent
     #[cfg(any(doc, all(feature = "all", target_os = "linux")))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn ip_transparent(&self) -> io::Result<bool> {
