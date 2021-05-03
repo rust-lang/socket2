@@ -74,7 +74,9 @@ impl<'s> Deref for SockRef<'s> {
     }
 }
 
+/// On Windows, a corresponding `From<&impl AsRawSocket>` implementation exists.
 #[cfg(unix)]
+#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl<'s, S> From<&'s S> for SockRef<'s>
 where
     S: AsRawFd,
@@ -88,12 +90,14 @@ where
     }
 }
 
+/// On Unix, a corresponding `From<&impl AsRawFd>` implementation exists.
 #[cfg(windows)]
+#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl<'s, S> From<&'s S> for SockRef<'s>
 where
     S: AsRawSocket,
 {
-    /// See the `From<AsRawFd>` implementation.
+    /// See the `From<&impl AsRawFd>` implementation.
     fn from(socket: &'s S) -> Self {
         SockRef {
             socket: ManuallyDrop::new(unsafe { Socket::from_raw_socket(socket.as_raw_socket()) }),

@@ -179,25 +179,29 @@ type IovLen = c_int;
 /// Unix only API.
 impl Domain {
     /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
+    #[cfg_attr(docsrs, doc(cfg(unix)))]
     pub const UNIX: Domain = Domain(libc::AF_UNIX);
 
     /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
-    ///
-    /// # Notes
-    ///
-    /// This function is only available on Fuchsia and Linux.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub const PACKET: Domain = Domain(libc::AF_PACKET);
 
     /// Domain for low-level VSOCK interface, corresponding to `AF_VSOCK`.
-    ///
-    /// # Notes
-    ///
-    /// This function is only available on Linux.
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
     pub const VSOCK: Domain = Domain(libc::AF_VSOCK);
 }
 
@@ -207,61 +211,31 @@ impl_debug!(
     libc::AF_INET6,
     libc::AF_UNIX,
     #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux")))
+    )]
     libc::AF_PACKET,
     #[cfg(any(target_os = "android", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(any(target_os = "android", target_os = "linux"))))]
     libc::AF_VSOCK,
     libc::AF_UNSPEC, // = 0.
 );
 
 /// Unix only API.
-impl Type {
-    /// Set `SOCK_NONBLOCK` on the `Type`.
-    ///
-    /// # Notes
-    ///
-    /// This function is only available on Android, DragonFlyBSD, Fuchsia,
-    /// FreeBSD, Linux, NetBSD and OpenBSD.
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "android",
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "fuchsia",
-            target_os = "illumos",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_os = "openbsd"
-        )
-    ))]
-    pub const fn nonblocking(self) -> Type {
-        Type(self.0 | libc::SOCK_NONBLOCK)
-    }
-
-    /// Set `SOCK_CLOEXEC` on the `Type`.
-    ///
-    /// # Notes
-    ///
-    /// This function is only available on Android, DragonFlyBSD, Fuchsia,
-    /// FreeBSD, Linux, NetBSD and OpenBSD.
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "android",
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "fuchsia",
-            target_os = "illumos",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_os = "openbsd"
-        )
-    ))]
-    pub const fn cloexec(self) -> Type {
-        self._cloexec()
-    }
-
-    #[cfg(any(
+#[cfg(any(
+    target_os = "android",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "illumos",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd"
+))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
@@ -270,7 +244,23 @@ impl Type {
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd"
-    ))]
+    )))
+)]
+impl Type {
+    /// Set `SOCK_NONBLOCK` on the `Type`.
+    #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    pub const fn nonblocking(self) -> Type {
+        Type(self.0 | libc::SOCK_NONBLOCK)
+    }
+
+    /// Set `SOCK_CLOEXEC` on the `Type`.
+    #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    pub const fn cloexec(self) -> Type {
+        self._cloexec()
+    }
+
     pub(crate) const fn _cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
     }
@@ -383,12 +373,11 @@ impl<'a> MaybeUninitSlice<'a> {
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
     ///
-    /// This function is only available on Unix.
-    ///
     /// # Failure
     ///
     /// Returns an error if the path is longer than `SUN_LEN`.
     #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, feature = "all"))))]
     #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
     pub fn unix<P>(path: P) -> io::Result<SockAddr>
     where
@@ -440,16 +429,18 @@ impl SockAddr {
     }
 }
 
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+)]
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
-    ///
-    /// This function is only available on Linux.
     ///
     /// # Errors
     ///
     /// This function can never fail. In a future version of this library it will be made
     /// infallible.
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
     pub fn vsock(cid: u32, port: u32) -> io::Result<SockAddr> {
         unsafe {
@@ -473,7 +464,6 @@ impl SockAddr {
 
     /// Returns this address VSOCK CID/port if it is in the `AF_VSOCK` family,
     /// otherwise return `None`.
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     pub fn vsock_address(&self) -> Option<(u32, u32)> {
         if self.family() == libc::AF_VSOCK as sa_family_t {
             // Safety: if the ss_family field is AF_VSOCK then storage must be a sockaddr_vm.
@@ -946,6 +936,22 @@ impl crate::Socket {
             target_os = "openbsd"
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "illumos",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
     pub fn accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
         self._accept4(flags)
     }
@@ -976,6 +982,7 @@ impl crate::Socket {
     ///
     /// On supported platforms you can use [`Type::cloexec`].
     #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {
         self._set_cloexec(close_on_exec)
     }
@@ -999,11 +1006,8 @@ impl crate::Socket {
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
-    ///
-    /// # Notes
-    ///
-    /// Only supported on Apple platforms (`target_vendor = "apple"`).
-    #[cfg(all(feature = "all", target_vendor = "apple"))]
+    #[cfg(all(feature = "all", any(doc, target_vendor = "apple")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
     pub fn set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
         self._set_nosigpipe(nosigpipe)
     }
@@ -1026,6 +1030,7 @@ impl crate::Socket {
     ///
     /// [`set_mss`]: crate::Socket::set_mss
     #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix, not(target_os = "redox")))))]
     pub fn mss(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_MAXSEG)
@@ -1038,6 +1043,7 @@ impl crate::Socket {
     /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment Size and is only
     /// available on TCP sockets.
     #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix, not(target_os = "redox")))))]
     pub fn set_mss(&self, mss: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1060,6 +1066,18 @@ impl crate::Socket {
             target_os = "linux",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+            )
+        )))
+    )]
     pub fn is_listener(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_ACCEPTCONN)
@@ -1079,6 +1097,16 @@ impl crate::Socket {
             target_os = "linux",
         )
     ))]
+    #[cfg_attr(docsrs, doc(cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            // TODO: add FreeBSD.
+            // target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))))]
     pub fn domain(&self) -> io::Result<Domain> {
         unsafe { getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_DOMAIN).map(Domain) }
     }
@@ -1094,6 +1122,18 @@ impl crate::Socket {
             target_os = "linux",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+            )
+        )))
+    )]
     pub fn protocol(&self) -> io::Result<Option<Protocol>> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_PROTOCOL).map(|v| match v
@@ -1109,12 +1149,18 @@ impl crate::Socket {
     /// This value gets the socket mark field for each packet sent through
     /// this socket.
     ///
-    /// This function is only available on Fuchsia and Linux. On Linux it
-    /// requires the `CAP_NET_ADMIN` capability.
+    /// On Linux this function requires the `CAP_NET_ADMIN` capability.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub fn mark(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_MARK)
@@ -1128,12 +1174,18 @@ impl crate::Socket {
     /// this socket. Changing the mark can be used for mark-based routing
     /// without netfilter or for packet filtering.
     ///
-    /// This function is only available on Fuchsia and Linux. On Linux it
-    /// requires the `CAP_NET_ADMIN` capability.
+    /// On Linux this function requires the `CAP_NET_ADMIN` capability.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub fn set_mark(&self, mark: u32) -> io::Result<()> {
         unsafe {
             setsockopt::<c_int>(
@@ -1148,12 +1200,17 @@ impl crate::Socket {
     /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
     ///
     /// This value gets the socket binded device's interface name.
-    ///
-    /// This function is only available on Fuchsia and Linux.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub fn device(&self) -> io::Result<Option<Vec<u8>>> {
         // TODO: replace with `MaybeUninit::uninit_array` once stable.
         let mut buf: [MaybeUninit<u8>; libc::IFNAMSIZ] =
@@ -1184,12 +1241,17 @@ impl crate::Socket {
     /// works for some socket types, particularly `AF_INET` sockets.
     ///
     /// If `interface` is `None` or an empty string it removes the binding.
-    ///
-    /// This function is only available on Fuchsia and Linux.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub fn bind_device(&self, interface: Option<&[u8]>) -> io::Result<()> {
         let (value, len) = if let Some(interface) = interface {
             (interface.as_ptr(), interface.len())
@@ -1210,10 +1272,9 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_cpu_affinity`].
     ///
-    /// This function is only available on Linux.
-    ///
     /// [`set_cpu_affinity`]: crate::Socket::set_cpu_affinity
-    #[cfg(all(feature = "all", any(target_os = "linux")))]
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn cpu_affinity(&self) -> io::Result<usize> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_INCOMING_CPU)
@@ -1224,9 +1285,8 @@ impl crate::Socket {
     /// Set value for the `SO_INCOMING_CPU` option on this socket.
     ///
     /// Sets the CPU affinity of the socket.
-    ///
-    /// This function is only available on Linux.
-    #[cfg(all(feature = "all", any(target_os = "linux")))]
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn set_cpu_affinity(&self, cpu: usize) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1242,13 +1302,19 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_reuse_port`].
     ///
-    /// This function is only available on Unix.
-    ///
     /// [`set_reuse_port`]: crate::Socket::set_reuse_port
     #[cfg(all(
         feature = "all",
         not(any(target_os = "solaris", target_os = "illumos"))
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            unix,
+            not(any(target_os = "solaris", target_os = "illumos"))
+        )))
+    )]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_REUSEPORT)
@@ -1261,12 +1327,18 @@ impl crate::Socket {
     /// This indicates that further calls to `bind` may allow reuse of local
     /// addresses. For IPv4 sockets this means that a socket may bind even when
     /// there's a socket already listening on this port.
-    ///
-    /// This function is only available on Unix.
     #[cfg(all(
         feature = "all",
         not(any(target_os = "solaris", target_os = "illumos"))
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            unix,
+            not(any(target_os = "solaris", target_os = "illumos"))
+        )))
+    )]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1282,13 +1354,18 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_freebind`].
     ///
-    /// This function is only available on Fuchsia and Linux.
-    ///
     /// [`set_freebind`]: Socket::set_freebind
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub fn freebind(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::IP_FREEBIND)
@@ -1303,12 +1380,17 @@ impl crate::Socket {
     /// without requiring the underlying network interface or the specified
     /// dynamic IP address to be up at the time that the application is trying
     /// to bind to it.
-    ///
-    /// This function is only available on Fuchsia and Linux.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
     pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1347,6 +1429,18 @@ impl crate::Socket {
             target_vendor = "apple",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "freebsd",
+                target_os = "linux",
+                target_vendor = "apple",
+            )
+        )))
+    )]
     pub fn sendfile<F>(
         &self,
         file: &F,
@@ -1426,18 +1520,21 @@ impl crate::Socket {
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
         self.as_raw()
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> c_int {
         self.into_raw()
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl FromRawFd for crate::Socket {
     unsafe fn from_raw_fd(fd: c_int) -> crate::Socket {
         crate::Socket::from_raw(fd)
