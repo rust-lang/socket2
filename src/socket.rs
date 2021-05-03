@@ -260,7 +260,12 @@ impl Socket {
         )))]
         {
             let (socket, addr) = self.accept_raw()?;
-            set_common_flags(socket).map(|socket| (socket, addr))
+            let socket = set_common_flags(socket)?;
+            // `set_common_flags` does not disable inheritance on Windows because `Socket::new`
+            // unlike `accept` is able to create the socket with inheritance disabled.
+            #[cfg(windows)]
+            socket._set_no_inherit(true)?;
+            Ok((socket, addr))
         }
     }
 
