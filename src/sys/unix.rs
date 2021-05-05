@@ -223,40 +223,71 @@ impl_debug!(
 );
 
 /// Unix only API.
-#[cfg(any(
-    target_os = "android",
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "fuchsia",
-    target_os = "illumos",
-    target_os = "linux",
-    target_os = "netbsd",
-    target_os = "openbsd"
-))]
-#[cfg_attr(
-    docsrs,
-    doc(cfg(any(
-        target_os = "android",
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "fuchsia",
-        target_os = "illumos",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "openbsd"
-    )))
-)]
 impl Type {
     /// Set `SOCK_NONBLOCK` on the `Type`.
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "illumos",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
     pub const fn nonblocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
     }
 
     /// Set `SOCK_CLOEXEC` on the `Type`.
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "illumos",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
     pub const fn cloexec(self) -> Type {
         self._cloexec()
     }
@@ -429,11 +460,6 @@ impl SockAddr {
     }
 }
 
-#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-#[cfg_attr(
-    docsrs,
-    doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
-)]
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
     ///
@@ -442,6 +468,11 @@ impl SockAddr {
     /// This function can never fail. In a future version of this library it will be made
     /// infallible.
     #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
     pub fn vsock(cid: u32, port: u32) -> io::Result<SockAddr> {
         unsafe {
             SockAddr::init(|storage, len| {
@@ -464,6 +495,11 @@ impl SockAddr {
 
     /// Returns this address VSOCK CID/port if it is in the `AF_VSOCK` family,
     /// otherwise return `None`.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
     pub fn vsock_address(&self) -> Option<(u32, u32)> {
         if self.family() == libc::AF_VSOCK as sa_family_t {
             // Safety: if the ss_family field is AF_VSOCK then storage must be a sockaddr_vm.
