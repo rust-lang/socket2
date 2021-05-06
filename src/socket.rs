@@ -118,11 +118,8 @@ impl Socket {
     ///
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::pair_raw`] can be used if you don't want to set those flags.
-    ///
-    /// # Notes
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(feature = "all", unix))]
+    #[cfg(any(doc, all(feature = "all", unix)))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn pair(
         domain: Domain,
         ty: Type,
@@ -138,11 +135,8 @@ impl Socket {
     /// Creates a pair of sockets which are connected to each other.
     ///
     /// This function corresponds to `socketpair(2)`.
-    ///
-    /// # Notes
-    ///
-    /// This function is only available on Unix.
-    #[cfg(all(feature = "all", unix))]
+    #[cfg(any(doc, all(feature = "all", unix)))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn pair_raw(
         domain: Domain,
         ty: Type,
@@ -416,6 +410,7 @@ impl Socket {
     /// function with `buf`s of type `&mut [IoSliceMut]`, allowing initialised
     /// buffers to be used without using `unsafe`.
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn recv_vectored(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
@@ -435,6 +430,7 @@ impl Socket {
     ///
     /// [`recv_vectored`]: Socket::recv_vectored
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn recv_vectored_with_flags(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
@@ -498,6 +494,7 @@ impl Socket {
     ///
     /// [`recv_vectored`]: Socket::recv_vectored
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn recv_from_vectored(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
@@ -517,6 +514,7 @@ impl Socket {
     ///
     /// [`recv_vectored`]: Socket::recv_vectored
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn recv_from_vectored_with_flags(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
@@ -563,6 +561,7 @@ impl Socket {
 
     /// Send data to the connected peer. Returns the amount of bytes written.
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn send_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
         self.send_vectored_with_flags(bufs, 0)
     }
@@ -572,6 +571,7 @@ impl Socket {
     ///
     /// [`send_vectored`]: Socket::send_vectored
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn send_vectored_with_flags(
         &self,
         bufs: &[IoSlice<'_>],
@@ -615,6 +615,7 @@ impl Socket {
     /// Send data to a peer listening on `addr`. Returns the amount of bytes
     /// written.
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn send_to_vectored(&self, bufs: &[IoSlice<'_>], addr: &SockAddr) -> io::Result<usize> {
         self.send_to_vectored_with_flags(bufs, addr, 0)
     }
@@ -624,6 +625,7 @@ impl Socket {
     ///
     /// [`send_to_vectored`]: Socket::send_to_vectored
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn send_to_vectored_with_flags(
         &self,
         bufs: &[IoSlice<'_>],
@@ -794,6 +796,7 @@ impl Socket {
     ///
     /// [`set_out_of_band_inline`]: Socket::set_out_of_band_inline
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn out_of_band_inline(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_OOBINLINE)
@@ -808,6 +811,7 @@ impl Socket {
     /// `MSG_OOB` flag is set during receiving. As per RFC6093, TCP sockets
     /// using the Urgent mechanism are encouraged to set this flag.
     #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn set_out_of_band_inline(&self, oob_inline: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -965,8 +969,9 @@ impl Socket {
     ///
     /// For more information about this option, see [`set_ip_transparent`].
     ///
-    /// [`ip_transparent`]: Socket::set_ip_transparent
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    /// [`set_ip_transparent`]: Socket::set_ip_transparent
+    #[cfg(any(doc, all(feature = "all", target_os = "linux")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn ip_transparent(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, libc::IP_TRANSPARENT)
@@ -989,8 +994,8 @@ impl Socket {
     ///
     /// TProxy redirection with the iptables TPROXY target also
     /// requires that this option be set on the redirected socket.
-    /// this feature is only available on linux
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg(any(doc, all(feature = "all", target_os = "linux")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1342,7 +1347,8 @@ impl Socket {
     /// This returns the value of `SO_KEEPALIVE` on OpenBSD and Haiku,
     /// `TCP_KEEPALIVE` on macOS and iOS, and `TCP_KEEPIDLE` on all other Unix
     /// operating systems.
-    #[cfg(all(feature = "all", not(windows)))]
+    #[cfg(any(doc, all(feature = "all", not(windows))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(windows)))))]
     pub fn keepalive_time(&self) -> io::Result<Duration> {
         sys::keepalive_time(self.as_raw())
     }
@@ -1355,6 +1361,7 @@ impl Socket {
     #[cfg(all(
         feature = "all",
         any(
+            doc,
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
@@ -1365,6 +1372,22 @@ impl Socket {
             target_vendor = "apple",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "illumos",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_vendor = "apple",
+            )
+        )))
+    )]
     pub fn keepalive_interval(&self) -> io::Result<Duration> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_KEEPINTVL)
@@ -1380,6 +1403,7 @@ impl Socket {
     #[cfg(all(
         feature = "all",
         any(
+            doc,
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
@@ -1390,6 +1414,22 @@ impl Socket {
             target_vendor = "apple",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "illumos",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_vendor = "apple",
+            )
+        )))
+    )]
     pub fn keepalive_retries(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_KEEPCNT)
