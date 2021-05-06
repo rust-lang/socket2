@@ -112,6 +112,7 @@ pub(crate) use libc::{
     feature = "all",
     any(
         target_os = "android",
+        target_os = "dragonfly",
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "illumos",
