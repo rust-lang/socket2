@@ -168,6 +168,7 @@ type IovLen = usize;
     target_os = "dragonfly",
     target_os = "freebsd",
     target_os = "fuchsia",
+    target_os = "haiku",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
