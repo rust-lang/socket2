@@ -787,6 +787,42 @@ fn device() {
     panic!("failed to bind to any device.");
 }
 
+#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[test]
+fn device() {
+    // Some common network interface on macOS.
+    const INTERFACES: &[&str] = &["lo\0", "lo0\0", "en0\0"];
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    assert_eq!(socket.device_index().unwrap(), None);
+
+    for interface in INTERFACES.iter() {
+        let iface_index = std::num::NonZeroU32::new(unsafe {
+            libc::if_nametoindex(interface.as_ptr() as *const _)
+        });
+        // If no index is returned, try another interface alias
+        if iface_index.is_none() {
+            continue;
+        }
+        if let Err(err) = socket.bind_device_by_index(iface_index) {
+            // Network interface is not available try another.
+            if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
+                eprintln!("error binding to device (`{}`): {}", interface, err);
+                continue;
+            } else {
+                panic!("unexpected error binding device: {}", err);
+            }
+        }
+        assert_eq!(socket.device_index().unwrap(), iface_index);
+
+        socket.bind_device_by_index(None).unwrap();
+        assert_eq!(socket.device_index().unwrap(), None);
+        // Just need to do it with one interface.
+        return;
+    }
+
+    panic!("failed to bind to any device.");
+}
 #[cfg(all(
     feature = "all",
     any(

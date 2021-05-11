@@ -13,6 +13,8 @@ use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
+#[cfg(all(feature = "all", target_vendor = "apple"))]
+use std::num::NonZeroU32;
 #[cfg(all(
     feature = "all",
     any(
@@ -1313,6 +1315,36 @@ impl crate::Socket {
             len as libc::socklen_t,
         ))
         .map(|_| ())
+    }
+
+    /// Sets the value for `IP_BOUND_IF` option on this socket.
+    ///
+    /// If a socket is bound to an interface, only packets received from that
+    /// particular interface are processed by the socket.
+    ///
+    /// If `interface` is `None`, the binding is removed. If the `interface`
+    /// index is not valid, an error is returned.
+    ///
+    /// One can use `libc::if_nametoindex` to convert an interface alias to an
+    /// index.
+    #[cfg(all(feature = "all", target_vendor = "apple"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
+    pub fn bind_device_by_index(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
+        let index = interface.map(NonZeroU32::get).unwrap_or(0);
+        unsafe { setsockopt(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF, index) }
+    }
+
+    /// Gets the value for `IP_BOUND_IF` option on this socket, i.e. the index
+    /// for the interface to which the socket is bound.
+    ///
+    /// Returns `None` if the socket is not bound to any interface, otherwise
+    /// returns an interface index.
+    #[cfg(all(feature = "all", target_vendor = "apple"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
+    pub fn device_index(&self) -> io::Result<Option<NonZeroU32>> {
+        let index =
+            unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF)? };
+        Ok(NonZeroU32::new(index))
     }
 
     /// Get the value of the `SO_INCOMING_CPU` option on this socket.
