@@ -125,6 +125,14 @@ fn protocol_fmt_debug() {
 }
 
 #[test]
+#[should_panic = "tried to create a `Socket` with an invalid fd"]
+#[cfg(unix)]
+fn from_invalid_raw_fd_should_panic() {
+    use std::os::unix::io::FromRawFd;
+    let _socket = unsafe { Socket::from_raw_fd(-1) };
+}
+
+#[test]
 #[cfg(all(unix, feature = "all"))]
 fn socket_address_unix() {
     let string = "/tmp/socket";
