@@ -524,8 +524,8 @@ impl SockAddr {
 
 pub(crate) type Socket = c_int;
 
-pub(crate) fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
-    unsafe { crate::socket::Inner::from_raw_fd(socket) }
+pub(crate) unsafe fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
+    crate::socket::Inner::from_raw_fd(socket)
 }
 
 pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {

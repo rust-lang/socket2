@@ -191,8 +191,8 @@ fn init() {
 
 pub(crate) type Socket = sock::SOCKET;
 
-pub(crate) fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
-    unsafe { crate::socket::Inner::from_raw_socket(socket as RawSocket) }
+pub(crate) unsafe fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
+    crate::socket::Inner::from_raw_socket(socket as RawSocket)
 }
 
 pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {

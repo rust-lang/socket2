@@ -74,16 +74,40 @@ pub struct Socket {
 /// Store a `TcpStream` internally to take advantage of its niche optimizations on Unix platforms.
 pub(crate) type Inner = std::net::TcpStream;
 
-// The `sys` module must have access to the below three functions.
 impl Socket {
+    /// # Safety
+    ///
+    /// The caller must ensure `raw` is a valid file descriptor/socket. NOTE:
+    /// this should really be marked `unsafe`, but this being an internal
+    /// function, often passed as mapping function, it's makes it very
+    /// inconvenient to mark it as `unsafe`.
     pub(crate) fn from_raw(raw: sys::Socket) -> Socket {
         Socket {
-            inner: sys::socket_from_raw(raw),
+            inner: unsafe {
+                // SAFETY: the caller must ensure that `raw` is a valid file
+                // descriptor, but when it isn't it could return I/O errors, or
+                // potentially close a fd it doesn't own. All of that isn't
+                // memory unsafe, so it's not desired but never memory unsafe or
+                // causes UB.
+                //
+                // However there is one exception. We use `TcpStream` to
+                // represent the `Socket` internally (see `Inner` type),
+                // `TcpStream` has a layout optimisation that doesn't allow for
+                // negative file descriptors (as those are always invalid).
+                // Violating this assumption (fd never negative) causes UB,
+                // something we don't want. So check for that we have this
+                // `assert!`.
+                #[cfg(unix)]
+                assert!(raw >= 0, "tried to create a `Socket` with an invalid fd");
+                sys::socket_from_raw(raw)
+            },
         }
     }
+
     pub(crate) fn as_raw(&self) -> sys::Socket {
         sys::socket_as_raw(&self.inner)
     }
+
     pub(crate) fn into_raw(self) -> sys::Socket {
         sys::socket_into_raw(self.inner)
     }
