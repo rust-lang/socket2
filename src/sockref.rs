@@ -26,6 +26,8 @@ use crate::Socket;
 ///
 /// # Examples
 ///
+/// Below is an example of converting a [`TcpStream`] into a [`SockRef`].
+///
 /// ```
 /// use std::net::{TcpStream, SocketAddr};
 ///
@@ -56,6 +58,29 @@ use crate::Socket;
 /// # handle.join().unwrap();
 /// # Ok(())
 /// # }
+/// ```
+///
+/// Below is an example of **incorrect usage** of `SockRef::from`, which is
+/// currently possible (but not intended and will be fixed in future versions).
+///
+/// ```compile_fail
+/// use socket2::SockRef;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// /// THIS USAGE IS NOT VALID!
+/// let socket_ref = SockRef::from(&123);
+/// // The above line is overseen possibility when using `SockRef::from`, it
+/// // uses the `RawFd` (on Unix), which is a type alias for `c_int`/`i32`,
+/// // which implements `AsRawFd`. However it may be clear that this usage is
+/// // invalid as it doesn't guarantee that `123` is a valid file descriptor.
+///
+/// // Using `Socket::set_nodelay` now will call it on a file descriptor we
+/// // don't own! We don't even not if the file descriptor is valid or a socket.
+/// socket_ref.set_nodelay(true)?;
+/// drop(socket_ref);
+/// # Ok(())
+/// # }
+/// # DO_NOT_COMPILE
 /// ```
 pub struct SockRef<'s> {
     /// Because this is a reference we don't own the `Socket`, however `Socket`
