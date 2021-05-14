@@ -1139,3 +1139,9 @@ test!(IPv6 only_v6, set_only_v6(true));
 // IPv6 socket are already IPv6 only on FreeBSD and Windows.
 #[cfg(any(windows, target_os = "freebsd"))]
 test!(IPv6 only_v6, set_only_v6(false));
+
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+test!(
+    tcp_user_timeout,
+    set_tcp_user_timeout(Some(Duration::from_secs(10)))
+);

@@ -1597,6 +1597,57 @@ impl crate::Socket {
         ))
         .map(|_| sbytes as usize)
     }
+
+    /// Set the value of the `TCP_USER_TIMEOUT` option on this socket.
+    ///
+    /// If set, this specifies the maximum amount of time that transmitted data may remain
+    /// unacknowledged or buffered data may remain untransmitted before TCP will forcibly close the
+    /// corresponding connection.
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
+    )]
+    pub fn set_tcp_user_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
+        use std::convert::TryInto;
+        fn into_millis(duration: Option<Duration>) -> io::Result<c_int> {
+            duration
+                .map_or(0, |d| d.as_millis())
+                .try_into()
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        }
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_TCP,
+                libc::TCP_USER_TIMEOUT,
+                into_millis(duration)?,
+            )
+        }
+    }
+
+    /// Get the value of the `TCP_USER_TIMEOUT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_user_timeout`].
+    ///
+    /// [`set_tcp_user_timeout`]: Socket::set_tcp_user_timeout
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
+    )]
+    pub fn tcp_user_timeout(&self) -> io::Result<Option<Duration>> {
+        unsafe {
+            getsockopt::<libc::c_uint>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_USER_TIMEOUT)
+                .map(|millis| {
+                    if millis == 0 {
+                        None
+                    } else {
+                        Some(Duration::from_millis(millis as u64))
+                    }
+                })
+        }
+    }
 }
 
 #[cfg_attr(docsrs, doc(cfg(unix)))]
