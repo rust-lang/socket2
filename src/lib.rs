@@ -361,6 +361,7 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
+            target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
@@ -383,6 +384,7 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
+            target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
