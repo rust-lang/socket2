@@ -1182,7 +1182,7 @@ impl Socket {
         target_os = "illumos",
     )))]
     pub fn set_tos(&self, tos: u32) -> io::Result<()> {
-        unsafe { setsockopt(self.inner, sys::IPPROTO_IP, sys::IP_TOS, tos as c_int) }
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TOS, tos as c_int) }
     }
 
     /// Get the value of the `IP_TOS` option for this socket.
@@ -1200,7 +1200,7 @@ impl Socket {
     )))]
     pub fn tos(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.inner, sys::IPPROTO_IP, sys::IP_TOS).map(|tos| tos as u32)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_TOS).map(|tos| tos as u32)
         }
     }
 }
