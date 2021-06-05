@@ -1605,13 +1605,25 @@ impl crate::Socket {
     /// corresponding connection.
     #[cfg(all(
         feature = "all",
-        any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+        any(
+            target_os = "android",
+            target_os = "emscripten",
+            target_os = "fuchsia",
+            target_os = "l4re",
+            target_os = "linux",
+        )
     ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(
             feature = "all",
-            any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+            any(
+                target_os = "android",
+                target_os = "emscripten",
+                target_os = "fuchsia",
+                target_os = "l4re",
+                target_os = "linux",
+            )
         )))
     )]
     pub fn set_tcp_user_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
@@ -1639,13 +1651,25 @@ impl crate::Socket {
     /// [`set_tcp_user_timeout`]: Socket::set_tcp_user_timeout
     #[cfg(all(
         feature = "all",
-        any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+        any(
+            target_os = "android",
+            target_os = "emscripten",
+            target_os = "fuchsia",
+            target_os = "l4re",
+            target_os = "linux",
+        )
     ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(
             feature = "all",
-            any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+            any(
+                target_os = "android",
+                target_os = "emscripten",
+                target_os = "fuchsia",
+                target_os = "l4re",
+                target_os = "linux",
+            )
         )))
     )]
     pub fn tcp_user_timeout(&self) -> io::Result<Option<Duration>> {
