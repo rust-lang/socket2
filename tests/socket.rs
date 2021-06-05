@@ -1140,7 +1140,10 @@ test!(IPv6 only_v6, set_only_v6(true));
 #[cfg(any(windows, target_os = "freebsd"))]
 test!(IPv6 only_v6, set_only_v6(false));
 
-#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+))]
 test!(
     tcp_user_timeout,
     set_tcp_user_timeout(Some(Duration::from_secs(10)))
