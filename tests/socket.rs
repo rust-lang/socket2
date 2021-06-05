@@ -1142,7 +1142,13 @@ test!(IPv6 only_v6, set_only_v6(false));
 
 #[cfg(all(
     feature = "all",
-    any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+    any(
+        target_os = "android",
+        target_os = "emscripten",
+        target_os = "fuchsia",
+        target_os = "l4re",
+        target_os = "linux",
+    )
 ))]
 test!(
     tcp_user_timeout,
