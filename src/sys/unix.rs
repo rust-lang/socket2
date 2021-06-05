@@ -1603,6 +1603,11 @@ impl crate::Socket {
     /// If set, this specifies the maximum amount of time that transmitted data may remain
     /// unacknowledged or buffered data may remain untransmitted before TCP will forcibly close the
     /// corresponding connection.
+    ///
+    /// Setting `timeout` to `None` or a zero duration causes the system default timeouts to
+    /// be used. If `timeout` in milliseconds is larger than `c_uint::MAX`, the timeout is clamped
+    /// to `c_uint::MAX`. For example, when `c_uint` is a 32-bit value, this limits the timeout to
+    /// approximately 49.71 days.
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -1614,20 +1619,16 @@ impl crate::Socket {
             any(target_os = "android", target_os = "fuchsia", target_os = "linux")
         )))
     )]
-    pub fn set_tcp_user_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
-        use std::convert::TryInto;
-        fn into_millis(duration: Option<Duration>) -> io::Result<c_int> {
-            duration
-                .map_or(0, |d| d.as_millis())
-                .try_into()
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-        }
+    pub fn set_tcp_user_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
+        let timeout = timeout
+            .map(|to| min(to.as_millis(), libc::c_uint::MAX as u128) as libc::c_uint)
+            .unwrap_or(0);
         unsafe {
             setsockopt(
                 self.as_raw(),
                 libc::IPPROTO_TCP,
                 libc::TCP_USER_TIMEOUT,
-                into_millis(duration)?,
+                timeout,
             )
         }
     }
