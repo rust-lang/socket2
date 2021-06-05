@@ -1603,10 +1603,16 @@ impl crate::Socket {
     /// If set, this specifies the maximum amount of time that transmitted data may remain
     /// unacknowledged or buffered data may remain untransmitted before TCP will forcibly close the
     /// corresponding connection.
-    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+        )))
     )]
     pub fn set_tcp_user_timeout(&self, duration: Option<Duration>) -> io::Result<()> {
         use std::convert::TryInto;
@@ -1631,10 +1637,16 @@ impl crate::Socket {
     /// For more information about this option, see [`set_tcp_user_timeout`].
     ///
     /// [`set_tcp_user_timeout`]: Socket::set_tcp_user_timeout
-    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+        )))
     )]
     pub fn tcp_user_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
