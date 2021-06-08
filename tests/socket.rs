@@ -139,14 +139,17 @@ fn socket_address_unix() {
     let addr = SockAddr::unix(string).unwrap();
     assert!(addr.as_socket_ipv4().is_none());
     assert!(addr.as_socket_ipv6().is_none());
-    if cfg!(any(target_os = "linux", target_os = "android")) {
-        let path = "\0h".repeat(108 / 2);
-        let addr = SockAddr::unix(path).unwrap();
-        assert_eq!(
-            addr.len() as usize,
-            std::mem::size_of::<libc::sockaddr_un>()
-        );
-    }
+}
+
+#[test]
+#[cfg(all(any(target_os = "linux", target_os = "android"), feature = "all"))]
+fn socket_address_unix_abstract_namespace() {
+    let path = "\0h".repeat(108 / 2);
+    let addr = SockAddr::unix(path).unwrap();
+    assert_eq!(
+        addr.len() as usize,
+        std::mem::size_of::<libc::sockaddr_un>()
+    );
 }
 
 #[test]
