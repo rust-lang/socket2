@@ -435,7 +435,13 @@ impl SockAddr {
                 let len: &mut socklen_t = unsafe { &mut *len };
 
                 let bytes = path.as_ref().as_os_str().as_bytes();
-                if bytes.len() >= storage.sun_path.len() {
+                let too_long = match bytes.first() {
+                    None => false,
+                    // linux abstract namespaces aren't null-terminated
+                    Some(&0) => bytes.len() > storage.sun_path.len(),
+                    Some(_) => bytes.len() >= storage.sun_path.len(),
+                };
+                if too_long {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         "path must be shorter than SUN_LEN",
