@@ -162,11 +162,26 @@ const MAX_BUF_LEN: usize = <ssize_t>::max_value() as usize;
 #[cfg(target_vendor = "apple")]
 const MAX_BUF_LEN: usize = <c_int>::max_value() as usize - 1;
 
-#[cfg(any(target_os = "android", all(target_os = "linux", target_env = "gnu")))]
+#[cfg(any(
+    all(
+        target_os = "linux",
+        any(
+            target_env = "gnu",
+            all(target_env = "uclibc", target_pointer_width = "64")
+        )
+    ),
+    target_os = "android",
+))]
 type IovLen = usize;
 
 #[cfg(any(
-    all(target_os = "linux", target_env = "musl"),
+    all(
+        target_os = "linux",
+        any(
+            target_env = "musl",
+            all(target_env = "uclibc", target_pointer_width = "32")
+        )
+    ),
     target_os = "dragonfly",
     target_os = "freebsd",
     target_os = "fuchsia",
