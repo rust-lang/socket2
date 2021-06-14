@@ -197,10 +197,12 @@ impl Type {
 
     /// Type corresponding to `SOCK_SEQPACKET`.
     #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
     #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
@@ -256,6 +258,7 @@ impl From<Protocol> for c_int {
 ///
 /// Flags provide additional information about incoming messages.
 #[cfg(not(target_os = "redox"))]
+#[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct RecvFlags(c_int);
 
@@ -370,6 +373,20 @@ impl TcpKeepalive {
             windows,
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_vendor = "apple",
+                windows,
+            )
+        )))
+    )]
     pub const fn with_interval(self, interval: Duration) -> Self {
         Self {
             interval: Some(interval),
@@ -384,6 +401,7 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
+            doc,
             target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
@@ -392,6 +410,19 @@ impl TcpKeepalive {
             target_vendor = "apple",
         )
     ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "netbsd",
+                target_vendor = "apple",
+            )
+        )))
+    )]
     pub const fn with_retries(self, retries: u32) -> Self {
         Self {
             retries: Some(retries),

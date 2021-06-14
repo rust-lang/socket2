@@ -116,6 +116,7 @@ impl Type {
 
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
     pub const fn no_inherit(self) -> Type {
         self._no_inherit()
     }
@@ -190,8 +191,8 @@ fn init() {
 
 pub(crate) type Socket = sock::SOCKET;
 
-pub(crate) fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
-    unsafe { crate::socket::Inner::from_raw_socket(socket as RawSocket) }
+pub(crate) unsafe fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
+    crate::socket::Inner::from_raw_socket(socket as RawSocket)
 }
 
 pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {
@@ -738,6 +739,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` using `SetHandleInformation`.
     #[cfg(feature = "all")]
+    #[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
     pub fn set_no_inherit(&self, no_inherit: bool) -> io::Result<()> {
         self._set_no_inherit(no_inherit)
     }
