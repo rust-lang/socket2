@@ -1104,7 +1104,7 @@ test!(IPv6 only_v6, set_only_v6(true));
 #[cfg(any(
     windows,
     any(
-        target_os = "dragonfly",
+        // target_os = "dragonfly", // unsetting only_v6 is unsupported on DragonflyBSD
         target_os = "freebsd",
     )
 ))]
