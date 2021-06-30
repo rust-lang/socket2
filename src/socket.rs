@@ -493,6 +493,15 @@ impl Socket {
         self.recv_from_with_flags(buf, 0)
     }
 
+    /// Receives data from the socket. On success, returns the number of bytes
+    /// read and the address from whence the data came.
+    ///
+    /// Similar to [`recv_from`] except using a `&mut [u8]` initialised buffer.
+    pub fn recv_from_into_buf(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
+        let buf = unsafe { &mut *(buf as *mut [u8] as *mut [MaybeUninit<u8>]) };
+        self.recv_from(buf)
+    }
+
     /// Identical to [`recv_from`] but allows for specification of arbitrary
     /// flags to the underlying `recvfrom` call.
     ///
