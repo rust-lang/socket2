@@ -19,6 +19,9 @@ $(TARGETS):
 install_targets:
 	rustup target add $(TARGETS)
 
+doc:
+	RUSTDOCFLAGS="--cfg docsrs" rustup run nightly cargo doc --all-features
+
 # NOTE: when using this command you might want to change the `test` target to
 # only run a subset of the tests you're actively working on.
 dev:
@@ -27,4 +30,4 @@ dev:
 clean:
 	cargo clean
 
-.PHONY: test test_all check_all_targets $(TARGETS) install_targets dev clean
+.PHONY: test test_all check_all_targets $(TARGETS) install_targets doc dev clean
