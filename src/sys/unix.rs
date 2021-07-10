@@ -992,6 +992,7 @@ impl crate::Socket {
     /// Accept a new incoming connection from this listener.
     ///
     /// This function directly corresponds to the `accept4(2)` function.
+    #[cfg_attr(docsrs, doc = man_links!(accept4(2)))]
     ///
     /// This function will block the calling thread until a new connection is
     /// established. When established, the corresponding `Socket` and the remote
@@ -1514,6 +1515,7 @@ impl crate::Socket {
     /// Different OSs support different kinds of `file`s, see the OS
     /// documentation for what kind of files are supported. Generally *regular*
     /// files are supported by all OSs.
+    #[cfg_attr(docsrs, doc = man_links!(sendfile(2)))]
     ///
     /// The `offset` is the absolute offset into the `file` to use as starting
     /// point.

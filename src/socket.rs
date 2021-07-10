@@ -116,12 +116,12 @@ impl Socket {
     ///
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
     /// Windows.
+    #[cfg_attr(docsrs, doc = man_links!(socket(2)))]
     ///
     /// On Unix-like systems, the close-on-exec flag is set on the new socket.
     /// Additionally, on Apple platforms `SOCK_NOSIGPIPE` is set. On Windows,
-    /// the socket is made non-inheritable.
-    ///
-    /// [`Socket::new_raw`] can be used if you don't want these flags to be set.
+    /// the socket is made non-inheritable. [`Socket::new_raw`] can be used if
+    /// you don't want these flags to be set.
     pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let ty = set_common_type(ty);
         Socket::new_raw(domain, ty, protocol).and_then(set_common_flags)
@@ -139,8 +139,9 @@ impl Socket {
     /// Creates a pair of sockets which are connected to each other.
     ///
     /// This function corresponds to `socketpair(2)`.
+    #[cfg_attr(docsrs, doc = man_links!(unix: socketpair(2)))]
     ///
-    /// This function sets the same flags as in done for [`Socket::new`],
+    /// This function sets the same flags as in done for [`Socket::new`].
     /// [`Socket::pair_raw`] can be used if you don't want to set those flags.
     #[cfg(any(doc, all(feature = "all", unix)))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
@@ -175,6 +176,7 @@ impl Socket {
     ///
     /// This function directly corresponds to the `bind(2)` function on Windows
     /// and Unix.
+    #[cfg_attr(docsrs, doc = man_links!(bind(2)))]
     pub fn bind(&self, address: &SockAddr) -> io::Result<()> {
         sys::bind(self.as_raw(), address)
     }
@@ -183,6 +185,7 @@ impl Socket {
     ///
     /// This function directly corresponds to the `connect(2)` function on
     /// Windows and Unix.
+    #[cfg_attr(docsrs, doc = man_links!(connect(2)))]
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
@@ -237,6 +240,7 @@ impl Socket {
     ///
     /// This function directly corresponds to the `listen(2)` function on
     /// Windows and Unix.
+    #[cfg_attr(docsrs, doc = man_links!(listen(2)))]
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
@@ -248,6 +252,7 @@ impl Socket {
     ///
     /// This function uses `accept4(2)` on platforms that support it and
     /// `accept(2)` platforms that do not.
+    #[cfg_attr(docsrs, doc = man_links!(accept(2)))]
     ///
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::accept_raw`] can be used if you don't want to set those flags.
@@ -297,6 +302,10 @@ impl Socket {
 
     /// Returns the socket address of the local half of this socket.
     ///
+    /// This function directly corresponds to the `getsockname(2)` function on
+    /// Windows and Unix.
+    #[cfg_attr(docsrs, doc = man_links!(getsockname(2)))]
+    ///
     /// # Notes
     ///
     /// Depending on the OS this may return an error if the socket is not
@@ -308,6 +317,10 @@ impl Socket {
     }
 
     /// Returns the socket address of the remote peer of this socket.
+    ///
+    /// This function directly corresponds to the `getpeername(2)` function on
+    /// Windows and Unix.
+    #[cfg_attr(docsrs, doc = man_links!(getpeername(2)))]
     ///
     /// # Notes
     ///
@@ -334,8 +347,7 @@ impl Socket {
     /// On Windows this uses `WSA_FLAG_NO_HANDLE_INHERIT` setting inheriting to
     /// false.
     ///
-    /// On Windows this can **not** be used function cannot be used on a
-    /// QOS-enabled socket, see
+    /// On Windows this function cannot be used on a QOS-enabled socket, see
     /// <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaduplicatesocketw>.
     pub fn try_clone(&self) -> io::Result<Socket> {
         sys::try_clone(self.as_raw()).map(Socket::from_raw)
@@ -357,6 +369,8 @@ impl Socket {
     ///
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
+    ///
+    #[cfg_attr(docsrs, doc = man_links!(shutdown(2)))]
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         sys::shutdown(self.as_raw(), how)
     }
