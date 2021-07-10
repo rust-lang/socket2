@@ -372,11 +372,13 @@ impl_debug!(
 impl RecvFlags {
     /// Check if the message terminates a record.
     ///
-    /// Not all socket types support the notion of records.
-    /// For socket types that do support it (such as [`SEQPACKET`][Type::SEQPACKET]),
-    /// a record is terminated by sending a message with the end-of-record flag set.
+    /// Not all socket types support the notion of records. For socket types
+    /// that do support it (such as [`SEQPACKET`]), a record is terminated by
+    /// sending a message with the end-of-record flag set.
     ///
     /// On Unix this corresponds to the MSG_EOR flag.
+    ///
+    /// [`SEQPACKET`]: Type::SEQPACKET
     pub const fn is_end_of_record(self) -> bool {
         self.0 & libc::MSG_EOR != 0
     }
