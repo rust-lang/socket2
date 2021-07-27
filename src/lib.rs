@@ -340,10 +340,11 @@ impl TcpKeepalive {
     /// Set the amount of time after which TCP keepalive probes will be sent on
     /// idle connections.
     ///
-    /// This will set the value of `SO_KEEPALIVE` on OpenBSD and Haiku,
-    /// `TCP_KEEPALIVE` on macOS and iOS, and `TCP_KEEPIDLE` on all other Unix
-    /// operating systems. On Windows, this sets the value of the
-    /// `tcp_keepalive` struct's `keepalivetime` field.
+    /// This will set `TCP_KEEPALIVE` on macOS and iOS, and
+    /// `TCP_KEEPIDLE` on all other Unix operating systems, except
+    /// OpenBSD and Haiku which don't support any way to set this
+    /// option. On Windows, this sets the value of the `tcp_keepalive`
+    /// struct's `keepalivetime` field.
     ///
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.

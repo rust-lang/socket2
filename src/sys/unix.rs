@@ -135,11 +135,9 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
-#[cfg(any(target_os = "openbsd", target_os = "haiku"))]
-use libc::SO_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(target_vendor = "apple")]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
-#[cfg(not(any(target_os = "openbsd", target_os = "haiku", target_vendor = "apple")))]
+#[cfg(not(any(target_vendor = "apple")))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
 /// Helper macro to execute a system call that returns an `io::Result`.
@@ -876,6 +874,7 @@ pub(crate) fn keepalive_time(fd: Socket) -> io::Result<Duration> {
 }
 
 pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
+    #[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
     if let Some(time) = keepalive.time {
         let secs = into_secs(time);
         unsafe { setsockopt(fd, libc::IPPROTO_TCP, KEEPALIVE_TIME, secs)? }
