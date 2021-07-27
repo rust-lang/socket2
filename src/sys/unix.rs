@@ -137,7 +137,7 @@ pub(crate) type Bool = c_int;
 
 #[cfg(target_vendor = "apple")]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
-#[cfg(not(any(target_vendor = "apple")))]
+#[cfg(not(any(target_vendor = "apple", target_os = "haiku", target_os = "openbsd")))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
 /// Helper macro to execute a system call that returns an `io::Result`.
@@ -873,6 +873,7 @@ pub(crate) fn keepalive_time(fd: Socket) -> io::Result<Duration> {
     }
 }
 
+#[allow(unused_variables)]
 pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
     #[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
     if let Some(time) = keepalive.time {
@@ -904,6 +905,7 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
     Ok(())
 }
 
+#[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
 fn into_secs(duration: Duration) -> c_int {
     min(duration.as_secs(), c_int::max_value() as u64) as c_int
 }
