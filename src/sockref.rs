@@ -145,11 +145,3 @@ impl fmt::Debug for SockRef<'_> {
             .finish()
     }
 }
-
-#[test]
-#[should_panic]
-#[cfg(unix)]
-fn sockref_from_invalid_fd() {
-    let raw: std::os::unix::io::RawFd = -1;
-    let _ = SockRef::from(&raw);
-}
