@@ -866,6 +866,7 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
 }
 
 #[cfg(feature = "all")]
+#[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
 pub(crate) fn keepalive_time(fd: Socket) -> io::Result<Duration> {
     unsafe {
         getsockopt::<c_int>(fd, IPPROTO_TCP, KEEPALIVE_TIME)

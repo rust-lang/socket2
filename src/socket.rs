@@ -1404,11 +1404,22 @@ impl Socket {
 impl Socket {
     /// Get the value of the `TCP_KEEPIDLE` option on this socket.
     ///
-    /// This returns the value of `SO_KEEPALIVE` on OpenBSD and Haiku,
-    /// `TCP_KEEPALIVE` on macOS and iOS, and `TCP_KEEPIDLE` on all other Unix
-    /// operating systems.
-    #[cfg(any(doc, all(feature = "all", not(windows))))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(windows)))))]
+    /// This returns the value of `TCP_KEEPALIVE` on macOS and iOS and `TCP_KEEPIDLE` on all other
+    /// supported Unix operating systems.
+    #[cfg(any(
+        doc,
+        all(
+            feature = "all",
+            not(any(windows, target_os = "haiku", target_os = "openbsd"))
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            not(any(windows, target_os = "haiku", target_os = "openbsd"))
+        )))
+    )]
     pub fn keepalive_time(&self) -> io::Result<Duration> {
         sys::keepalive_time(self.as_raw())
     }

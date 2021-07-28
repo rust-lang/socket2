@@ -729,7 +729,10 @@ fn tcp_keepalive() {
     // Set the parameters.
     socket.set_tcp_keepalive(&params).unwrap();
 
-    #[cfg(all(feature = "all", not(windows)))]
+    #[cfg(all(
+        feature = "all",
+        not(any(windows, target_os = "haiku", target_os = "openbsd"))
+    ))]
     assert_eq!(socket.keepalive_time().unwrap(), Duration::from_secs(200));
 
     #[cfg(all(
