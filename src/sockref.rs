@@ -109,8 +109,10 @@ where
 {
     /// The caller must ensure `S` is actually a socket.
     fn from(socket: &'s S) -> Self {
+        let fd = socket.as_raw_fd();
+        assert!(fd >= 0);
         SockRef {
-            socket: ManuallyDrop::new(unsafe { Socket::from_raw_fd(socket.as_raw_fd()) }),
+            socket: ManuallyDrop::new(unsafe { Socket::from_raw_fd(fd) }),
             _lifetime: PhantomData,
         }
     }
@@ -125,8 +127,10 @@ where
 {
     /// See the `From<&impl AsRawFd>` implementation.
     fn from(socket: &'s S) -> Self {
+        let socket = socket.as_raw_socket();
+        assert!(socket != winapi::um::winsock2::INVALID_SOCKET as _);
         SockRef {
-            socket: ManuallyDrop::new(unsafe { Socket::from_raw_socket(socket.as_raw_socket()) }),
+            socket: ManuallyDrop::new(unsafe { Socket::from_raw_socket(socket) }),
             _lifetime: PhantomData,
         }
     }
@@ -140,4 +144,12 @@ impl fmt::Debug for SockRef<'_> {
             .field("peer_addr", &self.socket.peer_addr().ok())
             .finish()
     }
+}
+
+#[test]
+#[should_panic]
+#[cfg(unix)]
+fn sockref_from_invalid_fd() {
+    let raw: std::os::unix::io::RawFd = -1;
+    let _ = SockRef::from(&raw);
 }
