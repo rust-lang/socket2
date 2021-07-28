@@ -1,3 +1,25 @@
+# 0.4.1
+
+## Added
+
+* Add `SockAddr::new`
+* Support for `TCP_USER_TIMEOUT`.
+* Support for `IP_BOUND_IF`.
+* Support for `IP_TRANSPARENT`.
+* Enable `Socket::type` on all platforms.
+* Support for uclibc (for Haiku support).
+* Add DragonFly support for TCP keepalive (`KEEPINTVL`/`KEEPCNT`).
+* Documentation for proper use of `SockRef::from`, and the improper use.
+* Assertion in `SockRef::from` to ensure the raw socket valid.
+
+## Fixed
+
+* Compilation on Haiku.
+* Setting TCP keepalive on Haiku and OpenBSD (by not setting it as it's not
+  supported).
+* Size check for abstract namespaces in `SockAddr::unix`.
+* Set noinherit on accepted sockets on Windows when opening sockets.
+
 # 0.4.0
 
 ## Added
