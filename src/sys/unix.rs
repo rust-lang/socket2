@@ -1478,8 +1478,8 @@ impl crate::Socket {
     )]
     pub fn freebind(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::IP_FREEBIND)
-                .map(|reuse| reuse != 0)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_IP, libc::IP_FREEBIND)
+                .map(|freebind| freebind != 0)
         }
     }
 
@@ -1501,13 +1501,13 @@ impl crate::Socket {
             any(target_os = "android", target_os = "fuchsia", target_os = "linux")
         )))
     )]
-    pub fn set_freebind(&self, reuse: bool) -> io::Result<()> {
+    pub fn set_freebind(&self, freebind: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
-                libc::SOL_SOCKET,
+                libc::SOL_IP,
                 libc::IP_FREEBIND,
-                reuse as c_int,
+                freebind as c_int,
             )
         }
     }
