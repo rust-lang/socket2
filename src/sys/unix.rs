@@ -1512,6 +1512,71 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `IPV6_FREEBIND` option on this socket.
+    ///
+    /// This is an IPv6 counterpart of `IP_FREEBIND` socket option on
+    /// Android/Linux. For more information about this option, see
+    /// [`set_freebind`].
+    ///
+    /// [`set_freebind`]: crate::Socket::set_freebind
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn freebind_ipv6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_IPV6, libc::IPV6_FREEBIND)
+                .map(|freebind| freebind != 0)
+        }
+    }
+
+    /// Set value for the `IPV6_FREEBIND` option on this socket.
+    ///
+    /// This is an IPv6 counterpart of `IP_FREEBIND` socket option on
+    /// Android/Linux. For more information about this option, see
+    /// [`set_freebind`].
+    ///
+    /// [`set_freebind`]: crate::Socket::set_freebind
+    ///
+    /// # Examples
+    ///
+    /// On Linux:
+    ///
+    /// ```
+    /// use socket2::{Domain, Socket, Type};
+    /// use std::io::{self, Error, ErrorKind};
+    ///
+    /// fn enable_freebind(socket: &Socket) -> io::Result<()> {
+    ///     match socket.domain()? {
+    ///         Domain::IPV4 => socket.set_freebind(true)?,
+    ///         Domain::IPV6 => socket.set_freebind_ipv6(true)?,
+    ///         _ => return Err(Error::new(ErrorKind::Other, "unsupported domain")),
+    ///     };
+    ///     Ok(())
+    /// }
+    ///
+    /// # fn main() -> io::Result<()> {
+    /// #     let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
+    /// #     enable_freebind(&socket)
+    /// # }
+    /// ```
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn set_freebind_ipv6(&self, freebind: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_IPV6,
+                libc::IPV6_FREEBIND,
+                freebind as c_int,
+            )
+        }
+    }
+
     /// Copies data between a `file` and this socket using the `sendfile(2)`
     /// system call. Because this copying is done within the kernel,
     /// `sendfile()` is more efficient than the combination of `read(2)` and
