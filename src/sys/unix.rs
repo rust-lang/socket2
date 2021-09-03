@@ -135,6 +135,8 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
+#[cfg(any(target_os = "haiku", target_os = "openbsd"))]
+use libc::SO_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(target_vendor = "apple")]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(not(any(target_vendor = "apple", target_os = "haiku", target_os = "openbsd")))]
