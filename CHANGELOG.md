@@ -1,3 +1,14 @@
+# 0.4.2
+
+## Added
+
+* `Socket::(set_)freebind_ipv6`, getter and setter for `IPV6_FREEBIND`.
+
+## Fixed
+
+* Compilation on OpenBSD.
+* Usage of incorrect flag in `Socket::(set_)freebind`.
+
 # 0.4.1
 
 ## Added
