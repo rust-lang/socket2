@@ -323,7 +323,9 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
     time: Option<Duration>,
+    #[cfg_attr(target_os = "redox", allow(dead_code))]
     interval: Option<Duration>,
+    #[cfg_attr(target_os = "redox", allow(dead_code))]
     retries: Option<u32>,
 }
 
