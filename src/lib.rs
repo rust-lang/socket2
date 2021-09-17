@@ -126,6 +126,9 @@ mod sys;
 #[path = "sys/windows.rs"]
 mod sys;
 
+#[cfg(not(any(windows, unix)))]
+compile_error!("Socket2 doesn't support the compile target");
+
 use sys::c_int;
 
 pub use sockaddr::SockAddr;
