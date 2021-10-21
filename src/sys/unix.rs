@@ -1348,6 +1348,31 @@ impl crate::Socket {
         .map(|_| ())
     }
 
+    /// Sets the value for the `SO_SETFIB` option on this socket.
+    ///
+    /// Bind socket to the specified forwarding table (VRF) on a *BSD OS
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "freebsd", target_os = "dragonfly", target_os = "netbsd", target_os = "openbsd")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "freebsd", target_os = "dragonfly", target_os = "netbsd", target_os = "openbsd")
+        )))
+    )]
+    pub fn set_fib(&self, fib: u32) -> io::Result<()> {
+        syscall!(setsockopt(
+            self.as_raw(),
+            libc::SOL_SOCKET,
+            libc::SO_SETFIB,
+            (&fib as *const u32).cast(),
+            mem::size_of::<u32>() as libc::socklen_t,
+        ))
+        .map(|_| ())
+    }
+
     /// Sets the value for `IP_BOUND_IF` option on this socket.
     ///
     /// If a socket is bound to an interface, only packets received from that
