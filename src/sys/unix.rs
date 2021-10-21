@@ -1353,13 +1353,13 @@ impl crate::Socket {
     /// Bind socket to the specified forwarding table (VRF) on a *BSD OS
     #[cfg(all(
         feature = "all",
-        any(target_os = "freebsd", target_os = "dragonfly", target_os = "netbsd", target_os = "openbsd")
+        any(target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd")
     ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(
             feature = "all",
-            any(target_os = "freebsd", target_os = "dragonfly", target_os = "netbsd", target_os = "openbsd")
+            any(target_os = "freebsd", target_os = "dragonfly", target_os = "openbsd")
         )))
     )]
     pub fn set_fib(&self, fib: u32) -> io::Result<()> {
