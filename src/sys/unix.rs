@@ -1351,17 +1351,8 @@ impl crate::Socket {
     /// Sets the value for the `SO_SETFIB` option on this socket.
     ///
     /// Bind socket to the specified forwarding table (VRF) on a FreeBSD.
-    #[cfg(all(
-        feature = "all",
-        any(target_os = "freebsd")
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(target_os = "freebsd")
-        )))
-    )]
+    #[cfg(all(feature = "all", any(target_os = "freebsd")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", any(target_os = "freebsd")))))]
     pub fn set_fib(&self, fib: u32) -> io::Result<()> {
         syscall!(setsockopt(
             self.as_raw(),
