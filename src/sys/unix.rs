@@ -10,7 +10,7 @@ use std::cmp::min;
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
 use std::marker::PhantomData;
-use std::mem::{self, size_of, MaybeUninit};
+use std::mem::{self, forget, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
 #[cfg(all(feature = "all", target_vendor = "apple"))]
@@ -55,7 +55,7 @@ use libc::{c_void, in6_addr, in_addr};
 use crate::RecvFlags;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 
-pub(crate) use libc::c_int;
+pub(crate) use libc::{c_int, c_uchar, c_uint, c_ushort};
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
@@ -199,6 +199,31 @@ type IovLen = usize;
     target_vendor = "apple",
 ))]
 type IovLen = c_int;
+
+/// Required for SO_ATTACH_FILTER.
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[derive(Debug)]
+#[repr(C)]
+struct SockFprog {
+    ///  Number of filter blocks
+    pub len: c_ushort,
+    pub filter: *mut SockFilter,
+}
+
+/// Linux Filter block
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct SockFilter {
+    /// Actual filter code
+    pub code: c_ushort,
+    /// Jump true
+    pub jt: c_uchar,
+    /// Jump false
+    pub jf: c_uchar,
+    /// Generic multiuse field
+    pub k: c_uint,
+}
 
 /// Unix only API.
 impl Domain {
@@ -1772,6 +1797,41 @@ impl crate::Socket {
                     }
                 })
         }
+    }
+
+    /// Attach Berkeley Packet Filter(BPF) on this socket.
+    ///
+    /// BPF allows a user-space program to attach a filter onto any socket
+    /// and allow or disallow certain types of data to come through the socket.
+    ///
+    /// For more information about this option, see [filter](https://www.kernel.org/doc/html/v5.12/networking/filter.html)
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn attach_filter(&self, mut filters: Vec<SockFilter>) -> io::Result<()> {
+        filters.shrink_to_fit();
+        assert_eq!(filters.capacity(), filters.len());
+
+        let prog = SockFprog {
+            len: filters.len() as u16,
+            filter: filters.as_mut_ptr(),
+        };
+        forget(filters);
+
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_ATTACH_FILTER,
+                prog,
+            )
+        }
+    }
+
+    /// Detach Berkeley Packet Filter(BPF) from this socket.
+    ///
+    /// For more information about this option, see [`attach_filter`]
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn detach_filter(&self) -> io::Result<()> {
+        unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
     }
 }
 
