@@ -10,7 +10,9 @@ use std::cmp::min;
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
 use std::marker::PhantomData;
-use std::mem::{self, forget, size_of, MaybeUninit};
+#[cfg(all(feature = "all", target_os = "linux"))]
+use std::mem::forget;
+use std::mem::{self, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
 #[cfg(all(feature = "all", target_vendor = "apple"))]
@@ -55,7 +57,10 @@ use libc::{c_void, in6_addr, in_addr};
 use crate::RecvFlags;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 
-pub(crate) use libc::{c_int, c_uchar, c_uint, c_ushort};
+#[cfg(all(feature = "all", target_os = "linux"))]
+pub(crate) use libc::{c_uchar, c_uint, c_ushort};
+
+pub(crate) use libc::c_int;
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
