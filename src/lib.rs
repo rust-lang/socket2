@@ -131,9 +131,6 @@ compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
 
-#[cfg(all(feature = "all", target_os = "linux"))]
-pub use sys::SockFilter;
-
 pub use sockaddr::SockAddr;
 pub use socket::Socket;
 pub use sockref::SockRef;
