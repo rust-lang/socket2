@@ -1781,10 +1781,10 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [filter](https://www.kernel.org/doc/html/v5.12/networking/filter.html)
     #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
-    pub fn attach_filter(&self, filters: &mut [libc::sock_filter]) -> io::Result<()> {
+    pub fn attach_filter(&self, filters: &[libc::sock_filter]) -> io::Result<()> {
         let prog = libc::sock_fprog {
             len: filters.len() as u16,
-            filter: filters.as_mut_ptr(),
+            filter: filters.as_ptr() as *mut _,
         };
 
         unsafe {
