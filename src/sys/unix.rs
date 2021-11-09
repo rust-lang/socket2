@@ -1773,6 +1773,37 @@ impl crate::Socket {
                 })
         }
     }
+
+    /// Attach Berkeley Packet Filter(BPF) on this socket.
+    ///
+    /// BPF allows a user-space program to attach a filter onto any socket
+    /// and allow or disallow certain types of data to come through the socket.
+    ///
+    /// For more information about this option, see [filter](https://www.kernel.org/doc/html/v5.12/networking/filter.html)
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+    pub fn attach_filter(&self, filters: &[libc::sock_filter]) -> io::Result<()> {
+        let prog = libc::sock_fprog {
+            len: filters.len() as u16,
+            filter: filters.as_ptr() as *mut _,
+        };
+
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_ATTACH_FILTER,
+                prog,
+            )
+        }
+    }
+
+    /// Detach Berkeley Packet Filter(BPF) from this socket.
+    ///
+    /// For more information about this option, see [`attach_filter`]
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+    pub fn detach_filter(&self) -> io::Result<()> {
+        unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
+    }
 }
 
 #[cfg_attr(docsrs, doc(cfg(unix)))]
