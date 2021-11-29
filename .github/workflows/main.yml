@@ -94,26 +94,6 @@ jobs:
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
 
-  Test_FreeBSD:
-    name: Test
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        target: ["x86_64-unknown-freebsd"]
-    steps:
-    - uses: actions/checkout@master
-    - name: Run check
-      uses: vmactions/freebsd-vm@v0.1.0
-      with:
-        prepare: |
-          pkg install -y curl
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
-        run: |
-          set path=($HOME/.cargo/bin $path)
-          cargo install cargo-hack
-          cargo hack test --feature-powerset --target ${{ matrix.target }}
-          cargo hack test --feature-powerset --release --target ${{ matrix.target }}
-
   Publish_docs:
     name: Publish Documentation
     runs-on: ubuntu-latest
