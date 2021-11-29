@@ -1191,6 +1191,7 @@ impl Socket {
     ///
     /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
     /// documents that not all versions of windows support `IP_TOS`.
+    ///
     /// [`set_tos`]: Socket::set_tos
     #[cfg(not(any(
         target_os = "fuschia",
