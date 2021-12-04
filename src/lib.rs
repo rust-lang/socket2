@@ -326,9 +326,9 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
     time: Option<Duration>,
-    #[cfg_attr(target_os = "redox", allow(dead_code))]
+    #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
     interval: Option<Duration>,
-    #[cfg_attr(target_os = "redox", allow(dead_code))]
+    #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
     retries: Option<u32>,
 }
 
@@ -337,7 +337,9 @@ impl TcpKeepalive {
     pub const fn new() -> TcpKeepalive {
         TcpKeepalive {
             time: None,
+            #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
             interval: None,
+            #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
             retries: None,
         }
     }
