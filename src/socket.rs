@@ -991,6 +991,44 @@ fn into_linger(duration: Option<Duration>) -> sys::linger {
 /// * Linux: <https://man7.org/linux/man-pages/man7/ip.7.html>
 /// * Windows: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
 impl Socket {
+    /// Get the value of the `IP_HDRINCL` option on this socket.
+    ///
+    /// For more information about this option, see [`set_header_included`].
+    ///
+    /// [`set_header_included`]: Socket::set_header_included
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(all(feature = "all", not(target_os = "redox"))))]
+    pub fn header_included(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_HDRINCL)
+                .map(|included| included != 0)
+        }
+    }
+
+    /// Set the value of the `IP_HDRINCL` option on this socket.
+    ///
+    /// If enabled, the user supplies an IP header in front of the user data.
+    /// Valid only for [`SOCK_RAW`] sockets; see [raw(7)] for more information.
+    /// When this flag is enabled, the values set by `IP_OPTIONS`, [`IP_TTL`],
+    /// and [`IP_TOS`] are ignored.
+    ///
+    /// [`SOCK_RAW`]: Type::RAW
+    /// [raw(7)]: https://man7.org/linux/man-pages/man7/raw.7.html
+    /// [`IP_TTL`]: Socket::set_ttl
+    /// [`IP_TOS`]: Socket::set_tos
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(all(feature = "all", not(target_os = "redox"))))]
+    pub fn set_header_included(&self, included: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_HDRINCL,
+                included as c_int,
+            )
+        }
+    }
+
     /// Get the value of the `IP_TRANSPARENT` option on this socket.
     ///
     /// For more information about this option, see [`set_ip_transparent`].
@@ -1016,7 +1054,7 @@ impl Socket {
     /// are routed through the TProxy box (i.e., the system
     /// hosting the application that employs the IP_TRANSPARENT
     /// socket option).  Enabling this socket option requires
-    /// superuser privileges (the CAP_NET_ADMIN capability).
+    /// superuser privileges (the `CAP_NET_ADMIN` capability).
     ///
     /// TProxy redirection with the iptables TPROXY target also
     /// requires that this option be set on the redirected socket.

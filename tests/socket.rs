@@ -1082,11 +1082,11 @@ macro_rules! test {
 
         let initial = socket.$get_fn().expect("failed to get initial value");
         let arg = $arg;
-        let expected = $expected;
         assert_ne!(initial, arg, "initial value and argument are the same");
 
         socket.$set_fn(arg).expect("failed to set option");
         let got = socket.$get_fn().expect("failed to get value");
+        let expected = $expected;
         assert_eq!(got, expected, "set and get values differ");
     };
 }
@@ -1174,3 +1174,27 @@ test!(
     tcp_user_timeout,
     set_tcp_user_timeout(Some(Duration::from_secs(10)))
 );
+
+#[test]
+#[cfg(all(feature = "all", not(target_os = "redox")))]
+fn header_included() {
+    let socket = match Socket::new(Domain::IPV4, Type::RAW, None) {
+        Ok(socket) => socket,
+        // Need certain permissions to create a raw sockets.
+        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => return,
+        #[cfg(unix)]
+        Err(ref err) if err.raw_os_error() == Some(libc::EPROTONOSUPPORT) => return,
+        Err(err) => panic!("unexpected error creating socket: {}", err),
+    };
+
+    let initial = socket
+        .header_included()
+        .expect("failed to get initial value");
+    assert_eq!(initial, false, "initial value and argument are the same");
+
+    socket
+        .set_header_included(true)
+        .expect("failed to set option");
+    let got = socket.header_included().expect("failed to get value");
+    assert_eq!(got, true, "set and get values differ");
+}
