@@ -75,6 +75,8 @@ pub(crate) use libc::{
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
 // Used in `Socket`.
+#[cfg(all(feature = "all", not(target_os = "redox")))]
+pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
     target_os = "fuschia",
     target_os = "redox",
