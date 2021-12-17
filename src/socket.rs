@@ -32,9 +32,11 @@ use crate::{MaybeUninitSlice, RecvFlags};
 /// precisely one libc or OS API call which is essentially just a "Rustic
 /// translation" of what's below.
 ///
+/// ## Converting to and from other types
+///
 /// This type can be freely converted into the network primitives provided by
 /// the standard library, such as [`TcpStream`] or [`UdpSocket`], using the
-/// [`Into`] trait, see the example below.
+/// [`From`] trait, see the example below.
 ///
 /// [`TcpStream`]: std::net::TcpStream
 /// [`UdpSocket`]: std::net::UdpSocket
