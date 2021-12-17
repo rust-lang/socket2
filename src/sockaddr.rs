@@ -224,7 +224,7 @@ impl From<SocketAddrV4> for SockAddr {
         let sockaddr_in = sockaddr_in {
             sin_family: AF_INET as sa_family_t,
             sin_port: addr.port().to_be(),
-            sin_addr: crate::sys::to_in_addr(&addr.ip()),
+            sin_addr: crate::sys::to_in_addr(addr.ip()),
             sin_zero: Default::default(),
             #[cfg(any(
                 target_os = "dragonfly",
