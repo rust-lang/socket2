@@ -285,10 +285,6 @@ impl RecvFlags {
 #[repr(transparent)]
 pub struct MaybeUninitSlice<'a>(sys::MaybeUninitSlice<'a>);
 
-unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
-
-unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
-
 impl<'a> fmt::Debug for MaybeUninitSlice<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self.0.as_slice(), fmt)

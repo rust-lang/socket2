@@ -157,6 +157,10 @@ pub struct MaybeUninitSlice<'a> {
     _lifetime: PhantomData<&'a mut [MaybeUninit<u8>]>,
 }
 
+unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
+
+unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
+
 impl<'a> MaybeUninitSlice<'a> {
     pub fn new(buf: &'a mut [MaybeUninit<u8>]) -> MaybeUninitSlice<'a> {
         assert!(buf.len() <= ULONG::MAX as usize);
