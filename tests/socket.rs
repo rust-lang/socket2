@@ -493,7 +493,7 @@ fn out_of_band() {
 
     let (receiver, _) = listener.accept().unwrap();
 
-    sender.send(DATA).unwrap();
+    sender.send(&DATA).unwrap();
 
     const FIRST: &[u8] = b"!";
     assert_eq!(sender.send_out_of_band(FIRST).unwrap(), FIRST.len());
@@ -623,7 +623,7 @@ fn recv_vectored_truncated() {
         .recv_vectored(&mut [MaybeUninitSlice::new(&mut buffer)])
         .unwrap();
     assert_eq!(received, 24);
-    assert!(flags.is_truncated(), "{}", true);
+    assert_eq!(flags.is_truncated(), true);
     assert_eq!(unsafe { assume_init(&buffer) }, b"do not feed the gremlins");
 }
 
@@ -645,7 +645,7 @@ fn recv_from_vectored_truncated() {
         .recv_from_vectored(&mut [MaybeUninitSlice::new(&mut buffer)])
         .unwrap();
     assert_eq!(received, 24);
-    assert!(flags.is_truncated(), "{}", true);
+    assert_eq!(flags.is_truncated(), true);
     assert_eq!(
         addr.as_socket_ipv6().unwrap(),
         addr_a.as_socket_ipv6().unwrap()
@@ -1190,15 +1190,11 @@ fn header_included() {
     let initial = socket
         .header_included()
         .expect("failed to get initial value");
-    assert!(
-        initial,
-        "{} {}",
-        false, "initial value and argument are the same"
-    );
+    assert_eq!(initial, false, "initial value and argument are the same");
 
     socket
         .set_header_included(true)
         .expect("failed to set option");
     let got = socket.header_included().expect("failed to get value");
-    assert!(got, "{} {}", true, "set and get values differ");
+    assert_eq!(got, true, "set and get values differ");
 }
