@@ -1,3 +1,4 @@
+#![allow(clippy::bool_assert_comparison)]
 #[cfg(all(
     feature = "all",
     any(
@@ -493,7 +494,7 @@ fn out_of_band() {
 
     let (receiver, _) = listener.accept().unwrap();
 
-    sender.send(&DATA).unwrap();
+    sender.send(DATA).unwrap();
 
     const FIRST: &[u8] = b"!";
     assert_eq!(sender.send_out_of_band(FIRST).unwrap(), FIRST.len());
