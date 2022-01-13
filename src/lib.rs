@@ -119,11 +119,8 @@ mod sockaddr;
 mod socket;
 mod sockref;
 
-#[cfg(unix)]
-#[path = "sys/unix.rs"]
-mod sys;
-#[cfg(windows)]
-#[path = "sys/windows.rs"]
+#[cfg_attr(unix, path = "sys/unix.rs")]
+#[cfg_attr(windows, path = "sys/windows.rs")]
 mod sys;
 
 #[cfg(not(any(windows, unix)))]
