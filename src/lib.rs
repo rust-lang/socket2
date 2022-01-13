@@ -132,6 +132,15 @@ pub use sockaddr::SockAddr;
 pub use socket::Socket;
 pub use sockref::SockRef;
 
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+pub use socket::InterfaceIndexOrAddress;
+
 /// Specification of the communication domain for a socket.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in

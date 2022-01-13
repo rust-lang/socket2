@@ -741,6 +741,32 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     Ipv6Addr::from(*unsafe { addr.u.Byte() })
 }
 
+pub(crate) fn to_mreqn(
+    multiaddr: &Ipv4Addr,
+    interface: &crate::socket::InterfaceIndexOrAddress,
+) -> IpMreq {
+    IpMreq {
+        imr_multiaddr: to_in_addr(multiaddr),
+        // Per https://docs.microsoft.com/en-us/windows/win32/api/ws2ipdef/ns-ws2ipdef-ip_mreq#members:
+        //
+        // imr_interface
+        //
+        // The local IPv4 address of the interface or the interface index on
+        // which the multicast group should be joined or dropped. This value is
+        // in network byte order. If this member specifies an IPv4 address of
+        // 0.0.0.0, the default IPv4 multicast interface is used.
+        //
+        // To use an interface index of 1 would be the same as an IP address of
+        // 0.0.0.1.
+        imr_interface: match interface {
+            crate::socket::InterfaceIndexOrAddress::Index(interface) => {
+                to_in_addr(&(*interface).into())
+            }
+            crate::socket::InterfaceIndexOrAddress::Address(interface) => to_in_addr(interface),
+        },
+    }
+}
+
 /// Windows only API.
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` using `SetHandleInformation`.
