@@ -1000,6 +1000,31 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     Ipv6Addr::from(addr.s6_addr)
 }
 
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+pub(crate) fn to_mreqn(
+    multiaddr: &Ipv4Addr,
+    interface: &crate::socket::InterfaceIndexOrAddress,
+) -> libc::ip_mreqn {
+    match interface {
+        crate::socket::InterfaceIndexOrAddress::Index(interface) => libc::ip_mreqn {
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_address: to_in_addr(&Ipv4Addr::UNSPECIFIED),
+            imr_ifindex: *interface as _,
+        },
+        crate::socket::InterfaceIndexOrAddress::Address(interface) => libc::ip_mreqn {
+            imr_multiaddr: to_in_addr(multiaddr),
+            imr_address: to_in_addr(interface),
+            imr_ifindex: 0,
+        },
+    }
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.

@@ -1192,6 +1192,34 @@ test!(
 );
 
 #[test]
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+fn join_leave_multicast_v4_n() {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    let multiaddr = Ipv4Addr::new(224, 0, 1, 1);
+    let interface = socket2::InterfaceIndexOrAddress::Index(0);
+    match socket.leave_multicast_v4_n(&multiaddr, &interface) {
+        Ok(()) => panic!("leaving an unjoined group should fail"),
+        Err(err) => {
+            assert_eq!(err.kind(), io::ErrorKind::AddrNotAvailable);
+            #[cfg(unix)]
+            assert_eq!(err.raw_os_error(), Some(libc::EADDRNOTAVAIL));
+        }
+    };
+    let () = socket
+        .join_multicast_v4_n(&multiaddr, &interface)
+        .expect("join multicast group");
+    let () = socket
+        .leave_multicast_v4_n(&multiaddr, &interface)
+        .expect("leave multicast group");
+}
+
+#[test]
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 fn header_included() {
     let socket = match Socket::new(Domain::IPV4, Type::RAW, None) {

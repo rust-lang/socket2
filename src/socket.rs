@@ -713,6 +713,25 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     Ok(socket)
 }
 
+/// A local interface specified by its index or an address assigned to it.
+///
+/// `Index(0)` and `Address(Ipv4Addr::UNSPECIFIED)` are equivalent and indicate
+/// that an appropriate interface should be selected by the system.
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+#[derive(Debug)]
+pub enum InterfaceIndexOrAddress {
+    /// An interface index.
+    Index(u32),
+    /// An address assigned to an interface.
+    Address(Ipv4Addr),
+}
+
 /// Socket options get/set using `SOL_SOCKET`.
 ///
 /// Additional documentation can be found in documentation of the OS.
@@ -1102,6 +1121,65 @@ impl Socket {
                 sys::IPPROTO_IP,
                 sys::IP_DROP_MEMBERSHIP,
                 mreq,
+            )
+        }
+    }
+
+    /// Join a multicast group using `IP_ADD_MEMBERSHIP` option on this socket.
+    ///
+    /// This function specifies a new multicast group for this socket to join.
+    /// The address must be a valid multicast address, and `interface` specifies
+    /// the local interface with which the system should join the multicast
+    /// group. See [`InterfaceIndexOrAddress`].
+    ///
+    /// [`InterfaceIndexOrAddress`]: Socket::InterfaceIndexOrAddress
+    #[cfg(not(any(
+        target_os = "haiku",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "redox",
+        target_os = "solaris",
+    )))]
+    pub fn join_multicast_v4_n(
+        &self,
+        multiaddr: &Ipv4Addr,
+        interface: &InterfaceIndexOrAddress,
+    ) -> io::Result<()> {
+        let mreqn = sys::to_mreqn(multiaddr, interface);
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_ADD_MEMBERSHIP,
+                mreqn,
+            )
+        }
+    }
+
+    /// Leave a multicast group using `IP_DROP_MEMBERSHIP` option on this socket.
+    ///
+    /// For more information about this option, see [`join_multicast_v4_n`].
+    ///
+    /// [`join_multicast_v4_n`]: Socket::join_multicast_v4_n
+    #[cfg(not(any(
+        target_os = "haiku",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "redox",
+        target_os = "solaris",
+    )))]
+    pub fn leave_multicast_v4_n(
+        &self,
+        multiaddr: &Ipv4Addr,
+        interface: &InterfaceIndexOrAddress,
+    ) -> io::Result<()> {
+        let mreqn = sys::to_mreqn(multiaddr, interface);
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_DROP_MEMBERSHIP,
+                mreqn,
             )
         }
     }
