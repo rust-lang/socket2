@@ -1147,6 +1147,11 @@ test!(cork, set_cork(true));
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
 test!(quickack, set_quickack(false));
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+test!(thin_linear_timeouts, set_thin_linear_timeouts(true));
 test!(linger, set_linger(Some(Duration::from_secs(10))));
 test!(
     read_timeout,
