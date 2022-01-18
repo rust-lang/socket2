@@ -1385,6 +1385,60 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `TCP_THIN_LINEAR_TIMEOUTS` option on this socket.
+    ///
+    /// For more information about this option, see [`set_thin_linear_timeouts`].
+    ///
+    /// [`set_thin_linear_timeouts`]: Socket::set_thin_linear_timeouts
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
+    pub fn thin_linear_timeouts(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<Bool>(
+                self.as_raw(),
+                libc::IPPROTO_TCP,
+                libc::TCP_THIN_LINEAR_TIMEOUTS,
+            )
+            .map(|timeouts| timeouts != 0)
+        }
+    }
+
+    /// Set the value of the `TCP_THIN_LINEAR_TIMEOUTS` option on this socket.
+    ///    
+    /// If set, the kernel will dynamically detect a thin-stream connection if there are less than four packets in flight.
+    /// With less than four packets in flight the normal TCP fast retransmission will not be effective.
+    /// The kernel will modify the retransmission to avoid the very high latencies that thin stream suffer because of exponential backoff.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
+    pub fn set_thin_linear_timeouts(&self, timeouts: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_TCP,
+                libc::TCP_THIN_LINEAR_TIMEOUTS,
+                timeouts as c_int,
+            )
+        }
+    }
+
     /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
     ///
     /// This value gets the socket binded device's interface name.
