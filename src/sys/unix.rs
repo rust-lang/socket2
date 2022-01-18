@@ -1283,6 +1283,57 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `TCP_CORK` option on this socket.
+    ///
+    /// For more information about this option, see [`set_cork`].
+    ///
+    /// [`set_cork`]: Socket::set_cork
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
+    pub fn cork(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<Bool>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_CORK)
+                .map(|cork| cork != 0)
+        }
+    }
+
+    /// Set the value of the `TCP_CORK` option on this socket.
+    ///
+    /// If set, don't send out partial frames. All queued partial frames are
+    /// sent when the option is cleared again. There is a 200 millisecond ceiling on
+    /// the time for which output is corked by `TCP_CORK`. If this ceiling is reached,
+    /// then queued data is automatically transmitted.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
+    pub fn set_cork(&self, cork: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_TCP,
+                libc::TCP_CORK,
+                cork as c_int,
+            )
+        }
+    }
+
     /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
     ///
     /// This value gets the socket binded device's interface name.
