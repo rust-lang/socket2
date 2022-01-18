@@ -1334,6 +1334,57 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `TCP_QUICKACK` option on this socket.
+    ///
+    /// For more information about this option, see [`set_quickack`].
+    ///
+    /// [`set_quickack`]: Socket::set_quickack
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
+    pub fn quickack(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<Bool>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_QUICKACK)
+                .map(|quickack| quickack != 0)
+        }
+    }
+
+    /// Set the value of the `TCP_QUICKACK` option on this socket.
+    ///
+    /// If set, acks are sent immediately, rather than delayed if needed in accordance to normal
+    /// TCP operation. This flag is not permanent, it only enables a switch to or from quickack mode.
+    /// Subsequent operation of the TCP protocol will once again enter/leave quickack mode depending on
+    /// internal protocol processing and factors such as delayed ack timeouts occurring and data transfer.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
+    )]
+    pub fn set_quickack(&self, quickack: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_TCP,
+                libc::TCP_QUICKACK,
+                quickack as c_int,
+            )
+        }
+    }
+
     /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
     ///
     /// This value gets the socket binded device's interface name.
