@@ -1137,6 +1137,11 @@ test!(
     mark,
     set_mark(123)
 );
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+test!(cork, set_cork(true));
 test!(linger, set_linger(Some(Duration::from_secs(10))));
 test!(
     read_timeout,
