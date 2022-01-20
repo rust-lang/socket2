@@ -1,3 +1,23 @@
+# 0.4.3
+
+## Added
+
+* `Socket::set_fib`: sets `SO_SETFIB` (https://github.com/rust-lang/socket2/pull/271).
+* `Socket::attach_filter`, `SO_ATTACH_FILTER` (https://github.com/rust-lang/socket2/commit/6601ed132b37d6e9d178b34918bfb0b236800232).
+* `Socket::detach_filter`, `SO_DETACH_FILTER` (https://github.com/rust-lang/socket2/commit/6601ed132b37d6e9d178b34918bfb0b236800232).
+* `Socket::{header_included, set_header_included}`: sets or gets `IP_HDRINCL`
+  (https://github.com/rust-lang/socket2/commit/f9e882ee53c0b4e89c5043b6d709af95c9db5599).
+* `Socket::{cork, set_cork}`: sets or gets `TCP_CORK`
+  (https://github.com/rust-lang/socket2/commit/50f31f18aac8fd6ef277df2906adeeed9fa391de).
+* `Socket::{quickack, set_quickack}`: sets or gets `TCP_QUICKACK`
+  (https://github.com/rust-lang/socket2/commit/849eee2abc5d5170d2d3bc635386a2ba13b04530).
+* `Socket::{thin_linear_timeouts, set_thin_linear_timeouts}`: sets or gets
+  `TCP_THIN_LINEAR_TIMEOUTS`
+  (https://github.com/rust-lang/socket2/commit/24c231ca463a17f51e53e7a554c7915a95bdbcc7).
+* `Socket::{join_multicast_v4_n, leave_multicast_v4_n}`: extends the existing
+  multicast API by allowing an index to be used (in addition to an address)
+  (https://github.com/rust-lang/socket2/commit/750f83618b967c620bbfdf6ca04de7362bdb42b5).
+
 # 0.4.2
 
 ## Added
