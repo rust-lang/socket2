@@ -1131,8 +1131,6 @@ impl Socket {
     /// The address must be a valid multicast address, and `interface` specifies
     /// the local interface with which the system should join the multicast
     /// group. See [`InterfaceIndexOrAddress`].
-    ///
-    /// [`InterfaceIndexOrAddress`]: Socket::InterfaceIndexOrAddress
     #[cfg(not(any(
         target_os = "haiku",
         target_os = "illumos",
