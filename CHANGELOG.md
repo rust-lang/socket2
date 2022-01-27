@@ -1,4 +1,11 @@
-# 0.4.3
+# 0.4.4
+
+## Fixed
+
+* Libc v0.2.114 fixed an issue where `ip_mreqn` where was not defined for Linux
+  s390x.
+
+# 0.4.3 (yanked)
 
 ## Added
 
