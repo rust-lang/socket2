@@ -1164,6 +1164,7 @@ impl Socket {
         target_os = "haiku",
         target_os = "illumos",
         target_os = "netbsd",
+        target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
     )))]
