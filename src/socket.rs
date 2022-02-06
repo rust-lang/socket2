@@ -138,6 +138,38 @@ impl Socket {
         sys::socket(domain.0, ty.0, protocol).map(Socket::from_raw)
     }
 
+    /// Creates a new socket in nonblocking mode.
+    pub fn new_nonblocking(
+        domain: Domain,
+        ty: Type,
+        protocol: Option<Protocol>,
+    ) -> io::Result<Socket> {
+        #[cfg(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ))]
+        let ty = ty._nonblocking();
+        let socket = Socket::new(domain, ty, protocol)?;
+        #[cfg(not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )))]
+        socket.set_nonblocking(true)?;
+        Ok(socket)
+    }
+
     /// Creates a pair of sockets which are connected to each other.
     ///
     /// This function corresponds to `socketpair(2)`.

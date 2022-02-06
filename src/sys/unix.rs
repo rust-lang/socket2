@@ -281,6 +281,20 @@ impl Type {
         )))
     )]
     pub const fn nonblocking(self) -> Type {
+        self._nonblocking()
+    }
+
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    pub(crate) const fn _nonblocking(self) -> Type {
         Type(self.0 | libc::SOCK_NONBLOCK)
     }
 
@@ -1439,7 +1453,7 @@ impl crate::Socket {
     }
 
     /// Set the value of the `TCP_THIN_LINEAR_TIMEOUTS` option on this socket.
-    ///    
+    ///
     /// If set, the kernel will dynamically detect a thin-stream connection if there are less than four packets in flight.
     /// With less than four packets in flight the normal TCP fast retransmission will not be effective.
     /// The kernel will modify the retransmission to avoid the very high latencies that thin stream suffer because of exponential backoff.

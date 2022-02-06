@@ -174,6 +174,12 @@ fn set_nonblocking() {
     assert_nonblocking(&socket, false);
 }
 
+#[test]
+fn new_nonblocking() {
+    let socket = Socket::new_nonblocking(Domain::IPV4, Type::STREAM, None).unwrap();
+    assert_nonblocking(&socket, true);
+}
+
 fn assert_common_flags(socket: &Socket, expected: bool) {
     #[cfg(unix)]
     assert_close_on_exec(socket, expected);
