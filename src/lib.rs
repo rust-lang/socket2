@@ -371,29 +371,35 @@ impl TcpKeepalive {
     ///
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "fuchsia",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_vendor = "apple",
-            windows,
-        )
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
+    #[cfg(any(
+        any(target_os = "linux", target_os = "macos", target_os = "windows"),
+        all(
             feature = "all",
             any(
+                target_os = "dragonfly",
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "linux",
                 target_os = "netbsd",
                 target_vendor = "apple",
                 windows,
+            )
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(any(
+            any(target_os = "linux", target_os = "macos", target_os = "windows"),
+            all(
+                feature = "all",
+                any(
+                    target_os = "freebsd",
+                    target_os = "fuchsia",
+                    target_os = "linux",
+                    target_os = "netbsd",
+                    target_vendor = "apple",
+                    windows,
+                )
             )
         )))
     )]
@@ -408,28 +414,34 @@ impl TcpKeepalive {
     ///
     /// Set the maximum number of TCP keepalive probes that will be sent before
     /// dropping a connection, if TCP keepalive is enabled on this socket.
-    #[cfg(all(
-        feature = "all",
-        any(
-            doc,
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "fuchsia",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_vendor = "apple",
-        )
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
+    #[cfg(any(
+        any(target_os = "linux", target_os = "macos",),
+        all(
             feature = "all",
             any(
+                doc,
+                target_os = "dragonfly",
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "linux",
                 target_os = "netbsd",
                 target_vendor = "apple",
+            )
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(any(
+            any(target_os = "linux", target_os = "macos",),
+            all(
+                feature = "all",
+                any(
+                    target_os = "freebsd",
+                    target_os = "fuchsia",
+                    target_os = "linux",
+                    target_os = "netbsd",
+                    target_vendor = "apple",
+                )
             )
         )))
     )]
