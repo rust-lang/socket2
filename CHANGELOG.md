@@ -169,7 +169,6 @@
 * Use correct inmutable references in `Socket::send_with_flags` and
   `Socket::send_out_of_band`.
 * Use `IPPROTO_IPV6` in `Socket::join_multicast_v6` on Windows.
-* Don't assume the memory layout of `std::net::SocketAddr`.
 * Use `c_int` instead of `i32` where appropriate.
 
 ## From v0.4.0-alpha.1 to v0.4.0-alpha.2
@@ -190,3 +189,8 @@
 ## From v0.4.0-alpha.5 to v0.4.0
 
 * Use `SO_LINGER_SEC` on macOS for `Socket::get/set_linger`.
+
+# 0.3.16
+
+* Don't assume the memory layout of `std::net::SocketAddr`.
+* Other changes omited
