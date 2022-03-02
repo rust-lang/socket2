@@ -1439,7 +1439,7 @@ impl crate::Socket {
     }
 
     /// Set the value of the `TCP_THIN_LINEAR_TIMEOUTS` option on this socket.
-    ///    
+    ///
     /// If set, the kernel will dynamically detect a thin-stream connection if there are less than four packets in flight.
     /// With less than four packets in flight the normal TCP fast retransmission will not be effective.
     /// The kernel will modify the retransmission to avoid the very high latencies that thin stream suffer because of exponential backoff.
@@ -1484,15 +1484,13 @@ impl crate::Socket {
         let mut buf: [MaybeUninit<u8>; libc::IFNAMSIZ] =
             unsafe { MaybeUninit::uninit().assume_init() };
         let mut len = buf.len() as libc::socklen_t;
-        unsafe {
-            syscall!(getsockopt(
-                self.as_raw(),
-                libc::SOL_SOCKET,
-                libc::SO_BINDTODEVICE,
-                buf.as_mut_ptr().cast(),
-                &mut len,
-            ))?;
-        }
+        syscall!(getsockopt(
+            self.as_raw(),
+            libc::SOL_SOCKET,
+            libc::SO_BINDTODEVICE,
+            buf.as_mut_ptr().cast(),
+            &mut len,
+        ))?;
         if len == 0 {
             Ok(None)
         } else {
