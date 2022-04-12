@@ -1125,6 +1125,43 @@ impl Socket {
         }
     }
 
+    /// Join a multicast SSM channel using `IP_ADD_SOURCE_MEMBERSHIP` option on this socket.
+    ///
+    /// This function specifies a new multicast channel for this socket to join.
+    /// The g must be a valid SSM group address, the s must be the address of the sender
+    /// and `interface` is the address of the local interface with which the system should join the
+    /// multicast group. If it's [`Ipv4Addr::UNSPECIFIED`] (`INADDR_ANY`) then
+    /// an appropriate interface is chosen by the system.
+    pub fn join_ssm_v4(&self,s: &Ipv4Addr, g: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+        let mreqs = sys::IpMreqSource {
+            imr_multiaddr: sys::to_in_addr(g),
+            imr_interface: sys::to_in_addr(interface),
+            imr_sourceaddr: sys::to_in_addr(s)
+        };
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_ADD_SOURCE_MEMBERSHIP, mreqs) }
+    }
+
+    /// Leave a multicast group using `IP_DROP_SOURCE_MEMBERSHIP` option on this socket.
+    ///
+    /// For more information about this option, see [`join_ssm_v4`].
+    ///
+    /// [`join_ssm_v4`]: Socket::join_ssm_v4
+    pub fn leave_ssm_v4(&self, s:&Ipv4Addr, g: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+        let mreqs = sys::IpMreqSource {
+            imr_multiaddr: sys::to_in_addr(g),
+            imr_interface: sys::to_in_addr(interface),
+            imr_sourceaddr: sys::to_in_addr(s)
+        };
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_DROP_SOURCE_MEMBERSHIP,
+                mreqs,
+            )
+        }
+    }
+
     /// Join a multicast group using `IP_ADD_MEMBERSHIP` option on this socket.
     ///
     /// This function specifies a new multicast group for this socket to join.
