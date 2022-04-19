@@ -1220,6 +1220,12 @@ fn join_leave_multicast_v4_n() {
 }
 
 #[test]
+#[cfg(not(any(
+    target_os = "haiku",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "fuchsia",
+)))]
 fn join_leave_ssm_v4() {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
     let g = Ipv4Addr::new(232,123,52,36);
