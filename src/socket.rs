@@ -1197,13 +1197,20 @@ impl Socket {
         target_os = "redox",
         target_os = "fuchsia",
     )))]
-    pub fn join_ssm_v4(&self,s: &Ipv4Addr, g: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn join_ssm_v4(&self, s: &Ipv4Addr, g: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let mreqs = sys::IpMreqSource {
             imr_multiaddr: sys::to_in_addr(g),
             imr_interface: sys::to_in_addr(interface),
-            imr_sourceaddr: sys::to_in_addr(s)
+            imr_sourceaddr: sys::to_in_addr(s),
         };
-        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_ADD_SOURCE_MEMBERSHIP, mreqs) }
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_ADD_SOURCE_MEMBERSHIP,
+                mreqs,
+            )
+        }
     }
 
     /// Leave a multicast group using `IP_DROP_SOURCE_MEMBERSHIP` option on this socket.
@@ -1217,11 +1224,11 @@ impl Socket {
         target_os = "redox",
         target_os = "fuchsia",
     )))]
-    pub fn leave_ssm_v4(&self, s:&Ipv4Addr, g: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
+    pub fn leave_ssm_v4(&self, s: &Ipv4Addr, g: &Ipv4Addr, interface: &Ipv4Addr) -> io::Result<()> {
         let mreqs = sys::IpMreqSource {
             imr_multiaddr: sys::to_in_addr(g),
             imr_interface: sys::to_in_addr(interface),
-            imr_sourceaddr: sys::to_in_addr(s)
+            imr_sourceaddr: sys::to_in_addr(s),
         };
         unsafe {
             setsockopt(

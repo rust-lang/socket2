@@ -1228,11 +1228,11 @@ fn join_leave_multicast_v4_n() {
 )))]
 fn join_leave_ssm_v4() {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
-    let g = Ipv4Addr::new(232,123,52,36);
-    let s = Ipv4Addr::new(62,40,109,31);
-    let interface = Ipv4Addr::new(0,0,0,0);
-    let () = socket.join_ssm_v4(&s,&g,&interface).expect("Joined SSM");
-    let () = socket.leave_ssm_v4(&s,&g,&interface).expect("Left SSM");
+    let g = Ipv4Addr::new(232, 123, 52, 36);
+    let s = Ipv4Addr::new(62, 40, 109, 31);
+    let interface = Ipv4Addr::new(0, 0, 0, 0);
+    let () = socket.join_ssm_v4(&s, &g, &interface).expect("Joined SSM");
+    let () = socket.leave_ssm_v4(&s, &g, &interface).expect("Left SSM");
 }
 
 #[test]
