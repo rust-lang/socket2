@@ -96,6 +96,15 @@ pub(crate) use libc::{
     SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 #[cfg(not(any(
+    target_os = "haiku",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "fuchsia",
+)))]
+pub(crate) use libc::{
+    ip_mreq_source as IpMreqSource, IP_ADD_SOURCE_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP,
+};
+#[cfg(not(any(
     target_os = "dragonfly",
     target_os = "freebsd",
     target_os = "haiku",
