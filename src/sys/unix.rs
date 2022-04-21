@@ -83,6 +83,13 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "solaris",
     target_os = "illumos",
 )))]
+pub(crate) use libc::IP_RECVTOS;
+#[cfg(not(any(
+    target_os = "fuschia",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "illumos",
+)))]
 pub(crate) use libc::IP_TOS;
 #[cfg(not(target_vendor = "apple"))]
 pub(crate) use libc::SO_LINGER;

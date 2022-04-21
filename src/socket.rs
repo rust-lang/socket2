@@ -1388,6 +1388,48 @@ impl Socket {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_TOS).map(|tos| tos as u32)
         }
     }
+
+    /// Set the value of the `IP_RECVTOS` option for this socket.
+    ///
+    /// If enabled, the IP_TOS ancillary message is passed with
+    /// incoming packets. It contains a byte which specifies the
+    /// Type of Service/Precedence field of the packet header.
+    #[cfg(not(any(
+        target_os = "fuschia",
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "illumos",
+    )))]
+    pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
+        let recv_tos = if recv_tos { 1 } else { 0 };
+
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_RECVTOS,
+                recv_tos as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_RECVTOS` option for this socket.
+    ///
+    /// For more information about this option, see [`set_recv_tos`].
+    ///
+    /// [`set_recv_tos`]: Socket::set_recv_tos
+    #[cfg(not(any(
+        target_os = "fuschia",
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "illumos",
+    )))]
+    pub fn recv_tos(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_RECVTOS)
+                .map(|recv_tos| recv_tos > 0)
+        }
+    }
 }
 
 /// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6`.
