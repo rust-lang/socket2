@@ -1175,9 +1175,10 @@ test!(IPv4 tos, set_tos(96));
 
 #[cfg(not(any(
     target_os = "fuschia",
+    target_os = "illumos",
+    target_os = "netbsd",
     target_os = "redox",
     target_os = "solaris",
-    target_os = "illumos",
     target_os = "windows",
 )))]
 test!(IPv4 recv_tos, set_recv_tos(true));

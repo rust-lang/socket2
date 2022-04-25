@@ -1396,9 +1396,10 @@ impl Socket {
     /// Type of Service/Precedence field of the packet header.
     #[cfg(not(any(
         target_os = "fuschia",
+        target_os = "illumos",
+        target_os = "netbsd",
         target_os = "redox",
         target_os = "solaris",
-        target_os = "illumos",
         target_os = "windows",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
@@ -1421,9 +1422,10 @@ impl Socket {
     /// [`set_recv_tos`]: Socket::set_recv_tos
     #[cfg(not(any(
         target_os = "fuschia",
+        target_os = "illumos",
+        target_os = "netbsd",
         target_os = "redox",
         target_os = "solaris",
-        target_os = "illumos",
         target_os = "windows",
     )))]
     pub fn recv_tos(&self) -> io::Result<bool> {
