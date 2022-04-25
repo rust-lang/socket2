@@ -1180,7 +1180,7 @@ test!(IPv4 tos, set_tos(96));
     target_os = "illumos",
     target_os = "windows",
 )))]
-test!(IPv4 recv_tos, set_recv_tos(96));
+test!(IPv4 recv_tos, set_recv_tos(true));
 
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
 test!(IPv4 broadcast, set_broadcast(true));
