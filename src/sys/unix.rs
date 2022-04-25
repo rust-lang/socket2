@@ -79,9 +79,10 @@ pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
 pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
     target_os = "fuschia",
+    target_os = "illumos",
+    target_os = "netbsd",
     target_os = "redox",
     target_os = "solaris",
-    target_os = "illumos",
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
