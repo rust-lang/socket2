@@ -1172,6 +1172,17 @@ test!(IPv4 ttl, set_ttl(40));
     target_os = "illumos",
 )))]
 test!(IPv4 tos, set_tos(96));
+
+#[cfg(not(any(
+    target_os = "fuschia",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "windows",
+)))]
+test!(IPv4 recv_tos, set_recv_tos(true));
+
 #[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
 test!(IPv4 broadcast, set_broadcast(true));
 
