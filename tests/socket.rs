@@ -40,11 +40,7 @@ use std::time::Duration;
 use std::{env, fs};
 
 #[cfg(windows)]
-use winapi::shared::minwindef::DWORD;
-#[cfg(windows)]
-use winapi::um::handleapi::GetHandleInformation;
-#[cfg(windows)]
-use winapi::um::winbase::HANDLE_FLAG_INHERIT;
+use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
 
 #[cfg(not(target_os = "redox"))]
 use socket2::MaybeUninitSlice;
@@ -320,7 +316,7 @@ pub fn assert_flag_no_inherit<S>(socket: &S, want: bool)
 where
     S: AsRawSocket,
 {
-    let mut flags: DWORD = 0;
+    let mut flags = 0;
     if unsafe { GetHandleInformation(socket.as_raw_socket() as _, &mut flags) } == 0 {
         let err = io::Error::last_os_error();
         panic!("unexpected error: {}", err);
