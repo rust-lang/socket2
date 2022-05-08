@@ -1,3 +1,24 @@
+# 0.4.5
+
+## Changed
+
+* Replace `winapi` dependency with `windows-sys`
+  (https://github.com/rust-lang/socket2/pull/303).
+
+## Added
+
+* `Socket::join_ssm_v4` and `Socket::leave_ssm_v4`
+  (https://github.com/rust-lang/socket2/pull/298).
+* `Socket::set_recv_tos` and `Socket::recv_tos`
+  (https://github.com/rust-lang/socket2/pull/299).
+
+## Fixed
+
+* Fix OpenBSD build
+  (https://github.com/rust-lang/socket2/pull/291).
+* Fix OpenBSD build
+  (https://github.com/rust-lang/socket2/pull/291).
+
 # 0.4.4
 
 ## Fixed
