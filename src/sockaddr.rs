@@ -1,6 +1,6 @@
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::{fmt, io};
+use std::{clone, fmt, io};
 
 #[cfg(windows)]
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
@@ -302,6 +302,15 @@ impl fmt::Debug for SockAddr {
         f.field("ss_family", &self.storage.ss_family)
             .field("len", &self.len)
             .finish()
+    }
+}
+
+impl clone::Clone for SockAddr {
+    fn clone(&self) -> Self {
+        SockAddr {
+            storage: self.storage.clone(),
+            len: self.len
+        }
     }
 }
 
