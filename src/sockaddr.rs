@@ -14,6 +14,7 @@ use crate::sys::{
 ///
 /// `SockAddr`s may be constructed directly to and from the standard library
 /// [`SocketAddr`], [`SocketAddrV4`], and [`SocketAddrV6`] types.
+#[derive(clone::Clone)]
 pub struct SockAddr {
     storage: sockaddr_storage,
     len: socklen_t,
@@ -302,15 +303,6 @@ impl fmt::Debug for SockAddr {
         f.field("ss_family", &self.storage.ss_family)
             .field("len", &self.len)
             .finish()
-    }
-}
-
-impl clone::Clone for SockAddr {
-    fn clone(&self) -> Self {
-        SockAddr {
-            storage: self.storage.clone(),
-            len: self.len,
-        }
     }
 }
 
