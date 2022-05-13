@@ -309,7 +309,7 @@ impl clone::Clone for SockAddr {
     fn clone(&self) -> Self {
         SockAddr {
             storage: self.storage.clone(),
-            len: self.len
+            len: self.len,
         }
     }
 }
