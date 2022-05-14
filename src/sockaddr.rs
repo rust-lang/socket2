@@ -14,6 +14,7 @@ use crate::sys::{
 ///
 /// `SockAddr`s may be constructed directly to and from the standard library
 /// [`SocketAddr`], [`SocketAddrV4`], and [`SocketAddrV6`] types.
+#[derive(Clone)]
 pub struct SockAddr {
     storage: sockaddr_storage,
     len: socklen_t,
