@@ -1,6 +1,6 @@
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::{clone, fmt, io};
+use std::{fmt, io};
 
 #[cfg(windows)]
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
@@ -14,7 +14,7 @@ use crate::sys::{
 ///
 /// `SockAddr`s may be constructed directly to and from the standard library
 /// [`SocketAddr`], [`SocketAddrV4`], and [`SocketAddrV6`] types.
-#[derive(clone::Clone)]
+#[derive(Clone)]
 pub struct SockAddr {
     storage: sockaddr_storage,
     len: socklen_t,
