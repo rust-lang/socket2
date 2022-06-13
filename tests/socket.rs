@@ -1265,3 +1265,60 @@ fn header_included() {
     let got = socket.header_included().expect("failed to get value");
     assert_eq!(got, true, "set and get values differ");
 }
+
+#[test]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "fuchsia",
+        target_os = "solaris",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "redox",
+    ))
+))]
+fn sendmsg_recvmsg() {
+    use socket2::{Cmsg, CmsgWriter};
+
+    let receiver = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+    receiver.bind(&any_ipv4()).unwrap();
+    let receiver_addr = receiver.local_addr().unwrap();
+    receiver.set_recv_tos(true).unwrap();
+
+    let sender = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+    sender.bind(&any_ipv4()).unwrap();
+    let sender_addr = sender.local_addr().unwrap();
+
+    let data = "hello".as_bytes();
+
+    let input_messages = [Cmsg::IpTos(16)];
+    let mut cmsg_buffer = [0; 32];
+    let mut cmsg_writer = CmsgWriter::new(&mut cmsg_buffer[..]);
+    cmsg_writer.extend(input_messages.iter());
+    let sent = sender
+        .send_msg_to(
+            &receiver_addr,
+            &[IoSlice::new(&data[..])][..],
+            &cmsg_writer,
+            0,
+        )
+        .unwrap();
+    assert_eq!(sent, data.len());
+
+    let mut hello = [MaybeUninit::new(10); 10];
+    let mut control_data = [MaybeUninit::uninit(); 32];
+    let (read, from, cmsg, flags) = receiver
+        .recv_msg(
+            &mut [MaybeUninitSlice::new(&mut hello)],
+            &mut control_data[..],
+            0,
+        )
+        .unwrap();
+    assert_eq!(read, data.len());
+    assert_eq!(
+        from.as_socket_ipv4().unwrap(),
+        sender_addr.as_socket_ipv4().unwrap()
+    );
+    assert_eq!(flags.is_truncated(), false);
+    assert_eq!(cmsg.collect::<Vec<_>>(), &input_messages[..]);
+}

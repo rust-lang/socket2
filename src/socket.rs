@@ -19,6 +19,8 @@ use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
+#[cfg(all(unix, not(target_os = "redox")))]
+use crate::{CmsgIter, CmsgWriter};
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, RecvFlags};
@@ -659,6 +661,76 @@ impl Socket {
         flags: c_int,
     ) -> io::Result<usize> {
         sys::send_to_vectored(self.as_raw(), bufs, addr, flags)
+    }
+
+    /// Sends data on the socket to the connected peer accompanied by ancillary
+    /// control message data.
+    #[cfg(all(unix, not(target_os = "redox")))]
+    pub fn send_msg(
+        &self,
+        bufs: &[IoSlice<'_>],
+        cmsg: &CmsgWriter<'_>,
+        flags: c_int,
+    ) -> io::Result<usize> {
+        sys::sendmsg(
+            self.as_raw(),
+            std::ptr::null(),
+            0,
+            bufs,
+            cmsg.io_slice(),
+            flags,
+        )
+    }
+
+    /// Sends data on the socket to the given address accompanied by ancillary
+    /// control message data.
+    #[cfg(all(unix, not(target_os = "redox")))]
+    pub fn send_msg_to(
+        &self,
+        addr: &SockAddr,
+        bufs: &[IoSlice<'_>],
+        cmsg: &CmsgWriter<'_>,
+        flags: c_int,
+    ) -> io::Result<usize> {
+        sys::sendmsg(
+            self.as_raw(),
+            addr.as_storage_ptr(),
+            addr.len(),
+            bufs,
+            cmsg.io_slice(),
+            flags,
+        )
+    }
+
+    /// Receives data on the socket accompanied by ancillary control message data.
+    #[cfg(all(unix, not(target_os = "redox")))]
+    pub fn recv_msg(
+        &self,
+        bufs: &mut [MaybeUninitSlice<'_>],
+        control_data: &mut [MaybeUninit<u8>],
+        flags: c_int,
+    ) -> io::Result<(usize, SockAddr, CmsgIter<'_>, RecvFlags)> {
+        // Safety: `recvmsg` initialises the address storage and we set the length
+        // manually.
+        unsafe {
+            SockAddr::init(|storage, len| {
+                sys::recvmsg(self.as_raw(), storage, bufs, control_data, flags).map(
+                    |(n, addrlen, cmsg_len, recv_flags)| {
+                        // Set the correct address length.
+                        *len = addrlen;
+                        // Safety: Slice was initialized up to cmsg_len by
+                        // recvmsg.
+                        let ptr = std::slice::from_raw_parts(
+                            control_data.as_ptr() as *const u8,
+                            cmsg_len,
+                        );
+                        let cmsg = CmsgIter::new(ptr);
+                        (n, cmsg, recv_flags)
+                    },
+                )
+            })
+        }
+        .map(|((n, cmsg, recv_flags), addr)| (n, addr, cmsg, recv_flags))
     }
 }
 
