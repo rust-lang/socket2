@@ -48,7 +48,7 @@ where each block contains a single level. The methods in these block are sorted
 based on the option name, e.g. `IP_ADD_MEMBERSHIP` rather than
 `join_multicast_v4`. Finally the last block contains platforms specific methods
 such as `Socket::freebind` which is (at the time of writing) only available on
-Android, Linux and Fuschia, which is defined in the `src/sys/*.rs` files.
+Android, Linux and Fuchsia, which is defined in the `src/sys/*.rs` files.
 
 Other types are mostly defined in `src/lib.rs`, except for `SockAddr` and
 `SockRef` which have there own file. These types follow the same structure as
