@@ -1360,7 +1360,7 @@ impl Socket {
     /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
     /// documents that not all versions of windows support `IP_TOS`.
     #[cfg(not(any(
-        target_os = "fuschia",
+        target_os = "fuchsia",
         target_os = "redox",
         target_os = "solaris",
         target_os = "illumos",
@@ -1378,7 +1378,7 @@ impl Socket {
     ///
     /// [`set_tos`]: Socket::set_tos
     #[cfg(not(any(
-        target_os = "fuschia",
+        target_os = "fuchsia",
         target_os = "redox",
         target_os = "solaris",
         target_os = "illumos",
@@ -1395,7 +1395,7 @@ impl Socket {
     /// incoming packets. It contains a byte which specifies the
     /// Type of Service/Precedence field of the packet header.
     #[cfg(not(any(
-        target_os = "fuschia",
+        target_os = "fuchsia",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
@@ -1421,7 +1421,7 @@ impl Socket {
     ///
     /// [`set_recv_tos`]: Socket::set_recv_tos
     #[cfg(not(any(
-        target_os = "fuschia",
+        target_os = "fuchsia",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",

@@ -78,7 +78,7 @@ pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
-    target_os = "fuschia",
+    target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
@@ -87,7 +87,7 @@ pub(crate) use libc::IP_HDRINCL;
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
-    target_os = "fuschia",
+    target_os = "fuchsia",
     target_os = "redox",
     target_os = "solaris",
     target_os = "illumos",

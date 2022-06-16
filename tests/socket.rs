@@ -1162,7 +1162,7 @@ test!(IPv6 freebind_ipv6, set_freebind_ipv6(true));
 test!(IPv4 ttl, set_ttl(40));
 
 #[cfg(not(any(
-    target_os = "fuschia",
+    target_os = "fuchsia",
     target_os = "redox",
     target_os = "solaris",
     target_os = "illumos",
@@ -1170,7 +1170,7 @@ test!(IPv4 ttl, set_ttl(40));
 test!(IPv4 tos, set_tos(96));
 
 #[cfg(not(any(
-    target_os = "fuschia",
+    target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "redox",
