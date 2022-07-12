@@ -226,11 +226,13 @@ impl Cmsg {
     fn level_type_size(&self) -> (libc::c_int, libc::c_int, libc::c_uint) {
         match self {
             #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
-            Cmsg::IpTos(_) => (
-                libc::IPPROTO_IP,
-                libc::IP_TOS,
-                std::mem::size_of::<u8>() as libc::c_uint,
-            ),
+            Cmsg::IpTos(_) => {
+                #[cfg(not(target_os = "macos"))]
+                let len = std::mem::size_of::<u8>();
+                #[cfg(target_os = "macos")]
+                let len = std::mem::size_of::<i32>();
+                (libc::IPPROTO_IP, libc::IP_TOS, len as libc::c_uint)
+            }
             #[cfg(not(any(target_os = "fuchsia", target_os = "solaris", target_os = "illumos")))]
             Cmsg::Ipv6PktInfo { .. } => (
                 libc::IPPROTO_IPV6,
@@ -248,7 +250,15 @@ impl Cmsg {
         match self {
             #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
             Cmsg::IpTos(tos) => {
-                buffer[0] = *tos;
+                #[cfg(not(target_os = "macos"))]
+                {
+                    buffer[0] = *tos;
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    let value = *tos as i32;
+                    buffer.copy_from_slice(&value.to_ne_bytes()[..])
+                }
             }
             #[cfg(not(any(target_os = "fuchsia", target_os = "solaris", target_os = "illumos")))]
             Cmsg::Ipv6PktInfo { addr, ifindex } => {
@@ -283,8 +293,17 @@ impl Cmsg {
         match (cmsg_level, cmsg_type) {
             #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
             (libc::IPPROTO_IP, libc::IP_TOS) => {
-                assert_eq!(bytes.len(), std::mem::size_of::<u8>(), "{:?}", bytes);
-                Cmsg::IpTos(bytes[0])
+                // Different systems encode received TOS as char or int.
+                match bytes {
+                    [b] => Cmsg::IpTos(*b),
+                    [a, b, c, d] => Cmsg::IpTos(i32::from_ne_bytes([*a, *b, *c, *d]) as u8),
+                    other => panic!("unexpected length for IP_TOS: {:?}", other),
+                }
+            }
+            #[cfg(any(target_os = "freebsd", target_os = "macos"))]
+            (libc::IPPROTO_IP, libc::IP_RECVTOS) => {
+                // Some systems use IP_RECVTOS on the receive path.
+                Self::from_raw(libc::IPPROTO_IP, libc::IP_TOS, bytes)
             }
             #[cfg(not(any(target_os = "fuchsia", target_os = "solaris", target_os = "illumos")))]
             (libc::IPPROTO_IPV6, libc::IPV6_PKTINFO) => {
