@@ -49,13 +49,14 @@ impl<B: AsRef<[u8]>> MsgHdrWalker<B> {
             // SAFETY: cmsghdr is a valid pointer given to us by `next_ptr`.
             let data = unsafe { libc::CMSG_DATA(cmsghdr) };
             let cmsghdr = unsafe { &*cmsghdr };
+            // SAFETY: Only copied values; need to grab the baseline for length.
+            let hdr_len = unsafe { libc::CMSG_LEN(0) } as usize;
             // SAFETY: data points to buffer and is controlled by control
             // message length.
             let data = unsafe {
                 std::slice::from_raw_parts(
                     data,
-                    (cmsghdr.cmsg_len as usize)
-                        .saturating_sub(std::mem::size_of::<libc::cmsghdr>()),
+                    (cmsghdr.cmsg_len as usize).saturating_sub(hdr_len),
                 )
             };
             (cmsghdr, data)
