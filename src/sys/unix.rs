@@ -1053,6 +1053,7 @@ impl crate::Socket {
     /// This function will block the calling thread until a new connection is
     /// established. When established, the corresponding `Socket` and the remote
     /// peer's address will be returned.
+    #[doc = man_links!(unix: accept4(2))]
     #[cfg(all(
         feature = "all",
         any(
@@ -1806,6 +1807,7 @@ impl crate::Socket {
     /// Different OSs support different kinds of `file`s, see the OS
     /// documentation for what kind of files are supported. Generally *regular*
     /// files are supported by all OSs.
+    #[doc = man_links!(unix: sendfile(2))]
     ///
     /// The `offset` is the absolute offset into the `file` to use as starting
     /// point.
