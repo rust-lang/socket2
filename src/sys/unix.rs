@@ -524,9 +524,7 @@ impl SockAddr {
         }
         .map(|(_, addr)| addr)
     }
-}
 
-impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
     ///
     /// # Errors
