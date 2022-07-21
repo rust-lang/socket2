@@ -1576,7 +1576,7 @@ impl crate::Socket {
     /// If `interface` is `None`, the binding is removed. If the `interface`
     /// index is not valid, an error is returned.
     ///
-    /// One can use `libc::if_nametoindex` to convert an interface alias to an
+    /// One can use [`libc::if_nametoindex`] to convert an interface alias to an
     /// index.
     #[cfg(all(feature = "all", target_vendor = "apple"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
