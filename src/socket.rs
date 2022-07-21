@@ -124,6 +124,7 @@ impl Socket {
     /// the socket is made non-inheritable.
     ///
     /// [`Socket::new_raw`] can be used if you don't want these flags to be set.
+    #[doc = man_links!(socket(2))]
     pub fn new(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
         let ty = set_common_type(ty);
         Socket::new_raw(domain, ty, protocol).and_then(set_common_flags)
@@ -144,6 +145,7 @@ impl Socket {
     ///
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::pair_raw`] can be used if you don't want to set those flags.
+    #[doc = man_links!(unix: socketpair(2))]
     #[cfg(any(doc, all(feature = "all", unix)))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn pair(
@@ -177,6 +179,7 @@ impl Socket {
     ///
     /// This function directly corresponds to the `bind(2)` function on Windows
     /// and Unix.
+    #[doc = man_links!(bind(2))]
     pub fn bind(&self, address: &SockAddr) -> io::Result<()> {
         sys::bind(self.as_raw(), address)
     }
@@ -188,6 +191,7 @@ impl Socket {
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
+    #[doc = man_links!(connect(2))]
     ///
     /// # Notes
     ///
@@ -242,6 +246,7 @@ impl Socket {
     ///
     /// An error will be returned if `listen` or `connect` has already been
     /// called on this builder.
+    #[doc = man_links!(listen(2))]
     pub fn listen(&self, backlog: c_int) -> io::Result<()> {
         sys::listen(self.as_raw(), backlog)
     }
@@ -253,6 +258,7 @@ impl Socket {
     ///
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::accept_raw`] can be used if you don't want to set those flags.
+    #[doc = man_links!(accept(2))]
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         // Use `accept4` on platforms that support it.
         #[cfg(any(
@@ -299,6 +305,10 @@ impl Socket {
 
     /// Returns the socket address of the local half of this socket.
     ///
+    /// This function directly corresponds to the `getsockname(2)` function on
+    /// Windows and Unix.
+    #[doc = man_links!(getsockname(2))]
+    ///
     /// # Notes
     ///
     /// Depending on the OS this may return an error if the socket is not
@@ -310,6 +320,10 @@ impl Socket {
     }
 
     /// Returns the socket address of the remote peer of this socket.
+    ///
+    /// This function directly corresponds to the `getpeername(2)` function on
+    /// Windows and Unix.
+    #[doc = man_links!(getpeername(2))]
     ///
     /// # Notes
     ///
@@ -359,6 +373,7 @@ impl Socket {
     ///
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
+    #[doc = man_links!(shutdown(2))]
     pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
         sys::shutdown(self.as_raw(), how)
     }
@@ -368,6 +383,7 @@ impl Socket {
     ///
     /// The [`connect`] method will connect this socket to a remote address.
     /// This method might fail if the socket is not connected.
+    #[doc = man_links!(recv(2))]
     ///
     /// [`connect`]: Socket::connect
     ///
@@ -419,6 +435,7 @@ impl Socket {
     /// In addition to the number of bytes read, this function returns the flags
     /// for the received message. See [`RecvFlags`] for more information about
     /// the returned flags.
+    #[doc = man_links!(recvmsg(2))]
     ///
     /// [`recv`]: Socket::recv
     /// [`connect`]: Socket::connect
@@ -484,6 +501,7 @@ impl Socket {
 
     /// Receives data from the socket. On success, returns the number of bytes
     /// read and the address from whence the data came.
+    #[doc = man_links!(recvfrom(2))]
     ///
     /// # Safety
     ///
@@ -510,6 +528,7 @@ impl Socket {
     /// Receives data from the socket. Returns the amount of bytes read, the
     /// [`RecvFlags`] and the remote address from the data is coming. Unlike
     /// [`recv_from`] this allows passing multiple buffers.
+    #[doc = man_links!(recvmsg(2))]
     ///
     /// [`recv_from`]: Socket::recv_from
     ///
@@ -573,6 +592,7 @@ impl Socket {
     /// been connected.
     ///
     /// On success returns the number of bytes that were sent.
+    #[doc = man_links!(send(2))]
     pub fn send(&self, buf: &[u8]) -> io::Result<usize> {
         self.send_with_flags(buf, 0)
     }
@@ -594,6 +614,7 @@ impl Socket {
 
     /// Identical to [`send_vectored`] but allows for specification of arbitrary
     /// flags to the underlying `sendmsg`/`WSASend` call.
+    #[doc = man_links!(sendmsg(2))]
     ///
     /// [`send_vectored`]: Socket::send_vectored
     #[cfg(not(target_os = "redox"))]
@@ -621,6 +642,7 @@ impl Socket {
     /// number of bytes written.
     ///
     /// This is typically used on UDP or datagram-oriented sockets.
+    #[doc = man_links!(sendto(2))]
     pub fn send_to(&self, buf: &[u8], addr: &SockAddr) -> io::Result<usize> {
         self.send_to_with_flags(buf, addr, 0)
     }
@@ -640,6 +662,7 @@ impl Socket {
 
     /// Send data to a peer listening on `addr`. Returns the amount of bytes
     /// written.
+    #[doc = man_links!(sendmsg(2))]
     #[cfg(not(target_os = "redox"))]
     #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn send_to_vectored(&self, bufs: &[IoSlice<'_>], addr: &SockAddr) -> io::Result<usize> {
