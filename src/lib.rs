@@ -144,7 +144,7 @@ pub use sockref::SockRef;
 pub use socket::InterfaceIndexOrAddress;
 
 #[cfg(all(unix, not(target_os = "redox")))]
-pub use cmsg::{Cmsg, CmsgIter, CmsgWriter};
+pub use cmsg::{Cmsg, CmsgBuffer, CmsgIter, CmsgWriter};
 
 /// Specification of the communication domain for a socket.
 ///

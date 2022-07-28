@@ -20,7 +20,7 @@ use std::time::Duration;
 
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
 #[cfg(all(unix, not(target_os = "redox")))]
-use crate::{CmsgIter, CmsgWriter};
+use crate::{CmsgBuffer, CmsgIter, CmsgWriter};
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, RecvFlags};
@@ -707,9 +707,37 @@ impl Socket {
     pub fn recv_msg(
         &self,
         bufs: &mut [MaybeUninitSlice<'_>],
-        control_data: &mut [MaybeUninit<u8>],
+        control_data: CmsgBuffer<'_>,
         flags: c_int,
-    ) -> io::Result<(usize, SockAddr, CmsgIter<'_>, RecvFlags)> {
+    ) -> io::Result<(usize, CmsgIter<'_>, RecvFlags)> {
+        let control_data = control_data.into_buffer();
+        sys::recvmsg(
+            self.as_raw(),
+            std::ptr::null_mut(),
+            bufs,
+            control_data,
+            flags,
+        )
+        .map(|(n, _addrlen, cmsg_len, recv_flags)| {
+            // Safety: Slice was initialized up to cmsg_len by
+            // recvmsg.
+            let ptr =
+                unsafe { std::slice::from_raw_parts(control_data.as_ptr() as *const u8, cmsg_len) };
+            let cmsg = CmsgIter::new(ptr);
+            (n, cmsg, recv_flags)
+        })
+    }
+
+    /// Receives data on the socket accompanied by ancillary control message data and the sender's
+    /// address.
+    #[cfg(all(unix, not(target_os = "redox")))]
+    pub fn recv_msg_from(
+        &self,
+        bufs: &mut [MaybeUninitSlice<'_>],
+        control_data: CmsgBuffer<'_>,
+        flags: c_int,
+    ) -> io::Result<(usize, CmsgIter<'_>, RecvFlags, SockAddr)> {
+        let control_data = control_data.into_buffer();
         // Safety: `recvmsg` initialises the address storage and we set the length
         // manually.
         unsafe {
@@ -730,7 +758,7 @@ impl Socket {
                 )
             })
         }
-        .map(|((n, cmsg, recv_flags), addr)| (n, addr, cmsg, recv_flags))
+        .map(|((n, cmsg, recv_flags), addr)| (n, cmsg, recv_flags, addr))
     }
 }
 

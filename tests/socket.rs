@@ -1267,6 +1267,7 @@ fn header_included() {
 }
 
 #[test]
+// NOTE: Test is limited by Socket::set_recv_tos and Cmsg::IpTos.
 #[cfg(all(
     unix,
     not(any(
@@ -1277,8 +1278,8 @@ fn header_included() {
         target_os = "redox",
     ))
 ))]
-fn sendmsg_recvmsg() {
-    use socket2::{Cmsg, CmsgWriter};
+fn sendmsg_recvmsg_ip_tos() {
+    use socket2::{Cmsg, CmsgBuffer, CmsgWriter};
 
     let receiver = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
     receiver.bind(&any_ipv4()).unwrap();
@@ -1307,10 +1308,10 @@ fn sendmsg_recvmsg() {
 
     let mut hello = [MaybeUninit::new(10); 10];
     let mut control_data = [MaybeUninit::uninit(); 32];
-    let (read, from, cmsg, flags) = receiver
-        .recv_msg(
+    let (read, cmsg, flags, from) = receiver
+        .recv_msg_from(
             &mut [MaybeUninitSlice::new(&mut hello)],
-            &mut control_data[..],
+            CmsgBuffer::new(&mut control_data[..]),
             0,
         )
         .unwrap();

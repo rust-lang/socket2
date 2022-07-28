@@ -1,5 +1,6 @@
 use std::convert::TryInto as _;
 use std::io::IoSlice;
+use std::mem;
 
 #[derive(Debug, Clone)]
 struct MsgHdrWalker<B> {
@@ -153,6 +154,25 @@ impl<'a, C: std::borrow::Borrow<Cmsg>> Extend<C> for CmsgWriter<'a> {
     }
 }
 
+/// A buffer for receiving control messages.
+///
+/// Used as a control message target in [`crate::Socket::recv_msg`].
+#[derive(Debug)]
+pub struct CmsgBuffer<'a> {
+    buffer: &'a mut [mem::MaybeUninit<u8>],
+}
+
+impl<'a> CmsgBuffer<'a> {
+    /// Creates a new buffer to receive ancillary data in.
+    pub fn new(buffer: &'a mut [mem::MaybeUninit<u8>]) -> Self {
+        Self { buffer }
+    }
+
+    pub(crate) fn into_buffer(self) -> &'a mut [mem::MaybeUninit<u8>] {
+        self.buffer
+    }
+}
+
 /// An iterator over received control messages.
 #[derive(Debug, Clone)]
 pub struct CmsgIter<'a> {
@@ -229,16 +249,16 @@ impl Cmsg {
             #[cfg(not(any(target_os = "solaris", target_os = "illumos")))]
             Cmsg::IpTos(_) => {
                 #[cfg(not(target_os = "macos"))]
-                let len = std::mem::size_of::<u8>();
+                let len = mem::size_of::<u8>();
                 #[cfg(target_os = "macos")]
-                let len = std::mem::size_of::<i32>();
+                let len = mem::size_of::<i32>();
                 (libc::IPPROTO_IP, libc::IP_TOS, len as libc::c_uint)
             }
             #[cfg(not(any(target_os = "fuchsia", target_os = "solaris", target_os = "illumos")))]
             Cmsg::Ipv6PktInfo { .. } => (
                 libc::IPPROTO_IPV6,
                 libc::IPV6_PKTINFO,
-                std::mem::size_of::<libc::in6_pktinfo>() as libc::c_uint,
+                mem::size_of::<libc::in6_pktinfo>() as libc::c_uint,
             ),
             Cmsg::Unknown(UnknownCmsg {
                 cmsg_level,
@@ -267,7 +287,7 @@ impl Cmsg {
                     ipi6_addr: crate::sys::to_in6_addr(addr),
                     ipi6_ifindex: *ifindex as _,
                 };
-                let size = std::mem::size_of::<libc::in6_pktinfo>();
+                let size = mem::size_of::<libc::in6_pktinfo>();
                 assert_eq!(buffer.len(), size);
                 // Safety: `pktinfo` is valid for reads for its size in bytes.
                 // `buffer` is valid for write for the same length, as
@@ -309,7 +329,7 @@ impl Cmsg {
             #[cfg(not(any(target_os = "fuchsia", target_os = "solaris", target_os = "illumos")))]
             (libc::IPPROTO_IPV6, libc::IPV6_PKTINFO) => {
                 let mut pktinfo = unsafe { std::mem::zeroed::<libc::in6_pktinfo>() };
-                let size = std::mem::size_of::<libc::in6_pktinfo>();
+                let size = mem::size_of::<libc::in6_pktinfo>();
                 assert!(bytes.len() >= size, "{:?}", bytes);
                 // Safety: `pktinfo` is valid for writes for its size in bytes.
                 // `buffer` is valid for read for the same length, as
