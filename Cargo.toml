@@ -47,3 +47,5 @@ features = [
 [features]
 # Enable all API, even ones not available on all OSs.
 all = []
+# Use I/O safe traits (requires Rust 1.63.0)
+io_safety = []

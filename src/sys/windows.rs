@@ -12,6 +12,8 @@ use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::io::{AsRawSocket, FromRawSocket, IntoRawSocket, RawSocket};
+#[cfg(feature = "io_safety")]
+use std::os::windows::io::{AsSocket, BorrowedSocket, OwnedSocket};
 use std::sync::Once;
 use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
@@ -815,6 +817,29 @@ impl IntoRawSocket for crate::Socket {
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket::from_raw(socket as Socket)
+    }
+}
+
+#[cfg(feature = "io_safety")]
+impl AsSocket for crate::Socket {
+    fn as_socket(&self) -> BorrowedSocket<'_> {
+        // SAFETY: lifetime is bound by "self"
+        unsafe { BorrowedSocket::borrow_raw(self.as_raw() as RawSocket) }
+    }
+}
+
+#[cfg(feature = "io_safety")]
+impl From<OwnedSocket> for crate::Socket {
+    fn from(fd: OwnedSocket) -> Self {
+        Self::from_raw(fd.into_raw_socket() as Socket)
+    }
+}
+
+#[cfg(feature = "io_safety")]
+impl From<crate::Socket> for OwnedSocket {
+    fn from(sock: crate::Socket) -> Self {
+        // SAFETY: sock.into_raw() is a valid fd
+        unsafe { OwnedSocket::from_raw_socket(sock.into_raw() as RawSocket) }
     }
 }
 
