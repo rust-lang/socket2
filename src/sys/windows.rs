@@ -11,9 +11,9 @@ use std::io::{self, IoSlice};
 use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-use std::os::windows::io::{AsRawSocket, FromRawSocket, IntoRawSocket, RawSocket};
-#[cfg(feature = "io_safety")]
-use std::os::windows::io::{AsSocket, BorrowedSocket, OwnedSocket};
+use std::os::windows::io::{
+    AsRawSocket, AsSocket, BorrowedSocket, FromRawSocket, IntoRawSocket, OwnedSocket, RawSocket,
+};
 use std::sync::Once;
 use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
@@ -820,7 +820,6 @@ impl FromRawSocket for crate::Socket {
     }
 }
 
-#[cfg(feature = "io_safety")]
 impl AsSocket for crate::Socket {
     fn as_socket(&self) -> BorrowedSocket<'_> {
         // SAFETY: lifetime is bound by "self"
@@ -828,14 +827,12 @@ impl AsSocket for crate::Socket {
     }
 }
 
-#[cfg(feature = "io_safety")]
 impl From<OwnedSocket> for crate::Socket {
     fn from(fd: OwnedSocket) -> Self {
         Self::from_raw(fd.into_raw_socket() as Socket)
     }
 }
 
-#[cfg(feature = "io_safety")]
 impl From<crate::Socket> for OwnedSocket {
     fn from(sock: crate::Socket) -> Self {
         // SAFETY: sock.into_raw() is a valid fd
