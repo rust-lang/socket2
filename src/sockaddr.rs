@@ -101,7 +101,7 @@ impl SockAddr {
     ///
     /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
     /// let (_, address) = unsafe {
-    ///     SockAddr::init(|addr_storage, len| {
+    ///     SockAddr::try_init(|addr_storage, len| {
     ///         // The `getsockname(2)` system call will intiliase `storage` for
     ///         // us, setting `len` to the correct length.
     ///         if libc::getsockname(socket.as_raw_fd(), addr_storage.cast(), len) == -1 {
@@ -116,7 +116,7 @@ impl SockAddr {
     /// # Ok(())
     /// # }
     /// ```
-    pub unsafe fn init<F, T>(init: F) -> io::Result<(T, SockAddr)>
+    pub unsafe fn try_init<F, T>(init: F) -> io::Result<(T, SockAddr)>
     where
         F: FnOnce(*mut sockaddr_storage, *mut socklen_t) -> io::Result<T>,
     {

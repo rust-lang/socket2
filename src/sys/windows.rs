@@ -311,7 +311,7 @@ pub(crate) fn listen(socket: Socket, backlog: c_int) -> io::Result<()> {
 pub(crate) fn accept(socket: Socket) -> io::Result<(Socket, SockAddr)> {
     // Safety: `accept` initialises the `SockAddr` for us.
     unsafe {
-        SockAddr::init(|storage, len| {
+        SockAddr::try_init(|storage, len| {
             syscall!(
                 accept(socket, storage.cast(), len),
                 PartialEq::eq,
@@ -324,7 +324,7 @@ pub(crate) fn accept(socket: Socket) -> io::Result<(Socket, SockAddr)> {
 pub(crate) fn getsockname(socket: Socket) -> io::Result<SockAddr> {
     // Safety: `getsockname` initialises the `SockAddr` for us.
     unsafe {
-        SockAddr::init(|storage, len| {
+        SockAddr::try_init(|storage, len| {
             syscall!(
                 getsockname(socket, storage.cast(), len),
                 PartialEq::eq,
@@ -338,7 +338,7 @@ pub(crate) fn getsockname(socket: Socket) -> io::Result<SockAddr> {
 pub(crate) fn getpeername(socket: Socket) -> io::Result<SockAddr> {
     // Safety: `getpeername` initialises the `SockAddr` for us.
     unsafe {
-        SockAddr::init(|storage, len| {
+        SockAddr::try_init(|storage, len| {
             syscall!(
                 getpeername(socket, storage.cast(), len),
                 PartialEq::eq,
@@ -443,7 +443,7 @@ pub(crate) fn recv_from(
 ) -> io::Result<(usize, SockAddr)> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.
     unsafe {
-        SockAddr::init(|storage, addrlen| {
+        SockAddr::try_init(|storage, addrlen| {
             let res = syscall!(
                 recvfrom(
                     socket,
@@ -472,7 +472,7 @@ pub(crate) fn recv_from_vectored(
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.
     unsafe {
-        SockAddr::init(|storage, addrlen| {
+        SockAddr::try_init(|storage, addrlen| {
             let mut nread = 0;
             let mut flags = flags as u32;
             let res = syscall!(

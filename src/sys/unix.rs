@@ -475,9 +475,9 @@ impl SockAddr {
         P: AsRef<Path>,
     {
         unsafe {
-            SockAddr::init(|storage, len| {
-                // Safety: `SockAddr::init` zeros the address, which is a valid
-                // representation.
+            SockAddr::try_init(|storage, len| {
+                // Safety: `SockAddr::try_init` zeros the address, which is a
+                // valid representation.
                 let storage: &mut libc::sockaddr_un = unsafe { &mut *storage.cast() };
                 let len: &mut socklen_t = unsafe { &mut *len };
 
@@ -498,8 +498,8 @@ impl SockAddr {
                 storage.sun_family = libc::AF_UNIX as sa_family_t;
                 // Safety: `bytes` and `addr.sun_path` are not overlapping and
                 // both point to valid memory.
-                // `SockAddr::init` zeroes the memory, so the path is already
-                // null terminated.
+                // `SockAddr::try_init` zeroes the memory, so the path is
+                // already null terminated.
                 unsafe {
                     ptr::copy_nonoverlapping(
                         bytes.as_ptr(),
@@ -539,9 +539,9 @@ impl SockAddr {
     )]
     pub fn vsock(cid: u32, port: u32) -> io::Result<SockAddr> {
         unsafe {
-            SockAddr::init(|storage, len| {
-                // Safety: `SockAddr::init` zeros the address, which is a valid
-                // representation.
+            SockAddr::try_init(|storage, len| {
+                // Safety: `SockAddr::try_init` zeros the address, which is a
+                // valid representation.
                 let storage: &mut libc::sockaddr_vm = unsafe { &mut *storage.cast() };
                 let len: &mut socklen_t = unsafe { &mut *len };
 
@@ -670,18 +670,18 @@ pub(crate) fn listen(fd: Socket, backlog: c_int) -> io::Result<()> {
 
 pub(crate) fn accept(fd: Socket) -> io::Result<(Socket, SockAddr)> {
     // Safety: `accept` initialises the `SockAddr` for us.
-    unsafe { SockAddr::init(|storage, len| syscall!(accept(fd, storage.cast(), len))) }
+    unsafe { SockAddr::try_init(|storage, len| syscall!(accept(fd, storage.cast(), len))) }
 }
 
 pub(crate) fn getsockname(fd: Socket) -> io::Result<SockAddr> {
     // Safety: `accept` initialises the `SockAddr` for us.
-    unsafe { SockAddr::init(|storage, len| syscall!(getsockname(fd, storage.cast(), len))) }
+    unsafe { SockAddr::try_init(|storage, len| syscall!(getsockname(fd, storage.cast(), len))) }
         .map(|(_, addr)| addr)
 }
 
 pub(crate) fn getpeername(fd: Socket) -> io::Result<SockAddr> {
     // Safety: `accept` initialises the `SockAddr` for us.
-    unsafe { SockAddr::init(|storage, len| syscall!(getpeername(fd, storage.cast(), len))) }
+    unsafe { SockAddr::try_init(|storage, len| syscall!(getpeername(fd, storage.cast(), len))) }
         .map(|(_, addr)| addr)
 }
 
@@ -723,7 +723,7 @@ pub(crate) fn recv_from(
 ) -> io::Result<(usize, SockAddr)> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.
     unsafe {
-        SockAddr::init(|addr, addrlen| {
+        SockAddr::try_init(|addr, addrlen| {
             syscall!(recvfrom(
                 fd,
                 buf.as_mut_ptr().cast(),
@@ -755,7 +755,7 @@ pub(crate) fn recv_from_vectored(
     // Safety: `recvmsg` initialises the address storage and we set the length
     // manually.
     unsafe {
-        SockAddr::init(|storage, len| {
+        SockAddr::try_init(|storage, len| {
             recvmsg(fd, storage, bufs, flags).map(|(n, addrlen, recv_flags)| {
                 // Set the correct address length.
                 *len = addrlen;
@@ -1100,7 +1100,7 @@ impl crate::Socket {
     pub(crate) fn _accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
         // Safety: `accept4` initialises the `SockAddr` for us.
         unsafe {
-            SockAddr::init(|storage, len| {
+            SockAddr::try_init(|storage, len| {
                 syscall!(accept4(self.as_raw(), storage.cast(), len, flags))
                     .map(crate::Socket::from_raw)
             })
