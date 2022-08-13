@@ -11,7 +11,9 @@ use std::io::{self, IoSlice};
 use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
-use std::os::windows::io::{AsRawSocket, FromRawSocket, IntoRawSocket, RawSocket};
+use std::os::windows::io::{
+    AsRawSocket, AsSocket, BorrowedSocket, FromRawSocket, IntoRawSocket, OwnedSocket, RawSocket,
+};
 use std::sync::Once;
 use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
@@ -800,18 +802,45 @@ impl crate::Socket {
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(windows)))]
+impl AsSocket for crate::Socket {
+    fn as_socket(&self) -> BorrowedSocket<'_> {
+        // SAFETY: lifetime is bound by self.
+        unsafe { BorrowedSocket::borrow_raw(self.as_raw() as RawSocket) }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
         self.as_raw() as RawSocket
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(windows)))]
+impl From<crate::Socket> for OwnedSocket {
+    fn from(sock: crate::Socket) -> OwnedSocket {
+        // SAFETY: sock.into_raw() always returns a valid fd.
+        unsafe { OwnedSocket::from_raw_socket(sock.into_raw() as RawSocket) }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
         self.into_raw() as RawSocket
     }
 }
 
+#[cfg_attr(docsrs, doc(cfg(windows)))]
+impl From<OwnedSocket> for crate::Socket {
+    fn from(fd: OwnedSocket) -> crate::Socket {
+        // SAFETY: `OwnedFd` ensures the fd is valid.
+        unsafe { crate::Socket::from_raw_socket(fd.into_raw_socket()) }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket::from_raw(socket as Socket)
