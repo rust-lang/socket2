@@ -152,7 +152,7 @@ fn socket_address_unix_abstract_namespace() {
 #[test]
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
 fn socket_address_vsock() {
-    let addr = SockAddr::vsock(1, 9999).unwrap();
+    let addr = SockAddr::vsock(1, 9999);
     assert!(addr.as_socket_ipv4().is_none());
     assert!(addr.as_socket_ipv6().is_none());
     assert_eq!(addr.vsock_address().unwrap(), (1, 9999));
@@ -459,14 +459,14 @@ fn unix() {
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
 #[ignore = "using VSOCK family requires optional kernel support (works when enabled)"]
 fn vsock() {
-    let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, libc::VMADDR_PORT_ANY).unwrap();
+    let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, libc::VMADDR_PORT_ANY);
 
     let listener = Socket::new(Domain::VSOCK, Type::STREAM, None).unwrap();
     listener.bind(&addr).unwrap();
     listener.listen(10).unwrap();
 
     let (_, port) = listener.local_addr().unwrap().vsock_address().unwrap();
-    let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, port).unwrap();
+    let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, port);
     let mut a = Socket::new(Domain::VSOCK, Type::STREAM, None).unwrap();
     a.connect(&addr).unwrap();
     let mut b = listener.accept().unwrap().0;
