@@ -537,24 +537,18 @@ impl SockAddr {
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
-    pub fn vsock(cid: u32, port: u32) -> io::Result<SockAddr> {
-        unsafe {
-            SockAddr::try_init(|storage, len| {
-                // Safety: `SockAddr::try_init` zeros the address, which is a
-                // valid representation.
-                let storage: &mut libc::sockaddr_vm = unsafe { &mut *storage.cast() };
-                let len: &mut socklen_t = unsafe { &mut *len };
-
-                storage.svm_family = libc::AF_VSOCK as sa_family_t;
-                storage.svm_cid = cid;
-                storage.svm_port = port;
-
-                *len = mem::size_of::<libc::sockaddr_vm>() as socklen_t;
-
-                Ok(())
-            })
+    pub fn vsock(cid: u32, port: u32) -> SockAddr {
+        // SAFETY: a `sockaddr_storage` of all zeros is valid, hence we can
+        // safely assume it's initialised.
+        let mut storage = unsafe { MaybeUninit::<sockaddr_storage>::zeroed().assume_init() };
+        {
+            let storage: &mut libc::sockaddr_vm =
+                unsafe { &mut *((&mut storage as *mut sockaddr_storage).cast()) };
+            storage.svm_family = libc::AF_VSOCK as sa_family_t;
+            storage.svm_cid = cid;
+            storage.svm_port = port;
         }
-        .map(|(_, addr)| addr)
+        unsafe { SockAddr::new(storage, mem::size_of::<libc::sockaddr_vm>() as socklen_t) }
     }
 
     /// Returns this address VSOCK CID/port if it is in the `AF_VSOCK` family,
