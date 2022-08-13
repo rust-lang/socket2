@@ -37,7 +37,7 @@ use std::os::unix::ffi::OsStrExt;
     )
 ))]
 use std::os::unix::io::RawFd;
-use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd};
+use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd};
 #[cfg(feature = "all")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 #[cfg(feature = "all")]
@@ -2013,6 +2013,14 @@ impl crate::Socket {
 }
 
 #[cfg_attr(docsrs, doc(cfg(unix)))]
+impl AsFd for crate::Socket {
+    fn as_fd(&self) -> BorrowedFd<'_> {
+        // SAFETY: lifetime is bound by self.
+        unsafe { BorrowedFd::borrow_raw(self.as_raw()) }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl AsRawFd for crate::Socket {
     fn as_raw_fd(&self) -> c_int {
         self.as_raw()
@@ -2020,9 +2028,25 @@ impl AsRawFd for crate::Socket {
 }
 
 #[cfg_attr(docsrs, doc(cfg(unix)))]
+impl From<crate::Socket> for OwnedFd {
+    fn from(sock: crate::Socket) -> OwnedFd {
+        // SAFETY: sock.into_raw() always returns a valid fd.
+        unsafe { OwnedFd::from_raw_fd(sock.into_raw()) }
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl IntoRawFd for crate::Socket {
     fn into_raw_fd(self) -> c_int {
         self.into_raw()
+    }
+}
+
+#[cfg_attr(docsrs, doc(cfg(unix)))]
+impl From<OwnedFd> for crate::Socket {
+    fn from(fd: OwnedFd) -> crate::Socket {
+        // SAFETY: `OwnedFd` ensures the fd is valid.
+        unsafe { crate::Socket::from_raw_fd(fd.into_raw_fd()) }
     }
 }
 
