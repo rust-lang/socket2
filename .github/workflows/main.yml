@@ -72,3 +72,13 @@ jobs:
       uses: taiki-e/install-action@cargo-hack
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
+
+  Clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Install Rust
+      run: rustup update stable && rustup default stable && rustup component add clippy
+    - name: Run Clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
