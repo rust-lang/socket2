@@ -1218,10 +1218,10 @@ fn join_leave_multicast_v4_n() {
             assert_eq!(err.raw_os_error(), Some(libc::EADDRNOTAVAIL));
         }
     };
-    let () = socket
+    socket
         .join_multicast_v4_n(&multiaddr, &interface)
         .expect("join multicast group");
-    let () = socket
+    socket
         .leave_multicast_v4_n(&multiaddr, &interface)
         .expect("leave multicast group");
 }
@@ -1238,8 +1238,8 @@ fn join_leave_ssm_v4() {
     let g = Ipv4Addr::new(232, 123, 52, 36);
     let s = Ipv4Addr::new(62, 40, 109, 31);
     let interface = Ipv4Addr::new(0, 0, 0, 0);
-    let () = socket.join_ssm_v4(&s, &g, &interface).expect("Joined SSM");
-    let () = socket.leave_ssm_v4(&s, &g, &interface).expect("Left SSM");
+    socket.join_ssm_v4(&s, &g, &interface).expect("Joined SSM");
+    socket.leave_ssm_v4(&s, &g, &interface).expect("Left SSM");
 }
 
 #[test]
