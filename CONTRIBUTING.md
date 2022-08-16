@@ -33,7 +33,7 @@ add new tests.
 
 All types and methods that are available on all tier 1 platforms are defined in
 the first level of the source, i.e. `src/*.rs` files. Additional API that is
-platform specific, e.g. `Domain::UNIX`, is defined in `src/sys/*.rs` and only
+platform specific, e.g. `Domain::VSOCK`, is defined in `src/sys/*.rs` and only
 for the platforms that support it. For API that is not available on all tier 1
 platforms the `all` feature is used, to indicate to the user that they're using
 API that might is not available on all platforms.

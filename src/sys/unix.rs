@@ -25,7 +25,6 @@ use std::num::NonZeroU32;
     )
 ))]
 use std::num::NonZeroUsize;
-#[cfg(feature = "all")]
 use std::os::unix::ffi::OsStrExt;
 #[cfg(all(
     feature = "all",
@@ -40,9 +39,7 @@ use std::os::unix::io::RawFd;
 use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd};
 #[cfg(feature = "all")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
-#[cfg(feature = "all")]
 use std::path::Path;
-#[cfg(not(all(target_os = "redox", not(feature = "all"))))]
 use std::ptr;
 use std::time::{Duration, Instant};
 use std::{io, slice};
@@ -58,7 +55,7 @@ use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 pub(crate) use libc::c_int;
 
 // Used in `Domain`.
-pub(crate) use libc::{AF_INET, AF_INET6};
+pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
 // Used in `Type`.
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::SOCK_RAW;
@@ -222,10 +219,6 @@ type IovLen = c_int;
 
 /// Unix only API.
 impl Domain {
-    /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
-    #[cfg_attr(docsrs, doc(cfg(unix)))]
-    pub const UNIX: Domain = Domain(libc::AF_UNIX);
-
     /// Domain for low-level packet interface, corresponding to `AF_PACKET`.
     #[cfg(all(
         feature = "all",
@@ -460,71 +453,56 @@ impl<'a> MaybeUninitSlice<'a> {
     }
 }
 
+#[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
+pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
+    // SAFETY: a `sockaddr_storage` of all zeros is valid.
+    let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
+    let len = {
+        let storage: &mut libc::sockaddr_un =
+            unsafe { &mut *(&mut storage as *mut sockaddr_storage).cast() };
+
+        let bytes = path.as_os_str().as_bytes();
+        let too_long = match bytes.first() {
+            None => false,
+            // linux abstract namespaces aren't null-terminated
+            Some(&0) => bytes.len() > storage.sun_path.len(),
+            Some(_) => bytes.len() >= storage.sun_path.len(),
+        };
+        if too_long {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must be shorter than SUN_LEN",
+            ));
+        }
+
+        storage.sun_family = libc::AF_UNIX as sa_family_t;
+        // Safety: `bytes` and `addr.sun_path` are not overlapping and
+        // both point to valid memory.
+        // `storage` was initialized to zero above, so the path is
+        // already null terminated.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                bytes.as_ptr(),
+                storage.sun_path.as_mut_ptr() as *mut u8,
+                bytes.len(),
+            )
+        };
+
+        let base = storage as *const _ as usize;
+        let path = &storage.sun_path as *const _ as usize;
+        let sun_path_offset = path - base;
+        sun_path_offset
+            + bytes.len()
+            + match bytes.first() {
+                Some(&0) | None => 0,
+                Some(_) => 1,
+            }
+    };
+    Ok(unsafe { SockAddr::new(storage, len as socklen_t) })
+}
+
 /// Unix only API.
 impl SockAddr {
-    /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
-    ///
-    /// # Failure
-    ///
-    /// Returns an error if the path is longer than `SUN_LEN`.
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(all(unix, feature = "all"))))]
-    #[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
-    pub fn unix<P>(path: P) -> io::Result<SockAddr>
-    where
-        P: AsRef<Path>,
-    {
-        unsafe {
-            SockAddr::try_init(|storage, len| {
-                // Safety: `SockAddr::try_init` zeros the address, which is a
-                // valid representation.
-                let storage: &mut libc::sockaddr_un = unsafe { &mut *storage.cast() };
-                let len: &mut socklen_t = unsafe { &mut *len };
-
-                let bytes = path.as_ref().as_os_str().as_bytes();
-                let too_long = match bytes.first() {
-                    None => false,
-                    // linux abstract namespaces aren't null-terminated
-                    Some(&0) => bytes.len() > storage.sun_path.len(),
-                    Some(_) => bytes.len() >= storage.sun_path.len(),
-                };
-                if too_long {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "path must be shorter than SUN_LEN",
-                    ));
-                }
-
-                storage.sun_family = libc::AF_UNIX as sa_family_t;
-                // Safety: `bytes` and `addr.sun_path` are not overlapping and
-                // both point to valid memory.
-                // `SockAddr::try_init` zeroes the memory, so the path is
-                // already null terminated.
-                unsafe {
-                    ptr::copy_nonoverlapping(
-                        bytes.as_ptr(),
-                        storage.sun_path.as_mut_ptr() as *mut u8,
-                        bytes.len(),
-                    )
-                };
-
-                let base = storage as *const _ as usize;
-                let path = &storage.sun_path as *const _ as usize;
-                let sun_path_offset = path - base;
-                let length = sun_path_offset
-                    + bytes.len()
-                    + match bytes.first() {
-                        Some(&0) | None => 0,
-                        Some(_) => 1,
-                    };
-                *len = length as socklen_t;
-
-                Ok(())
-            })
-        }
-        .map(|(_, addr)| addr)
-    }
-
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
     ///
     /// # Errors
@@ -538,9 +516,8 @@ impl SockAddr {
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
     pub fn vsock(cid: u32, port: u32) -> SockAddr {
-        // SAFETY: a `sockaddr_storage` of all zeros is valid, hence we can
-        // safely assume it's initialised.
-        let mut storage = unsafe { MaybeUninit::<sockaddr_storage>::zeroed().assume_init() };
+        // SAFETY: a `sockaddr_storage` of all zeros is valid.
+        let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
         {
             let storage: &mut libc::sockaddr_vm =
                 unsafe { &mut *((&mut storage as *mut sockaddr_storage).cast()) };
