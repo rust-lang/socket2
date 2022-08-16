@@ -12,7 +12,6 @@ use std::fs::File;
 use std::io;
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
-#[cfg(all(unix, feature = "all"))]
 use std::io::Read;
 use std::io::Write;
 use std::mem::{self, MaybeUninit};
@@ -36,7 +35,6 @@ use std::os::windows::io::AsRawSocket;
 use std::str;
 use std::thread;
 use std::time::Duration;
-#[cfg(all(unix, feature = "all"))]
 use std::{env, fs};
 
 #[cfg(windows)]
@@ -62,7 +60,6 @@ fn domain_fmt_debug() {
     let tests = &[
         (Domain::IPV4, "AF_INET"),
         (Domain::IPV6, "AF_INET6"),
-        #[cfg(unix)]
         (Domain::UNIX, "AF_UNIX"),
         #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
         (Domain::PACKET, "AF_PACKET"),
@@ -130,7 +127,6 @@ fn from_invalid_raw_fd_should_panic() {
 }
 
 #[test]
-#[cfg(all(unix, feature = "all"))]
 fn socket_address_unix() {
     let string = "/tmp/socket";
     let addr = SockAddr::unix(string).unwrap();
@@ -429,9 +425,29 @@ fn pair() {
     assert_eq!(&buf[..n], DATA);
 }
 
+fn unix_sockets_supported() -> bool {
+    #[cfg(windows)]
+    {
+        // Only some versions of Windows support Unix sockets.
+        match Socket::new(Domain::UNIX, Type::STREAM, None) {
+            Ok(_) => {}
+            Err(err)
+                if err.raw_os_error()
+                    == Some(windows_sys::Win32::Networking::WinSock::WSAEAFNOSUPPORT as i32) =>
+            {
+                return false;
+            }
+            Err(err) => panic!("socket error: {}", err),
+        }
+    }
+    true
+}
+
 #[test]
-#[cfg(all(feature = "all", unix))]
 fn unix() {
+    if !unix_sockets_supported() {
+        return;
+    }
     let mut path = env::temp_dir();
     path.push("socket2");
     let _ = fs::remove_dir_all(&path);

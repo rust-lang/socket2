@@ -1,5 +1,6 @@
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::path::Path;
 use std::{fmt, io};
 
 #[cfg(windows)]
@@ -209,6 +210,16 @@ impl SockAddr {
             Some(SocketAddr::V6(addr)) => Some(addr),
             _ => None,
         }
+    }
+
+    /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
+    ///
+    /// Returns an error if the path is longer than `SUN_LEN`.
+    pub fn unix<P>(path: P) -> io::Result<SockAddr>
+    where
+        P: AsRef<Path>,
+    {
+        crate::sys::unix_sockaddr(path.as_ref())
     }
 }
 

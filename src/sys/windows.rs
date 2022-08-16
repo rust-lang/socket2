@@ -14,6 +14,7 @@ use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
 use std::os::windows::io::{
     AsRawSocket, AsSocket, BorrowedSocket, FromRawSocket, IntoRawSocket, OwnedSocket, RawSocket,
 };
+use std::path::Path;
 use std::sync::Once;
 use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
@@ -41,8 +42,8 @@ pub(crate) const MSG_TRUNC: c_int = 0x01;
 // Used in `Domain`.
 pub(crate) const AF_INET: c_int = windows_sys::Win32::Networking::WinSock::AF_INET as c_int;
 pub(crate) const AF_INET6: c_int = windows_sys::Win32::Networking::WinSock::AF_INET6 as c_int;
-const AF_UNIX: c_int = windows_sys::Win32::Networking::WinSock::AF_UNIX as c_int;
-const AF_UNSPEC: c_int = windows_sys::Win32::Networking::WinSock::AF_UNSPEC as c_int;
+pub(crate) const AF_UNIX: c_int = windows_sys::Win32::Networking::WinSock::AF_UNIX as c_int;
+pub(crate) const AF_UNSPEC: c_int = windows_sys::Win32::Networking::WinSock::AF_UNSPEC as c_int;
 // Used in `Type`.
 pub(crate) const SOCK_STREAM: c_int = windows_sys::Win32::Networking::WinSock::SOCK_STREAM as c_int;
 pub(crate) const SOCK_DGRAM: c_int = windows_sys::Win32::Networking::WinSock::SOCK_DGRAM as c_int;
@@ -772,6 +773,49 @@ pub(crate) fn to_mreqn(
             crate::socket::InterfaceIndexOrAddress::Address(interface) => to_in_addr(interface),
         },
     }
+}
+
+#[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
+pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
+    // SAFETY: a `sockaddr_storage` of all zeros is valid.
+    let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
+    let len = {
+        let storage: &mut windows_sys::Win32::Networking::WinSock::sockaddr_un =
+            unsafe { &mut *(&mut storage as *mut sockaddr_storage).cast() };
+
+        // Windows expects a UTF-8 path here even though Windows paths are
+        // usually UCS-2 encoded. If Rust exposed OsStr's Wtf8 encoded
+        // buffer, this could be used directly, relying on Windows to
+        // validate the path, but Rust hides this implementation detail.
+        //
+        // See <https://github.com/rust-lang/rust/pull/95290>.
+        let bytes = path
+            .to_str()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "path must be valid UTF-8"))?
+            .as_bytes();
+
+        // Windows appears to allow non-null-terminated paths, but this is
+        // not documented, so do not rely on it yet.
+        //
+        // See <https://github.com/rust-lang/socket2/issues/331>.
+        if bytes.len() >= storage.sun_path.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must be shorter than SUN_LEN",
+            ));
+        }
+
+        storage.sun_family = crate::sys::AF_UNIX as sa_family_t;
+        // `storage` was initialized to zero above, so the path is
+        // already null terminated.
+        storage.sun_path[..bytes.len()].copy_from_slice(bytes);
+
+        let base = storage as *const _ as usize;
+        let path = &storage.sun_path as *const _ as usize;
+        let sun_path_offset = path - base;
+        sun_path_offset + bytes.len() + 1
+    };
+    Ok(unsafe { SockAddr::new(storage, len as socklen_t) })
 }
 
 /// Windows only API.
