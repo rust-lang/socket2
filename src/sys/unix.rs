@@ -823,7 +823,7 @@ pub(crate) fn timeout_opt(fd: Socket, opt: c_int, val: c_int) -> io::Result<Opti
     unsafe { getsockopt(fd, opt, val).map(from_timeval) }
 }
 
-fn from_timeval(duration: libc::timeval) -> Option<Duration> {
+const fn from_timeval(duration: libc::timeval) -> Option<Duration> {
     if duration.tv_sec == 0 && duration.tv_usec == 0 {
         None
     } else {
@@ -965,7 +965,7 @@ pub(crate) unsafe fn setsockopt<T>(
     .map(|_| ())
 }
 
-pub(crate) fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
+pub(crate) const fn to_in_addr(addr: &Ipv4Addr) -> in_addr {
     // `s_addr` is stored as BE on all machines, and the array is in BE order.
     // So the native endian conversion method is used so that it's never
     // swapped.
@@ -978,7 +978,7 @@ pub(crate) fn from_in_addr(in_addr: in_addr) -> Ipv4Addr {
     Ipv4Addr::from(in_addr.s_addr.to_ne_bytes())
 }
 
-pub(crate) fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
+pub(crate) const fn to_in6_addr(addr: &Ipv6Addr) -> in6_addr {
     in6_addr {
         s6_addr: addr.octets(),
     }
@@ -996,7 +996,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "redox",
     target_os = "solaris",
 )))]
-pub(crate) fn to_mreqn(
+pub(crate) const fn to_mreqn(
     multiaddr: &Ipv4Addr,
     interface: &crate::socket::InterfaceIndexOrAddress,
 ) -> libc::ip_mreqn {
