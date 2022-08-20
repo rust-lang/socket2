@@ -1552,7 +1552,7 @@ impl crate::Socket {
     #[cfg(all(feature = "all", target_vendor = "apple"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
     pub fn bind_device_by_index(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
-        let index = interface.map(NonZeroU32::get).unwrap_or(0);
+        let index = interface.map_or(0, NonZeroU32::get);
         unsafe { setsockopt(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF, index) }
     }
 
@@ -1908,9 +1908,9 @@ impl crate::Socket {
         )))
     )]
     pub fn set_tcp_user_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
-        let timeout = timeout
-            .map(|to| min(to.as_millis(), libc::c_uint::MAX as u128) as libc::c_uint)
-            .unwrap_or(0);
+        let timeout = timeout.map_or(0, |to| {
+            min(to.as_millis(), libc::c_uint::MAX as u128) as libc::c_uint
+        });
         unsafe {
             setsockopt(
                 self.as_raw(),

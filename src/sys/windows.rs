@@ -638,9 +638,9 @@ fn into_ms(duration: Option<Duration>) -> u32 {
     // * Nanosecond precision is rounded up
     // * Greater than u32::MAX milliseconds (50 days) is rounded up to
     //   INFINITE (never time out).
-    duration
-        .map(|duration| min(duration.as_millis(), INFINITE as u128) as u32)
-        .unwrap_or(0)
+    duration.map_or(0, |duration| {
+        min(duration.as_millis(), INFINITE as u128) as u32
+    })
 }
 
 pub(crate) fn set_tcp_keepalive(socket: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
