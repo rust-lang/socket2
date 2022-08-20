@@ -394,7 +394,7 @@ impl RecvFlags {
     /// that do support it (such as [`SEQPACKET`]), a record is terminated by
     /// sending a message with the end-of-record flag set.
     ///
-    /// On Unix this corresponds to the MSG_EOR flag.
+    /// On Unix this corresponds to the `MSG_EOR` flag.
     ///
     /// [`SEQPACKET`]: Type::SEQPACKET
     pub const fn is_end_of_record(self) -> bool {
@@ -406,7 +406,7 @@ impl RecvFlags {
     /// This is useful for protocols where you receive out-of-band data
     /// mixed in with the normal data stream.
     ///
-    /// On Unix this corresponds to the MSG_OOB flag.
+    /// On Unix this corresponds to the `MSG_OOB` flag.
     pub const fn is_out_of_band(self) -> bool {
         self.0 & libc::MSG_OOB != 0
     }

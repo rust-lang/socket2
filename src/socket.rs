@@ -1414,7 +1414,7 @@ impl Socket {
 
     /// Set the value of the `IP_RECVTOS` option for this socket.
     ///
-    /// If enabled, the IP_TOS ancillary message is passed with
+    /// If enabled, the `IP_TOS` ancillary message is passed with
     /// incoming packets. It contains a byte which specifies the
     /// Type of Service/Precedence field of the packet header.
     #[cfg(not(any(
