@@ -156,6 +156,17 @@ impl SockAddr {
         &self.storage as *const _ as *const _
     }
 
+    /// Returns true if this address is in the `AF_INET` (IPv4) family, false otherwise.
+    pub const fn is_ipv4(&self) -> bool {
+        self.storage.ss_family == AF_INET as sa_family_t
+    }
+
+    /// Returns true if this address is in the `AF_INET6` (IPv6) family, false
+    /// otherwise.
+    pub const fn is_ipv6(&self) -> bool {
+        self.storage.ss_family == AF_INET6 as sa_family_t
+    }
+
     /// Returns a raw pointer to the address storage.
     #[cfg(all(unix, not(target_os = "redox")))]
     pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
@@ -322,6 +333,7 @@ fn ipv4() {
     use std::net::Ipv4Addr;
     let std = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
     let addr = SockAddr::from(std);
+    assert_eq!(addr.is_ipv4(), true);
     assert_eq!(addr.family(), AF_INET as sa_family_t);
     assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
     assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
@@ -341,6 +353,7 @@ fn ipv6() {
     use std::net::Ipv6Addr;
     let std = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
     let addr = SockAddr::from(std);
+    assert_eq!(addr.is_ipv6(), true);
     assert_eq!(addr.family(), AF_INET6 as sa_family_t);
     assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
     assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
