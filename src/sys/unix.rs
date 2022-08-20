@@ -475,17 +475,17 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         }
 
         storage.sun_family = libc::AF_UNIX as sa_family_t;
-        // Safety: `bytes` and `addr.sun_path` are not overlapping and
+        // SAFETY: `bytes` and `addr.sun_path` are not overlapping and
         // both point to valid memory.
         // `storage` was initialized to zero above, so the path is
-        // already null terminated.
+        // already NULL terminated.
         unsafe {
             ptr::copy_nonoverlapping(
                 bytes.as_ptr(),
                 storage.sun_path.as_mut_ptr().cast(),
                 bytes.len(),
-            )
-        };
+            );
+        }
 
         let base = storage as *const _ as usize;
         let path = ptr::addr_of!(storage.sun_path) as usize;
@@ -601,14 +601,13 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
                 // Error or hang up indicates an error (or failure to connect).
                 if (pollfd.revents & libc::POLLHUP) != 0 || (pollfd.revents & libc::POLLERR) != 0 {
                     match socket.take_error() {
-                        Ok(Some(err)) => return Err(err),
+                        Ok(Some(err)) | Err(err) => return Err(err),
                         Ok(None) => {
                             return Err(io::Error::new(
                                 io::ErrorKind::Other,
                                 "no error set after POLLHUP",
                             ))
                         }
-                        Err(err) => return Err(err),
                     }
                 }
                 return Ok(());
