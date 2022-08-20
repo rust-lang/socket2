@@ -169,7 +169,7 @@ impl SockAddr {
 
     /// Returns a raw pointer to the address.
     pub const fn as_ptr(&self) -> *const sockaddr {
-        &self.storage as *const _ as *const _
+        ptr::addr_of!(self.storage).cast()
     }
 
     /// Returns true if this address is in the `AF_INET` (IPv4) family, false otherwise.
@@ -193,16 +193,16 @@ impl SockAddr {
     /// or `AF_INET6` (IPv6) family, otherwise returns `None`.
     pub fn as_socket(&self) -> Option<SocketAddr> {
         if self.storage.ss_family == AF_INET as sa_family_t {
-            // Safety: if the ss_family field is AF_INET then storage must be a sockaddr_in.
-            let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in) };
-
+            // SAFETY: if the `ss_family` field is `AF_INET` then storage must
+            // be a `sockaddr_in`.
+            let addr = unsafe { &*(ptr::addr_of!(self.storage).cast::<sockaddr_in>()) };
             let ip = crate::sys::from_in_addr(addr.sin_addr);
             let port = u16::from_be(addr.sin_port);
             Some(SocketAddr::V4(SocketAddrV4::new(ip, port)))
         } else if self.storage.ss_family == AF_INET6 as sa_family_t {
-            // Safety: if the ss_family field is AF_INET6 then storage must be a sockaddr_in6.
-            let addr = unsafe { &*(&self.storage as *const _ as *const sockaddr_in6) };
-
+            // SAFETY: if the `ss_family` field is `AF_INET6` then storage must
+            // be a `sockaddr_in6`.
+            let addr = unsafe { &*(ptr::addr_of!(self.storage).cast::<sockaddr_in6>()) };
             let ip = crate::sys::from_in6_addr(addr.sin6_addr);
             let port = u16::from_be(addr.sin6_port);
             Some(SocketAddr::V6(SocketAddrV6::new(
