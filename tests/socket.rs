@@ -151,7 +151,7 @@ fn socket_address_vsock() {
     let addr = SockAddr::vsock(1, 9999);
     assert!(addr.as_socket_ipv4().is_none());
     assert!(addr.as_socket_ipv6().is_none());
-    assert_eq!(addr.vsock_address().unwrap(), (1, 9999));
+    assert_eq!(addr.as_vsock_address().unwrap(), (1, 9999));
 }
 
 #[test]
@@ -481,7 +481,7 @@ fn vsock() {
     listener.bind(&addr).unwrap();
     listener.listen(10).unwrap();
 
-    let (_, port) = listener.local_addr().unwrap().vsock_address().unwrap();
+    let (_, port) = listener.local_addr().unwrap().as_vsock_address().unwrap();
     let addr = SockAddr::vsock(libc::VMADDR_CID_LOCAL, port);
     let mut a = Socket::new(Domain::VSOCK, Type::STREAM, None).unwrap();
     a.connect(&addr).unwrap();
