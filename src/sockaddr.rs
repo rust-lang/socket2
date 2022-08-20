@@ -1,7 +1,7 @@
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::path::Path;
-use std::{fmt, io};
+use std::{fmt, io, ptr};
 
 #[cfg(windows)]
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
@@ -251,29 +251,17 @@ impl From<SocketAddr> for SockAddr {
 
 impl From<SocketAddrV4> for SockAddr {
     fn from(addr: SocketAddrV4) -> SockAddr {
-        let sockaddr_in = sockaddr_in {
-            sin_family: AF_INET as sa_family_t,
-            sin_port: addr.port().to_be(),
-            sin_addr: crate::sys::to_in_addr(addr.ip()),
-            sin_zero: Default::default(),
-            #[cfg(any(
-                target_os = "dragonfly",
-                target_os = "freebsd",
-                target_os = "haiku",
-                target_os = "ios",
-                target_os = "macos",
-                target_os = "netbsd",
-                target_os = "openbsd"
-            ))]
-            sin_len: 0,
+        // SAFETY: a `sockaddr_storage` of all zeros is valid.
+        let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
+        let len = {
+            let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<sockaddr_in>() };
+            storage.sin_family = AF_INET as sa_family_t;
+            storage.sin_port = addr.port().to_be();
+            storage.sin_addr = crate::sys::to_in_addr(addr.ip());
+            storage.sin_zero = Default::default();
+            mem::size_of::<sockaddr_in>() as socklen_t
         };
-        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
-        // Safety: A `sockaddr_in` is memory compatible with a `sockaddr_storage`
-        unsafe { (storage.as_mut_ptr() as *mut sockaddr_in).write(sockaddr_in) };
-        SockAddr {
-            storage: unsafe { storage.assume_init() },
-            len: mem::size_of::<sockaddr_in>() as socklen_t,
-        }
+        SockAddr { storage, len }
     }
 }
 
