@@ -317,7 +317,7 @@ fn ipv4() {
     use std::net::Ipv4Addr;
     let std = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
     let addr = SockAddr::from(std);
-    assert_eq!(addr.is_ipv4(), true);
+    assert!(addr.is_ipv4());
     assert_eq!(addr.family(), AF_INET as sa_family_t);
     assert_eq!(addr.domain(), Domain::IPV4);
     assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
@@ -338,7 +338,7 @@ fn ipv6() {
     use std::net::Ipv6Addr;
     let std = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
     let addr = SockAddr::from(std);
-    assert_eq!(addr.is_ipv6(), true);
+    assert!(addr.is_ipv6());
     assert_eq!(addr.family(), AF_INET6 as sa_family_t);
     assert_eq!(addr.domain(), Domain::IPV6);
     assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
