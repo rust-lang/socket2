@@ -46,7 +46,7 @@ use std::{io, slice};
 
 #[cfg(not(target_vendor = "apple"))]
 use libc::ssize_t;
-use libc::{c_void, in6_addr, in_addr};
+use libc::{in6_addr, in_addr};
 
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
@@ -458,8 +458,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
     let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
     let len = {
-        let storage: &mut libc::sockaddr_un =
-            unsafe { &mut *(&mut storage as *mut sockaddr_storage).cast() };
+        let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<libc::sockaddr_un>() };
 
         let bytes = path.as_os_str().as_bytes();
         let too_long = match bytes.first() {
@@ -483,13 +482,13 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         unsafe {
             ptr::copy_nonoverlapping(
                 bytes.as_ptr(),
-                storage.sun_path.as_mut_ptr() as *mut u8,
+                storage.sun_path.as_mut_ptr().cast(),
                 bytes.len(),
             )
         };
 
         let base = storage as *const _ as usize;
-        let path = &storage.sun_path as *const _ as usize;
+        let path = ptr::addr_of!(storage.sun_path) as usize;
         let sun_path_offset = path - base;
         sun_path_offset
             + bytes.len()
@@ -955,7 +954,7 @@ pub(crate) unsafe fn setsockopt<T>(
     val: c_int,
     payload: T,
 ) -> io::Result<()> {
-    let payload = &payload as *const T as *const c_void;
+    let payload = ptr::addr_of!(payload).cast();
     syscall!(setsockopt(
         fd,
         opt,
