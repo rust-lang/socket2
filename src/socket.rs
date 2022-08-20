@@ -688,7 +688,7 @@ impl Socket {
 /// Set `SOCK_CLOEXEC` and `NO_HANDLE_INHERIT` on the `ty`pe on platforms that
 /// support it.
 #[inline(always)]
-fn set_common_type(ty: Type) -> Type {
+const fn set_common_type(ty: Type) -> Type {
     // On platforms that support it set `SOCK_CLOEXEC`.
     #[cfg(any(
         target_os = "android",
@@ -1006,7 +1006,7 @@ impl Socket {
     }
 }
 
-fn from_linger(linger: sys::linger) -> Option<Duration> {
+const fn from_linger(linger: sys::linger) -> Option<Duration> {
     if linger.l_onoff == 0 {
         None
     } else {
@@ -1014,7 +1014,7 @@ fn from_linger(linger: sys::linger) -> Option<Duration> {
     }
 }
 
-fn into_linger(duration: Option<Duration>) -> sys::linger {
+const fn into_linger(duration: Option<Duration>) -> sys::linger {
     match duration {
         Some(duration) => sys::linger {
             l_onoff: 1,
