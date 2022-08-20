@@ -135,7 +135,7 @@ impl Socket {
     /// This function corresponds to `socket(2)` on Unix and `WSASocketW` on
     /// Windows and simply creates a new socket, no other configuration is done.
     pub fn new_raw(domain: Domain, ty: Type, protocol: Option<Protocol>) -> io::Result<Socket> {
-        let protocol = protocol.map(|p| p.0).unwrap_or(0);
+        let protocol = protocol.map_or(0, |p| p.0);
         sys::socket(domain.0, ty.0, protocol).map(Socket::from_raw)
     }
 
@@ -170,7 +170,7 @@ impl Socket {
         ty: Type,
         protocol: Option<Protocol>,
     ) -> io::Result<(Socket, Socket)> {
-        let protocol = protocol.map(|p| p.0).unwrap_or(0);
+        let protocol = protocol.map_or(0, |p| p.0);
         sys::socketpair(domain.0, ty.0, protocol)
             .map(|[a, b]| (Socket::from_raw(a), Socket::from_raw(b)))
     }
