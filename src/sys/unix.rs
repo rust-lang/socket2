@@ -535,7 +535,7 @@ impl SockAddr {
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
-    pub fn vsock_address(&self) -> Option<(u32, u32)> {
+    pub fn as_vsock_address(&self) -> Option<(u32, u32)> {
         if self.family() == libc::AF_VSOCK as sa_family_t {
             // Safety: if the ss_family field is AF_VSOCK then storage must be a sockaddr_vm.
             let addr = unsafe { &*(self.as_ptr() as *const libc::sockaddr_vm) };
