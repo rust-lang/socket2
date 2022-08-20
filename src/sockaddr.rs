@@ -267,37 +267,27 @@ impl From<SocketAddrV4> for SockAddr {
 
 impl From<SocketAddrV6> for SockAddr {
     fn from(addr: SocketAddrV6) -> SockAddr {
-        let sockaddr_in6 = sockaddr_in6 {
-            sin6_family: AF_INET6 as sa_family_t,
-            sin6_port: addr.port().to_be(),
-            sin6_addr: crate::sys::to_in6_addr(addr.ip()),
-            sin6_flowinfo: addr.flowinfo(),
+        // SAFETY: a `sockaddr_storage` of all zeros is valid.
+        let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
+        let len = {
+            let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<sockaddr_in6>() };
+            storage.sin6_family = AF_INET6 as sa_family_t;
+            storage.sin6_port = addr.port().to_be();
+            storage.sin6_addr = crate::sys::to_in6_addr(addr.ip());
+            storage.sin6_flowinfo = addr.flowinfo();
             #[cfg(unix)]
-            sin6_scope_id: addr.scope_id(),
+            {
+                storage.sin6_scope_id = addr.scope_id();
+            }
             #[cfg(windows)]
-            Anonymous: SOCKADDR_IN6_0 {
-                sin6_scope_id: addr.scope_id(),
-            },
-            #[cfg(any(
-                target_os = "dragonfly",
-                target_os = "freebsd",
-                target_os = "haiku",
-                target_os = "ios",
-                target_os = "macos",
-                target_os = "netbsd",
-                target_os = "openbsd"
-            ))]
-            sin6_len: 0,
-            #[cfg(any(target_os = "solaris", target_os = "illumos"))]
-            __sin6_src_id: 0,
+            {
+                storage.Anonymous = SOCKADDR_IN6_0 {
+                    sin6_scope_id: addr.scope_id(),
+                };
+            }
+            mem::size_of::<sockaddr_in6>() as socklen_t
         };
-        let mut storage = MaybeUninit::<sockaddr_storage>::zeroed();
-        // Safety: A `sockaddr_in6` is memory compatible with a `sockaddr_storage`
-        unsafe { (storage.as_mut_ptr() as *mut sockaddr_in6).write(sockaddr_in6) };
-        SockAddr {
-            storage: unsafe { storage.assume_init() },
-            len: mem::size_of::<sockaddr_in6>() as socklen_t,
-        }
+        SockAddr { storage, len }
     }
 }
 
