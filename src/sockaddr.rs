@@ -7,9 +7,10 @@ use std::{fmt, io};
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
 
 use crate::sys::{
-    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
+    c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
     AF_INET6,
 };
+use crate::Domain;
 
 /// The address of a socket.
 ///
@@ -144,6 +145,11 @@ impl SockAddr {
     /// Returns this address's family.
     pub const fn family(&self) -> sa_family_t {
         self.storage.ss_family
+    }
+
+    /// Returns this address's `Domain`.
+    pub const fn domain(&self) -> Domain {
+        Domain(self.storage.ss_family as c_int)
     }
 
     /// Returns the size of this address in bytes.
@@ -335,6 +341,7 @@ fn ipv4() {
     let addr = SockAddr::from(std);
     assert_eq!(addr.is_ipv4(), true);
     assert_eq!(addr.family(), AF_INET as sa_family_t);
+    assert_eq!(addr.domain(), Domain::IPV4);
     assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
     assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
     assert_eq!(addr.as_socket_ipv4(), Some(std));
@@ -355,6 +362,7 @@ fn ipv6() {
     let addr = SockAddr::from(std);
     assert_eq!(addr.is_ipv6(), true);
     assert_eq!(addr.family(), AF_INET6 as sa_family_t);
+    assert_eq!(addr.domain(), Domain::IPV6);
     assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
     assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
     assert!(addr.as_socket_ipv4().is_none());
