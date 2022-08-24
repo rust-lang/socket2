@@ -157,6 +157,17 @@ use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(not(any(target_vendor = "apple", target_os = "haiku", target_os = "openbsd")))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
+#[cfg(any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "watchos",
+    target_os = "tvos"
+))]
+pub(crate) use libc::TCP_FASTOPEN;
+
 /// Helper macro to execute a system call that returns an `io::Result`.
 macro_rules! syscall {
     ($fn: ident ( $($arg: expr),* $(,)* ) ) => {{

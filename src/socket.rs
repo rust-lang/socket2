@@ -1457,6 +1457,81 @@ impl Socket {
                 .map(|recv_tos| recv_tos > 0)
         }
     }
+
+    /// Set `TCP_FASTOPEN` option for this socket.
+    ///
+    /// ## Windows
+    ///
+    /// Windows supports TCP Fast Open since Windows 10.
+    ///
+    /// <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options>
+    ///
+    /// `value` is a boolean with only `0` and `1`.
+    ///
+    /// ## Linux
+    ///
+    /// Linux supports TCP Fast Open since 3.7.
+    ///
+    /// <https://lwn.net/Articles/508865/>
+    ///
+    /// The option `value`, `qlen`, specifies this server's limit on the size of the queue of TFO requests that have
+    /// not yet completed the three-way handshake (see the remarks on prevention of resource-exhaustion attacks above).
+    ///
+    /// It was recommended to be `5` in this document.
+    ///
+    /// ## macOS
+    ///
+    /// `value` is a boolean with only `0` and `1`.
+    ///
+    /// ## FreeBSD
+    ///
+    /// FreeBSD supports TCP Fast Open since 12.0.
+    ///
+    /// Example program: <https://people.freebsd.org/~pkelsey/tfo-tools/tfo-srv.c>
+    ///
+    /// `value` is a boolean with only `0` and `1`.
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "watchos",
+        target_os = "tvos",
+        target_os = "windows"
+    ))]
+    pub fn set_tcp_fastopen(&self, value: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt::<c_int>(
+                self.as_raw(),
+                sys::IPPROTO_TCP,
+                sys::TCP_FASTOPEN,
+                value as c_int,
+            )
+        }
+    }
+
+    /// Get the value of `TCP_FASTOPEN` option for this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_fastopen`].
+    ///
+    /// [`set_tcp_fastopen`]: Socket::set_tcp_fastopen
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "watchos",
+        target_os = "tvos",
+        target_os = "windows"
+    ))]
+    pub fn tcp_fastopen(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_FASTOPEN)
+                .map(|c| c as u32)
+        }
+    }
 }
 
 /// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6`.
