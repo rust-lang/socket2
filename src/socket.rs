@@ -1466,7 +1466,7 @@ impl Socket {
     ///
     /// <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options>
     ///
-    /// `value` is a boolean with only `0` and `1`.
+    /// `value` is a boolean with only `0` and `1`. Any `value` > `1` will be set to `1`.
     ///
     /// ## Linux
     ///
@@ -1481,7 +1481,7 @@ impl Socket {
     ///
     /// ## macOS
     ///
-    /// `value` is a boolean with only `0` and `1`.
+    /// `value` is a boolean with only `0` and `1`. Any `value` > `1` will be set to `1`.
     ///
     /// ## FreeBSD
     ///
@@ -1489,7 +1489,7 @@ impl Socket {
     ///
     /// Example program: <https://people.freebsd.org/~pkelsey/tfo-tools/tfo-srv.c>
     ///
-    /// `value` is a boolean with only `0` and `1`.
+    /// `value` is a boolean with only `0` and `1`. Any `value` > `1` will be set to `1`.
     #[cfg(any(
         target_os = "linux",
         target_os = "android",
@@ -1500,7 +1500,11 @@ impl Socket {
         target_os = "tvos",
         target_os = "windows"
     ))]
-    pub fn set_tcp_fastopen(&self, value: u32) -> io::Result<()> {
+    pub fn set_tcp_fastopen(&self, mut value: u32) -> io::Result<()> {
+        if !cfg!(any(target_os = "linux", target_os = "android")) && value > 1 {
+            value = 1;
+        }
+
         unsafe {
             setsockopt::<c_int>(
                 self.as_raw(),

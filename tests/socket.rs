@@ -1299,10 +1299,11 @@ fn tcp_fastopen() {
     let bsaddr = SockAddr::from(baddr);
     socket.bind(&bsaddr).unwrap();
     socket.listen(128).unwrap();
+    socket.set_tcp_fastopen(5).unwrap();
 
     if cfg!(any(target_os = "linux", target_os = "android")) {
-        socket.set_tcp_fastopen(5).unwrap();
+        assert_eq!(socket.tcp_fastopen().unwrap(), 5);
     } else {
-        socket.set_tcp_fastopen(1).unwrap();
+        assert_eq!(socket.tcp_fastopen().unwrap(), 1);
     }
 }
