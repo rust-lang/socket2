@@ -78,8 +78,7 @@ pub(crate) use windows_sys::Win32::Networking::WinSock::{
 };
 pub(crate) const IPPROTO_IP: c_int = windows_sys::Win32::Networking::WinSock::IPPROTO_IP as c_int;
 pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SOL_SOCKET as c_int;
-pub(crate) const TCP_FASTOPEN: c_int =
-    windows_sys::Win32::Networking::WinSock::TCP_FASTOPEN as c_int;
+pub(crate) const TCP_FASTOPEN: u32 = windows_sys::Win32::Networking::WinSock::TCP_FASTOPEN as u32;
 
 /// Type used in set/getsockopt to retrieve the `TCP_NODELAY` option.
 ///
