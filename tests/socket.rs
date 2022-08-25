@@ -1301,7 +1301,7 @@ fn tcp_fastopen() {
     socket.listen(128).unwrap();
     socket.set_tcp_fastopen(5).unwrap();
 
-    #[cfg(not(target_os = "linux", target_os = "android"))]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     let expected = 5;
     #[cfg(not(any(target_os = "linux", target_os = "android")))]
     let expected = 1;
