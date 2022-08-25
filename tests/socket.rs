@@ -1281,3 +1281,19 @@ fn header_included() {
     let got = socket.header_included().expect("failed to get value");
     assert_eq!(got, true, "set and get values differ");
 }
+
+#[test]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "watchos",
+    target_os = "tvos",
+    target_os = "windows"
+))]
+fn tcp_fastopen() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    socket.set_tcp_fastopen(5).unwrap();
+}
