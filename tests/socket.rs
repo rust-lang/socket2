@@ -1299,5 +1299,10 @@ fn tcp_fastopen() {
     let bsaddr = SockAddr::from(baddr);
     socket.bind(&bsaddr).unwrap();
     socket.listen(128).unwrap();
-    socket.set_tcp_fastopen(5).unwrap();
+
+    if cfg!(any(target_os = "linux", target_os = "android")) {
+        socket.set_tcp_fastopen(5).unwrap();
+    } else {
+        socket.set_tcp_fastopen(1).unwrap();
+    }
 }
