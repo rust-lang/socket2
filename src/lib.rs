@@ -427,9 +427,11 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
+            target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
+            target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
@@ -441,8 +443,11 @@ impl TcpKeepalive {
         doc(cfg(all(
             feature = "all",
             any(
+                target_os = "android",
+                target_os = "dragonfly",
                 target_os = "freebsd",
                 target_os = "fuchsia",
+                target_os = "illumos",
                 target_os = "linux",
                 target_os = "netbsd",
                 target_vendor = "apple",
@@ -465,9 +470,11 @@ impl TcpKeepalive {
         feature = "all",
         any(
             doc,
+            target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
+            target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
             target_vendor = "apple",
@@ -478,8 +485,11 @@ impl TcpKeepalive {
         doc(cfg(all(
             feature = "all",
             any(
+                target_os = "android",
+                target_os = "dragonfly",
                 target_os = "freebsd",
                 target_os = "fuchsia",
+                target_os = "illumos",
                 target_os = "linux",
                 target_os = "netbsd",
                 target_vendor = "apple",
