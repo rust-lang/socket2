@@ -1501,7 +1501,8 @@ impl Socket {
         target_os = "windows"
     ))]
     pub fn set_tcp_fastopen(&self, mut value: u32) -> io::Result<()> {
-        if !cfg!(any(target_os = "linux", target_os = "android")) && value > 1 {
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        if value > 1 {
             value = 1;
         }
 
