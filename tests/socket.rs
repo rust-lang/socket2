@@ -1295,5 +1295,9 @@ fn header_included() {
 ))]
 fn tcp_fastopen() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    let baddr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0);
+    let bsaddr = SockAddr::from(baddr);
+    socket.bind(&bsaddr).unwrap();
+    socket.listen(128).unwrap();
     socket.set_tcp_fastopen(5).unwrap();
 }
