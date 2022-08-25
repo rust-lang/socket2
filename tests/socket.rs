@@ -1301,9 +1301,9 @@ fn tcp_fastopen() {
     socket.listen(128).unwrap();
     socket.set_tcp_fastopen(5).unwrap();
 
-    if cfg!(any(target_os = "linux", target_os = "android")) {
-        assert_eq!(socket.tcp_fastopen().unwrap(), 5);
-    } else {
-        assert_eq!(socket.tcp_fastopen().unwrap(), 1);
-    }
+    #[cfg(not(target_os = "linux", target_os = "android"))]
+    let expected = 5;
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    let expected = 1;
+    assert_eq!(socket.tcp_fastopen().unwrap(), expected);
 }
