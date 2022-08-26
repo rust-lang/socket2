@@ -128,7 +128,7 @@ where
     /// See the `From<&impl AsRawFd>` implementation.
     fn from(socket: &'s S) -> Self {
         let socket = socket.as_raw_socket();
-        assert!(socket != windows_sys::Win32::Networking::WinSock::INVALID_SOCKET as _);
+        assert!(socket != winapi::um::winsock2::INVALID_SOCKET as _);
         SockRef {
             socket: ManuallyDrop::new(unsafe { Socket::from_raw_socket(socket) }),
             _lifetime: PhantomData,
