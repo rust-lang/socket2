@@ -1533,9 +1533,14 @@ impl Socket {
         target_os = "windows"
     ))]
     pub fn tcp_fastopen(&self) -> io::Result<u32> {
+        #[cfg(not(target_os = "windows"))]
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_FASTOPEN)
                 .map(|c| c as u32)
+        }
+        #[cfg(target_os = "windows")]
+        unsafe {
+            getsockopt::<u8>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_FASTOPEN).map(|c| c as u32)
         }
     }
 }
