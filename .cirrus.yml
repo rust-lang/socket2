@@ -6,9 +6,6 @@ env:
 
 task:
   name: FreeBSD
-  enable_tcp_fastopen:
-    - sysctl net.inet.tcp.fastopen.client_enabled=1
-    - sysctl net.inet.tcp.fastopen.server_enabled=1
   setup_script:
     - pkg install -y curl
     - curl https://sh.rustup.rs -sSf --output rustup.sh
@@ -19,6 +16,9 @@ task:
     - . $HOME/.cargo/env
     - cargo build
     - cargo build --no-default-features
+  enable_tcp_fastopen:
+    - sysctl net.inet.tcp.fastopen.client_enabled=1
+    - sysctl net.inet.tcp.fastopen.server_enabled=1
   amd64_test_script:
     - . $HOME/.cargo/env
     - cargo test --all-features
