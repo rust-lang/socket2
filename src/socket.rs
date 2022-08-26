@@ -1500,6 +1500,7 @@ impl Socket {
         target_os = "tvos",
         target_os = "windows"
     ))]
+    #[allow(unused_mut)]
     pub fn set_tcp_fastopen(&self, mut value: u32) -> io::Result<()> {
         #[cfg(not(any(target_os = "linux", target_os = "android")))]
         if value > 1 {
