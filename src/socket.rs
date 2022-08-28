@@ -1215,6 +1215,7 @@ impl Socket {
     /// multicast group. If it's [`Ipv4Addr::UNSPECIFIED`] (`INADDR_ANY`) then
     /// an appropriate interface is chosen by the system.
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "haiku",
         target_os = "netbsd",
         target_os = "redox",
@@ -1247,6 +1248,7 @@ impl Socket {
     ///
     /// [`join_ssm_v4`]: Socket::join_ssm_v4
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "haiku",
         target_os = "netbsd",
         target_os = "redox",
