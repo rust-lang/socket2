@@ -1395,6 +1395,7 @@ impl Socket {
     /// incoming packets. It contains a byte which specifies the
     /// Type of Service/Precedence field of the packet header.
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "fuchsia",
         target_os = "illumos",
         target_os = "netbsd",
@@ -1422,6 +1423,7 @@ impl Socket {
     ///
     /// [`set_recv_tos`]: Socket::set_recv_tos
     #[cfg(not(any(
+        target_os = "dragonfly",
         target_os = "fuchsia",
         target_os = "illumos",
         target_os = "netbsd",
