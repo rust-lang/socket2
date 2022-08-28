@@ -106,6 +106,7 @@ pub(crate) use libc::{
     SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "haiku",
     target_os = "netbsd",
     target_os = "redox",
