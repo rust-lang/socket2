@@ -1186,6 +1186,7 @@ test!(IPv4 ttl, set_ttl(40));
 test!(IPv4 tos, set_tos(96));
 
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
@@ -1244,6 +1245,7 @@ fn join_leave_multicast_v4_n() {
 
 #[test]
 #[cfg(not(any(
+    target_os = "dragonfly",
     target_os = "haiku",
     target_os = "netbsd",
     target_os = "redox",
