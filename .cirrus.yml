@@ -17,8 +17,8 @@ task:
     - cargo build
     - cargo build --no-default-features
   enable_tcp_fastopen:
-    - sysctl net.inet.tcp.fastopen.client_enabled=1
-    - sysctl net.inet.tcp.fastopen.server_enabled=1
+    - sudo sysctl net.inet.tcp.fastopen.client_enable=1
+    - sudo sysctl net.inet.tcp.fastopen.server_enable=1
   amd64_test_script:
     - . $HOME/.cargo/env
     - cargo test --all-features
