@@ -107,6 +107,7 @@ pub(crate) use libc::{
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "fuchsia",
 )))]
