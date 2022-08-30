@@ -1218,6 +1218,7 @@ impl Socket {
         target_os = "dragonfly",
         target_os = "haiku",
         target_os = "netbsd",
+        target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
     )))]
@@ -1251,6 +1252,7 @@ impl Socket {
         target_os = "dragonfly",
         target_os = "haiku",
         target_os = "netbsd",
+        target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
     )))]
