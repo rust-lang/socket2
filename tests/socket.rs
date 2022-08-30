@@ -1177,6 +1177,7 @@ test!(IPv4 tos, set_tos(96));
     target_os = "fuchsia",
     target_os = "illumos",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
     target_os = "windows",
