@@ -109,6 +109,7 @@ pub(crate) use libc::{
     target_os = "dragonfly",
     target_os = "haiku",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
     target_os = "fuchsia",
 )))]
