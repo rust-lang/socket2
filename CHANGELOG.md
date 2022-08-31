@@ -1,3 +1,10 @@
+# 0.4.7
+
+* Fixes compilation on OpenBSD
+  (https://github.com/rust-lang/socket2/pull/344).
+* Fixes compilation on DragonFlyBSD
+  (https://github.com/rust-lang/socket2/pull/342).
+
 # 0.4.6
 
 * Reverted back to the `winapi` dependency as switch to `windows-sys` was a
