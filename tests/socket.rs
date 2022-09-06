@@ -227,17 +227,19 @@ fn type_nonblocking() {
 /// Assert that `NONBLOCK` is set on `socket`.
 #[cfg(unix)]
 #[track_caller]
-pub fn assert_nonblocking<S>(socket: &S, want: bool)
-where
-    S: AsRawFd,
-{
-    let flags = unsafe { libc::fcntl(socket.as_raw_fd(), libc::F_GETFL) };
-    assert_eq!(flags & libc::O_NONBLOCK != 0, want, "non-blocking option");
+pub fn assert_nonblocking(socket: &Socket, want: bool) {
+    #[cfg(all(feature = "all", unix))]
+    assert_eq!(socket.nonblocking().unwrap(), want, "non-blocking option");
+    #[cfg(not(all(feature = "all", unix)))]
+    {
+        let flags = unsafe { libc::fcntl(socket.as_raw_fd(), libc::F_GETFL) };
+        assert_eq!(flags & libc::O_NONBLOCK != 0, want, "non-blocking option");
+    }
 }
 
 #[cfg(windows)]
 #[track_caller]
-pub fn assert_nonblocking<S>(_: &S, _: bool) {
+pub fn assert_nonblocking(_: &Socket, _: bool) {
     // No way to get this information...
 }
 

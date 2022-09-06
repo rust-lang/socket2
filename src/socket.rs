@@ -357,7 +357,21 @@ impl Socket {
         sys::try_clone(self.as_raw()).map(Socket::from_raw)
     }
 
-    /// Moves this TCP stream into or out of nonblocking mode.
+    /// Returns true if this socket is set to nonblocking mode, false otherwise.
+    ///
+    /// # Notes
+    ///
+    /// On Unix this corresponds to calling `fcntl` returning the value of
+    /// `O_NONBLOCK`.
+    ///
+    /// On Windows it is not possible retrieve the nonblocking mode status.
+    #[cfg(all(feature = "all", unix))]
+    #[cfg_attr(docsrs, doc(all(feature = "all", unix)))]
+    pub fn nonblocking(&self) -> io::Result<bool> {
+        sys::nonblocking(self.as_raw())
+    }
+
+    /// Moves this socket into or out of nonblocking mode.
     ///
     /// # Notes
     ///
