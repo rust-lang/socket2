@@ -661,6 +661,12 @@ pub(crate) fn try_clone(fd: Socket) -> io::Result<Socket> {
     syscall!(fcntl(fd, libc::F_DUPFD_CLOEXEC, 0))
 }
 
+#[cfg(all(feature = "all", unix))]
+pub(crate) fn nonblocking(fd: Socket) -> io::Result<bool> {
+    let file_status_flags = fcntl_get(fd, libc::F_GETFL)?;
+    Ok((file_status_flags & libc::O_NONBLOCK) != 0)
+}
+
 pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
     if nonblocking {
         fcntl_add(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
@@ -907,9 +913,14 @@ fn into_secs(duration: Duration) -> c_int {
     min(duration.as_secs(), c_int::MAX as u64) as c_int
 }
 
+/// Get the flags using `cmd`.
+fn fcntl_get(fd: Socket, cmd: c_int) -> io::Result<c_int> {
+    syscall!(fcntl(fd, cmd))
+}
+
 /// Add `flag` to the current set flags of `F_GETFD`.
 fn fcntl_add(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
-    let previous = syscall!(fcntl(fd, get_cmd))?;
+    let previous = fcntl_get(fd, get_cmd)?;
     let new = previous | flag;
     if new != previous {
         syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
@@ -921,7 +932,7 @@ fn fcntl_add(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Res
 
 /// Remove `flag` to the current set flags of `F_GETFD`.
 fn fcntl_remove(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
-    let previous = syscall!(fcntl(fd, get_cmd))?;
+    let previous = fcntl_get(fd, get_cmd)?;
     let new = previous & !flag;
     if new != previous {
         syscall!(fcntl(fd, set_cmd, new)).map(|_| ())
