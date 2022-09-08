@@ -63,6 +63,8 @@ pub(crate) use libc::SOCK_RAW;
 pub(crate) use libc::SOCK_SEQPACKET;
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
+#[cfg(target_os = "linux")]
+pub(crate) use libc::IPPROTO_MPTCP;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
@@ -386,6 +388,8 @@ impl_debug!(
     libc::IPPROTO_ICMPV6,
     libc::IPPROTO_TCP,
     libc::IPPROTO_UDP,
+    #[cfg(target_os = "linux")]
+    libc::IPPROTO_MPTCP,
 );
 
 /// Unix-only API.

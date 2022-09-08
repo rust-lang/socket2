@@ -302,6 +302,10 @@ impl Protocol {
 
     /// Protocol corresponding to `UDP`.
     pub const UDP: Protocol = Protocol(sys::IPPROTO_UDP);
+
+    #[cfg(target_os = "linux")]
+    /// Protocol corresponding to `MPTCP`.
+    pub const MPTCP: Protocol = Protocol(sys::IPPROTO_MPTCP);
 }
 
 impl From<c_int> for Protocol {

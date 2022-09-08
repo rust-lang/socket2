@@ -106,6 +106,8 @@ fn protocol_fmt_debug() {
         (Protocol::ICMPV6, "IPPROTO_ICMPV6"),
         (Protocol::TCP, "IPPROTO_TCP"),
         (Protocol::UDP, "IPPROTO_UDP"),
+        #[cfg(target_os = "linux")]
+        (Protocol::MPTCP, "IPPROTO_MPTCP"),
         (500.into(), "500"),
     ];
 
