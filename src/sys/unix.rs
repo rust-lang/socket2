@@ -18,6 +18,7 @@ use std::num::NonZeroU32;
 #[cfg(all(
     feature = "all",
     any(
+        target_os = "aix",
         target_os = "android",
         target_os = "freebsd",
         target_os = "linux",
@@ -29,6 +30,7 @@ use std::os::unix::ffi::OsStrExt;
 #[cfg(all(
     feature = "all",
     any(
+        target_os = "aix",
         target_os = "android",
         target_os = "freebsd",
         target_os = "linux",
@@ -96,6 +98,7 @@ pub(crate) use libc::IPV6_RECVTCLASS;
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
+    target_os = "aix",
     target_os = "dragonfly",
     target_os = "fuchsia",
     target_os = "illumos",
@@ -242,6 +245,7 @@ type IovLen = usize;
             all(target_env = "uclibc", target_pointer_width = "32")
         )
     ),
+    target_os = "aix",
     target_os = "dragonfly",
     target_os = "freebsd",
     target_os = "fuchsia",
@@ -920,6 +924,7 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
     }
 
     #[cfg(any(
+        target_os = "aix",
         target_os = "android",
         target_os = "dragonfly",
         target_os = "freebsd",
@@ -1043,6 +1048,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
 }
 
 #[cfg(not(any(
+    target_os = "aix",
     target_os = "haiku",
     target_os = "illumos",
     target_os = "netbsd",
@@ -1216,6 +1222,7 @@ impl crate::Socket {
     #[cfg(all(
         feature = "all",
         any(
+            target_os = "aix",
             target_os = "android",
             target_os = "freebsd",
             target_os = "fuchsia",
@@ -1227,6 +1234,7 @@ impl crate::Socket {
         doc(cfg(all(
             feature = "all",
             any(
+                target_os = "aix",
                 target_os = "android",
                 target_os = "freebsd",
                 target_os = "fuchsia",
@@ -1901,6 +1909,7 @@ impl crate::Socket {
     #[cfg(all(
         feature = "all",
         any(
+            target_os = "aix",
             target_os = "android",
             target_os = "freebsd",
             target_os = "linux",
@@ -1912,6 +1921,7 @@ impl crate::Socket {
         doc(cfg(all(
             feature = "all",
             any(
+                target_os = "aix",
                 target_os = "android",
                 target_os = "freebsd",
                 target_os = "linux",
@@ -1995,6 +2005,37 @@ impl crate::Socket {
             0,
         ))
         .map(|_| sbytes as usize)
+    }
+
+    #[cfg(all(feature = "all", target_os = "aix"))]
+    fn _sendfile(
+        &self,
+        file: RawFd,
+        offset: libc::off_t,
+        length: Option<NonZeroUsize>,
+    ) -> io::Result<usize> {
+        let nbytes = match length {
+            Some(n) => n.get() as i64,
+            None => -1,
+        };
+        let mut params = libc::sf_parms {
+            header_data: ptr::null_mut(),
+            header_length: 0,
+            file_descriptor: file,
+            file_size: 0,
+            file_offset: offset as u64,
+            file_bytes: nbytes,
+            trailer_data: ptr::null_mut(),
+            trailer_length: 0,
+            bytes_sent: 0,
+        };
+        // AIX doesn't support SF_REUSE, socket will be closed after successful transmission.
+        syscall!(send_file(
+            &mut self.as_raw() as *mut _,
+            &mut params as *mut _,
+            libc::SF_CLOSE as libc::c_uint,
+        ))
+        .map(|_| params.bytes_sent as usize)
     }
 
     /// Set the value of the `TCP_USER_TIMEOUT` option on this socket.
