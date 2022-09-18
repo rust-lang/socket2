@@ -1170,6 +1170,7 @@ impl Socket {
     /// the local interface with which the system should join the multicast
     /// group. See [`InterfaceIndexOrAddress`].
     #[cfg(not(any(
+        target_os = "aix",
         target_os = "haiku",
         target_os = "illumos",
         target_os = "netbsd",
@@ -1200,6 +1201,7 @@ impl Socket {
     ///
     /// [`join_multicast_v4_n`]: Socket::join_multicast_v4_n
     #[cfg(not(any(
+        target_os = "aix",
         target_os = "haiku",
         target_os = "illumos",
         target_os = "netbsd",
@@ -1441,6 +1443,7 @@ impl Socket {
     /// incoming packets. It contains a byte which specifies the
     /// Type of Service/Precedence field of the packet header.
     #[cfg(not(any(
+        target_os = "aix",
         target_os = "dragonfly",
         target_os = "fuchsia",
         target_os = "illumos",
@@ -1468,6 +1471,7 @@ impl Socket {
     ///
     /// [`set_recv_tos`]: Socket::set_recv_tos
     #[cfg(not(any(
+        target_os = "aix",
         target_os = "dragonfly",
         target_os = "fuchsia",
         target_os = "illumos",
