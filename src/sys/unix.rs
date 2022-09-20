@@ -61,10 +61,13 @@ pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
 pub(crate) use libc::SOCK_RAW;
 #[cfg(feature = "all")]
 pub(crate) use libc::SOCK_SEQPACKET;
+#[cfg(target_os = "linux")]
+pub(crate) use libc::{SOCK_DCCP};
+
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
 #[cfg(target_os = "linux")]
-pub(crate) use libc::IPPROTO_MPTCP;
+pub(crate) use libc::{IPPROTO_MPTCP, IPPROTO_DCCP};
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
