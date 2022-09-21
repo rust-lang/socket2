@@ -1883,16 +1883,16 @@ impl Socket {
         unsafe { getsockopt(self.as_raw(), sys::SOL_DCCP, sys::DCCP_SOCKOPT_GET_CUR_MPS) }
     }
 
-    /// Set's both the TX and RX CCIDs
-    /// Setting of different TX and RX CCIDs, while in practice allowed, is rarely done and not supported by this library.
+    /// Set both the TX and RX CCIDs
+    /// Different TX and RX CCIDs, while in practice allowed, is rarely done and not supported by this library.
     // todo: allow passing of multiple CCIDs
     pub fn dccp_set_ccid(&self, ccid: u8) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), sys::SOL_DCCP, sys::DCCP_SOCKOPT_CCID, ccid) }
     }
 
-    /// Gets the current CCID if set.
-    /// The underlying sockopt used here is the DCCP_SOCKOPT_TX_CCID. This means that theoreticcaly only the CCID for TX is returned.
-    /// However in practice setting different TX and RX CCIDs is rarely used.
+    /// Get the current CCID if set.
+    /// The underlying sockopt used here is the DCCP_SOCKOPT_TX_CCID. This means that theoretically only the CCID for TX is returned.
+    /// However, in practice setting different TX and RX CCIDs is rarely used.
     pub fn dccp_ccid(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), sys::SOL_DCCP, sys::DCCP_SOCKOPT_TX_CCID) }
     }
@@ -1924,14 +1924,14 @@ impl Socket {
         }
     }
 
-    /// Get the value of partial checksum coverage on the reciever side
+    /// Get the value of partial checksum coverage on the receiver side
     pub fn dccp_recv_cscov(&self) -> io::Result<u32> {
         unsafe {
             getsockopt(self.as_raw(), sys::SOL_DCCP, sys::DCCP_SOCKOPT_RECV_CSCOV)
         }
     }
 
-    /// Set the value of partial checksum coverage on the reciever side
+    /// Set the value of partial checksum coverage on the receiver side
     pub fn dccp_set_recv_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
             setsockopt(self.as_raw(), sys::SOL_DCCP, sys::DCCP_SOCKOPT_RECV_CSCOV, level)
