@@ -394,6 +394,8 @@ impl_debug!(
     libc::IPPROTO_UDP,
     #[cfg(target_os = "linux")]
     libc::IPPROTO_MPTCP,
+    #[cfg(target_os = "linux")]
+    libc::IPPROTO_DCCP
 );
 
 /// Unix-only API.

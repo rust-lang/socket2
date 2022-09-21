@@ -108,6 +108,8 @@ fn protocol_fmt_debug() {
         (Protocol::UDP, "IPPROTO_UDP"),
         #[cfg(target_os = "linux")]
         (Protocol::MPTCP, "IPPROTO_MPTCP"),
+        #[cfg(target_os = "linux")]
+        (Protocol::DCCP, "IPPROTO_DCCP"),
         (500.into(), "500"),
     ];
 
