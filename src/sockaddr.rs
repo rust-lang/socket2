@@ -25,6 +25,7 @@ pub struct SockAddr {
 #[allow(clippy::len_without_is_empty)]
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
+    /// The provided path can start with '@' instead of the null byte (\0).
     ///
     /// Returns an error if the path is longer than `SUN_LEN`.
     pub fn unix<P>(path: P) -> io::Result<SockAddr>

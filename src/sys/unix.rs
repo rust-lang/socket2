@@ -46,7 +46,7 @@ use std::{io, slice};
 
 #[cfg(not(target_vendor = "apple"))]
 use libc::ssize_t;
-use libc::{in6_addr, in_addr};
+use libc::{c_char, in6_addr, in_addr};
 
 #[cfg(not(target_os = "redox"))]
 use crate::RecvFlags;
@@ -468,10 +468,11 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<libc::sockaddr_un>() };
 
         let bytes = path.as_os_str().as_bytes();
+
         let too_long = match bytes.first() {
             None => false,
             // linux abstract namespaces aren't null-terminated
-            Some(&0) => bytes.len() > storage.sun_path.len(),
+            Some(v) if v == &0 || v == &b'@' => bytes.len() > storage.sun_path.len(),
             Some(_) => bytes.len() >= storage.sun_path.len(),
         };
         if too_long {
@@ -494,13 +495,18 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
             );
         }
 
+        if bytes.first() == Some(&b'@') {
+            storage.sun_path[0] = 0 as c_char;
+        }
+
         let base = storage as *const _ as usize;
         let path = ptr::addr_of!(storage.sun_path) as usize;
         let sun_path_offset = path - base;
         sun_path_offset
             + bytes.len()
             + match bytes.first() {
-                Some(&0) | None => 0,
+                None => 0,
+                Some(v) if v == &0 || v == &b'@' => 0,
                 Some(_) => 1,
             }
     };

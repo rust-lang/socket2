@@ -148,6 +148,17 @@ fn socket_address_unix_abstract_namespace() {
 }
 
 #[test]
+#[cfg(all(any(target_os = "linux", target_os = "android"), feature = "all"))]
+fn socket_address_unix_abstract_namespace_starting_with_at_symbol() {
+    let path = format!("@h\0{}", "h".repeat(105));
+    let addr = SockAddr::unix(path).unwrap();
+    assert_eq!(
+        addr.len() as usize,
+        std::mem::size_of::<libc::sockaddr_un>()
+    );
+}
+
+#[test]
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
 fn socket_address_vsock() {
     let addr = SockAddr::vsock(1, 9999);
