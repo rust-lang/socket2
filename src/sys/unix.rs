@@ -57,17 +57,17 @@ pub(crate) use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
 // Used in `Type`.
+#[cfg(target_os = "linux")]
+pub(crate) use libc::SOCK_DCCP;
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::SOCK_RAW;
 #[cfg(feature = "all")]
 pub(crate) use libc::SOCK_SEQPACKET;
-#[cfg(target_os = "linux")]
-pub(crate) use libc::{SOCK_DCCP};
 
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
 #[cfg(target_os = "linux")]
-pub(crate) use libc::{IPPROTO_MPTCP, IPPROTO_DCCP};
+pub(crate) use libc::{IPPROTO_DCCP, IPPROTO_MPTCP};
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
@@ -158,7 +158,11 @@ pub(crate) use libc::{
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
 #[cfg(target_os = "linux")]
-pub(crate) use libc::{SOL_DCCP, DCCP_SOCKOPT_SERVICE};
+pub(crate) use libc::{
+    DCCP_SOCKOPT_CCID, DCCP_SOCKOPT_GET_CUR_MPS,
+    DCCP_SOCKOPT_QPOLICY_TXQLEN, DCCP_SOCKOPT_RECV_CSCOV, DCCP_SOCKOPT_SEND_CSCOV,
+    DCCP_SOCKOPT_SERVER_TIMEWAIT, DCCP_SOCKOPT_SERVICE, DCCP_SOCKOPT_TX_CCID, SOL_DCCP,
+};
 
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
@@ -1510,6 +1514,22 @@ impl crate::Socket {
             // TODO: use `MaybeUninit::slice_assume_init_ref` once stable.
             Ok(Some(unsafe { &*(buf as *const [_] as *const [u8]) }.into()))
         }
+    }
+
+    /// Returns list of CCIDs supported by the endpoint
+    #[cfg(target_os = "linux")]
+    pub fn dccp_available_ccids(&self) -> io::Result<Vec<u8>> {
+        let mut buf: [MaybeUninit<u8>; 10] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut len = buf.len() as libc::socklen_t;
+        syscall!(getsockopt(
+            self.as_raw(),
+            libc::SOL_DCCP,
+            libc::DCCP_SOCKOPT_AVAILABLE_CCIDS,
+            buf.as_mut_ptr().cast(),
+            &mut len,
+        ))?;
+        let buf = &buf[..len as usize - 1];
+        Ok(unsafe { &*(buf as *const [_] as *const [u8]) }.into())
     }
 
     /// Sets the value for the `SO_BINDTODEVICE` option on this socket.
