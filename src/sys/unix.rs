@@ -157,12 +157,6 @@ pub(crate) use libc::{
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
-#[cfg(target_os = "linux")]
-pub(crate) use libc::{
-    DCCP_SOCKOPT_CCID, DCCP_SOCKOPT_GET_CUR_MPS,
-    DCCP_SOCKOPT_QPOLICY_TXQLEN, DCCP_SOCKOPT_RECV_CSCOV, DCCP_SOCKOPT_SEND_CSCOV,
-    DCCP_SOCKOPT_SERVER_TIMEWAIT, DCCP_SOCKOPT_SERVICE, DCCP_SOCKOPT_TX_CCID, SOL_DCCP,
-};
 
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
@@ -2023,6 +2017,110 @@ impl crate::Socket {
     pub fn detach_filter(&self) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
     }
+
+    #[cfg(target_os = "linux")]
+    /// Get the service
+    pub fn dccp_service(&self) -> io::Result<u32> {
+        unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SERVICE) }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Set the service
+    pub fn dccp_set_service(&self, code: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_SERVICE,
+                code,
+            )
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Get the current maximum packet size
+    pub fn dccp_cur_mps(&self) -> io::Result<u32> {
+        unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_GET_CUR_MPS) }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Set both the TX and RX CCIDs
+    /// Different TX and RX CCIDs, while in practice allowed, is rarely done and not supported by this library.
+    // todo: allow passing of multiple CCIDs
+    pub fn dccp_set_ccid(&self, ccid: u8) -> io::Result<()> {
+        unsafe { setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_CCID, ccid) }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Get the current CCID if set.
+    /// The underlying sockopt used here is the DCCP_SOCKOPT_TX_CCID. This means that theoretically only the CCID for TX is returned.
+    /// However, in practice setting different TX and RX CCIDs is rarely used.
+    pub fn dccp_ccid(&self) -> io::Result<u32> {
+        unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_TX_CCID) }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Enables the server to hold the timewait state when closing the connection.
+    /// Only available for listening sockets
+    pub fn dccp_set_server_timewait(&self, hold_timewait: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_SERVER_TIMEWAIT,
+                hold_timewait as c_int,
+            )
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Get the value of partial checksum coverage on the sender side
+    pub fn dccp_send_cscov(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Set the value of partial checksum coverage on the sender side
+    pub fn dccp_set_send_cscov(&self, level: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV, level)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Get the value of partial checksum coverage on the receiver side
+    pub fn dccp_recv_cscov(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Set the value of partial checksum coverage on the receiver side
+    pub fn dccp_set_recv_cscov(&self, level: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV, level)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Get the maximum length of the output queue
+    pub fn dccp_qpolicy_txqlen(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_QPOLICY_TXQLEN)
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    /// Set the maximum length of the output queue
+    pub fn dccp_set_qpolicy_txqlen(&self, qlen: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_QPOLICY_TXQLEN, qlen)
+        }
+    }
+        
 }
 
 #[cfg_attr(docsrs, doc(cfg(unix)))]
