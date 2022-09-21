@@ -1856,6 +1856,28 @@ impl Socket {
     }
 }
 
+/// Socket options for the DCCP protocol
+///
+/// for more info see the linux kernel documentation <https://www.kernel.org/doc/html/latest/networking/dccp.html>
+impl Socket {
+    /// Get the service
+    pub fn dccp_service(&self) -> io::Result<u32> {
+        unsafe { getsockopt(self.as_raw(), sys::SOCK_DCCP, sys::DCCP_SOCKOPT_SERVICE) }
+    }
+
+    /// Set the service
+    pub fn dccp_set_service(&self, code: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::SOL_DCCP,
+                sys::DCCP_SOCKOPT_SERVICE,
+                code,
+            )
+        }
+    }
+}
+
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         // Safety: the `recv` implementation promises not to write uninitialised

@@ -157,6 +157,9 @@ pub(crate) use libc::{
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
+#[cfg(target_os = "linux")]
+pub(crate) use libc::{SOL_DCCP, DCCP_SOCKOPT_SERVICE};
+
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
