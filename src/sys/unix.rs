@@ -157,7 +157,6 @@ pub(crate) use libc::{
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
-
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
@@ -2042,7 +2041,13 @@ impl crate::Socket {
     #[cfg(target_os = "linux")]
     /// Get the current maximum packet size
     pub fn dccp_cur_mps(&self) -> io::Result<u32> {
-        unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_GET_CUR_MPS) }
+        unsafe {
+            getsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_GET_CUR_MPS,
+            )
+        }
     }
 
     #[cfg(target_os = "linux")]
@@ -2078,32 +2083,38 @@ impl crate::Socket {
     #[cfg(target_os = "linux")]
     /// Get the value of partial checksum coverage on the sender side
     pub fn dccp_send_cscov(&self) -> io::Result<u32> {
-        unsafe {
-            getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV)
-        }
+        unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV) }
     }
 
     #[cfg(target_os = "linux")]
     /// Set the value of partial checksum coverage on the sender side
     pub fn dccp_set_send_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
-            setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV, level)
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_SEND_CSCOV,
+                level,
+            )
         }
     }
 
     #[cfg(target_os = "linux")]
     /// Get the value of partial checksum coverage on the receiver side
     pub fn dccp_recv_cscov(&self) -> io::Result<u32> {
-        unsafe {
-            getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV)
-        }
+        unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV) }
     }
 
     #[cfg(target_os = "linux")]
     /// Set the value of partial checksum coverage on the receiver side
     pub fn dccp_set_recv_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
-            setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV, level)
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_RECV_CSCOV,
+                level,
+            )
         }
     }
 
@@ -2111,7 +2122,11 @@ impl crate::Socket {
     /// Get the maximum length of the output queue
     pub fn dccp_qpolicy_txqlen(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_QPOLICY_TXQLEN)
+            getsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_QPOLICY_TXQLEN,
+            )
         }
     }
 
@@ -2119,10 +2134,14 @@ impl crate::Socket {
     /// Set the maximum length of the output queue
     pub fn dccp_set_qpolicy_txqlen(&self, qlen: u32) -> io::Result<()> {
         unsafe {
-            setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_QPOLICY_TXQLEN, qlen)
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_QPOLICY_TXQLEN,
+                qlen,
+            )
         }
     }
-        
 }
 
 #[cfg_attr(docsrs, doc(cfg(unix)))]

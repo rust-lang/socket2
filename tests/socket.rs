@@ -1306,8 +1306,11 @@ fn test_dccp() {
     socket_s.dccp_set_service(45).unwrap();
     assert!(socket_s.dccp_service().unwrap() == 45);
     assert!(socket_s.dccp_cur_mps().unwrap() > 0);
-    assert!(socket_s.dccp_available_ccids().unwrap().len() >= 1);
-    assert!(socket_s.dccp_send_cscov().unwrap() == 0, "sender cscov should be zero by default");
+    assert!(!socket_s.dccp_available_ccids().unwrap().is_empty());
+    assert!(
+        socket_s.dccp_send_cscov().unwrap() == 0,
+        "sender cscov should be zero by default"
+    );
     socket_s.dccp_set_ccid(2).unwrap();
     socket_s.dccp_set_qpolicy_txqlen(6).unwrap();
     assert!(socket_s.dccp_qpolicy_txqlen().unwrap() == 6);
@@ -1320,7 +1323,7 @@ fn test_dccp() {
 
     let (mut socket_s_c, _) = socket_s.accept().unwrap();
     let msg = "Hello World!";
-    socket_c.write(msg.as_bytes()).unwrap();
-    let mut recv_buf = [0 as u8; 64];
+    assert!(socket_c.write(msg.as_bytes()).unwrap() == msg.len());
+    let mut recv_buf = [0_u8; 64];
     assert!(socket_s_c.read(&mut recv_buf).unwrap() == msg.len());
 }

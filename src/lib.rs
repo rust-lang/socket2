@@ -259,7 +259,7 @@ impl Type {
 
     #[cfg(target_os = "linux")]
     /// Type corresponding to `SOCK_DCCP`
-    /// 
+    ///
     /// Used for the DCCP protocol
     pub const DCCP: Type = Type(sys::SOCK_DCCP);
 
