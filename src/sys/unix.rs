@@ -1511,26 +1511,6 @@ impl crate::Socket {
         }
     }
 
-    /// Returns list of CCIDs supported by the endpoint.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
-    pub fn dccp_available_ccids(&self) -> io::Result<Vec<u8>> {
-        // Creating the buffer with a value of 5 is ~probably~ fine. 
-        // https://www.kernel.org/doc/html/latest/networking/dccp.html says the minimum is 4, however currently there are only 3 CCIDs implemented in the kernel.
-        // So 5 should cover us for some time. Even if 3 more CCIDs are implemented it would be very unlikely, that all 6 are available. 
-        let mut buf: [MaybeUninit<u8>; 5] = unsafe { MaybeUninit::uninit().assume_init() };
-        let mut len = buf.len() as libc::socklen_t;
-        syscall!(getsockopt(
-            self.as_raw(),
-            libc::SOL_DCCP,
-            libc::DCCP_SOCKOPT_AVAILABLE_CCIDS,
-            buf.as_mut_ptr().cast(),
-            &mut len,
-        ))?;
-        let buf = &buf[..len as usize - 1];
-        Ok(unsafe { &*(buf as *const [_] as *const [u8]) }.into())
-    }
-
     /// Sets the value for the `SO_BINDTODEVICE` option on this socket.
     ///
     /// If a socket is bound to an interface, only packets received from that
@@ -2021,6 +2001,26 @@ impl crate::Socket {
     #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     pub fn detach_filter(&self) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
+    }
+
+    /// Returns list of CCIDs supported by the endpoint.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
+    pub fn dccp_available_ccids(&self) -> io::Result<Vec<u8>> {
+        // Creating the buffer with a value of 5 is ~probably~ fine. 
+        // https://www.kernel.org/doc/html/latest/networking/dccp.html says the minimum is 4, however currently there are only 3 CCIDs implemented in the kernel.
+        // So 5 should cover us for some time. Even if 3 more CCIDs are implemented it would be very unlikely, that all 6 are available. 
+        let mut buf: [MaybeUninit<u8>; 5] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut len = buf.len() as libc::socklen_t;
+        syscall!(getsockopt(
+            self.as_raw(),
+            libc::SOL_DCCP,
+            libc::DCCP_SOCKOPT_AVAILABLE_CCIDS,
+            buf.as_mut_ptr().cast(),
+            &mut len,
+        ))?;
+        let buf = &buf[..len as usize - 1];
+        Ok(unsafe { &*(buf as *const [_] as *const [u8]) }.into())
     }
 
     /// Get the service
