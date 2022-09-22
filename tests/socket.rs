@@ -1299,7 +1299,7 @@ fn header_included() {
 }
 
 #[test]
-#[cfg(target_os = "linux")]
+#[cfg(all(feature = "all", target_os = "linux"))]
 fn dccp() {
     let socket_s = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
     let addr = "127.0.0.1:8686".parse::<SocketAddr>().unwrap().into();
