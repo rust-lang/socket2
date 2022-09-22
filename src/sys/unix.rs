@@ -1511,10 +1511,13 @@ impl crate::Socket {
         }
     }
 
-    /// Returns list of CCIDs supported by the endpoint
+    /// Returns list of CCIDs supported by the endpoint.
     #[cfg(target_os = "linux")]
     pub fn dccp_available_ccids(&self) -> io::Result<Vec<u8>> {
-        let mut buf: [MaybeUninit<u8>; 10] = unsafe { MaybeUninit::uninit().assume_init() };
+        // Creating the buffer with a value of 5 is ~probably~ fine. 
+        // https://www.kernel.org/doc/html/latest/networking/dccp.html says the minimum is 4, however currently there are only 3 CCIDs implemented in the kernel.
+        // So 5 should cover us for some time. Even if 3 more CCIDs are implemented it would be very unlikely, that all 6 are available. 
+        let mut buf: [MaybeUninit<u8>; 5] = unsafe { MaybeUninit::uninit().assume_init() };
         let mut len = buf.len() as libc::socklen_t;
         syscall!(getsockopt(
             self.as_raw(),

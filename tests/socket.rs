@@ -1306,6 +1306,7 @@ fn test_dccp() {
     socket_s.dccp_set_service(45).unwrap();
     assert!(socket_s.dccp_service().unwrap() == 45);
     assert!(socket_s.dccp_cur_mps().unwrap() > 0);
+    assert!(socket_s.dccp_available_ccids().is_ok());
     assert!(
         socket_s.dccp_send_cscov().unwrap() == 0,
         "sender cscov should be zero by default"
