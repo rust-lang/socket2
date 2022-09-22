@@ -1299,6 +1299,7 @@ fn header_included() {
 }
 
 #[test]
+#[ignore = "DCCP support is not enabled in all kernels of majors Linux distros"]
 #[cfg(all(feature = "all", target_os = "linux"))]
 fn dccp() {
     let socket_s = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
