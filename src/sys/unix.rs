@@ -57,7 +57,7 @@ pub(crate) use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
 // Used in `Type`.
-#[cfg(target_os = "linux")]
+#[cfg(all(feature = "all", target_os = "linux"))]
 pub(crate) use libc::SOCK_DCCP;
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::SOCK_RAW;
@@ -66,8 +66,10 @@ pub(crate) use libc::SOCK_SEQPACKET;
 
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
+#[cfg(all(feature = "all", target_os = "linux"))]
+pub(crate) use libc::IPPROTO_DCCP;
 #[cfg(target_os = "linux")]
-pub(crate) use libc::{IPPROTO_DCCP, IPPROTO_MPTCP};
+pub(crate) use libc::IPPROTO_MPTCP;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
