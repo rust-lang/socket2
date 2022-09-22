@@ -1512,7 +1512,8 @@ impl crate::Socket {
     }
 
     /// Returns list of CCIDs supported by the endpoint.
-    #[cfg(target_os = "linux")]
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_available_ccids(&self) -> io::Result<Vec<u8>> {
         // Creating the buffer with a value of 5 is ~probably~ fine. 
         // https://www.kernel.org/doc/html/latest/networking/dccp.html says the minimum is 4, however currently there are only 3 CCIDs implemented in the kernel.
@@ -2022,14 +2023,16 @@ impl crate::Socket {
         unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
     }
 
-    #[cfg(target_os = "linux")]
     /// Get the service
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_service(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SERVICE) }
     }
 
-    #[cfg(target_os = "linux")]
     /// Set the service
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_set_service(&self, code: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2041,8 +2044,9 @@ impl crate::Socket {
         }
     }
 
-    #[cfg(target_os = "linux")]
     /// Get the current maximum packet size
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_cur_mps(&self) -> io::Result<u32> {
         unsafe {
             getsockopt(
@@ -2053,25 +2057,28 @@ impl crate::Socket {
         }
     }
 
-    #[cfg(target_os = "linux")]
     /// Set both the TX and RX CCIDs
     /// Different TX and RX CCIDs, while in practice allowed, is rarely done and not supported by this library.
     // todo: allow passing of multiple CCIDs
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_set_ccid(&self, ccid: u8) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_CCID, ccid) }
     }
 
-    #[cfg(target_os = "linux")]
     /// Get the current CCID if set.
     /// The underlying sockopt used here is the DCCP_SOCKOPT_TX_CCID. This means that theoretically only the CCID for TX is returned.
     /// However, in practice setting different TX and RX CCIDs is rarely used.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_ccid(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_TX_CCID) }
     }
 
-    #[cfg(target_os = "linux")]
     /// Enables the server to hold the timewait state when closing the connection.
     /// Only available for listening sockets
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_set_server_timewait(&self, hold_timewait: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2083,14 +2090,16 @@ impl crate::Socket {
         }
     }
 
-    #[cfg(target_os = "linux")]
     /// Get the value of partial checksum coverage on the sender side
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_send_cscov(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV) }
     }
 
-    #[cfg(target_os = "linux")]
     /// Set the value of partial checksum coverage on the sender side
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_set_send_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2102,14 +2111,16 @@ impl crate::Socket {
         }
     }
 
-    #[cfg(target_os = "linux")]
     /// Get the value of partial checksum coverage on the receiver side
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_recv_cscov(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV) }
     }
 
-    #[cfg(target_os = "linux")]
     /// Set the value of partial checksum coverage on the receiver side
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_set_recv_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2121,8 +2132,9 @@ impl crate::Socket {
         }
     }
 
-    #[cfg(target_os = "linux")]
     /// Get the maximum length of the output queue
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_qpolicy_txqlen(&self) -> io::Result<u32> {
         unsafe {
             getsockopt(
@@ -2133,8 +2145,9 @@ impl crate::Socket {
         }
     }
 
-    #[cfg(target_os = "linux")]
     /// Set the maximum length of the output queue
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub fn dccp_set_qpolicy_txqlen(&self, qlen: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
