@@ -1303,7 +1303,7 @@ fn header_included() {
 fn dccp() {
     let socket_s = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
     let addr = "127.0.0.1:8686".parse::<SocketAddr>().unwrap().into();
-    socket_s.dccp_set_service(45).unwrap();
+    socket_s.set_dccp_service(45).unwrap();
     assert!(socket_s.dccp_service().unwrap() == 45);
     assert!(socket_s.dccp_cur_mps().unwrap() > 0);
     assert!(socket_s.dccp_available_ccids().is_ok());
@@ -1311,14 +1311,14 @@ fn dccp() {
         socket_s.dccp_send_cscov().unwrap() == 0,
         "sender cscov should be zero by default"
     );
-    socket_s.dccp_set_ccid(2).unwrap();
-    socket_s.dccp_set_qpolicy_txqlen(6).unwrap();
+    socket_s.set_dccp_ccid(2).unwrap();
+    socket_s.set_dccp_qpolicy_txqlen(6).unwrap();
     assert!(socket_s.dccp_qpolicy_txqlen().unwrap() == 6);
     socket_s.bind(&addr).unwrap();
     socket_s.listen(10).unwrap();
 
     let mut socket_c = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
-    socket_c.dccp_set_service(45).unwrap();
+    socket_c.set_dccp_service(45).unwrap();
     socket_c.connect(&addr).unwrap();
 
     let (mut socket_s_c, _) = socket_s.accept().unwrap();
