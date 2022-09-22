@@ -2077,6 +2077,23 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `DCCP_SOCKOPT_SERVER_TIMEWAIT` option on this socket.
+    ///
+    /// For more information see [`set_dccp_server_timewait`]
+    ///
+    /// [`set_dccp_server_timewait`]: crate::Socket::set_dccp_server_timewait
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
+    pub fn dccp_server_timewait(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt(
+                self.as_raw(),
+                libc::SOL_DCCP,
+                libc::DCCP_SOCKOPT_SERVER_TIMEWAIT,
+            )
+        }
+    }
+
     /// Set value for the `DCCP_SOCKOPT_SEND_CSCOV` option on this socket.
     ///
     /// Both this option and DCCP_SOCKOPT_RECV_CSCOV are used for setting the partial checksum coverage. The default is that checksums always cover the entire packet and that only fully covered application data is accepted by the receiver. Hence, when using this feature on the sender, it must be enabled at the receiver, too with suitable choice of CsCov.
@@ -2093,7 +2110,7 @@ impl crate::Socket {
         }
     }
 
-    /// Get the value of the `DCCP_SOCKOPT_SEND_CSCOV` option for this socket.
+    /// Get the value of the `DCCP_SOCKOPT_SEND_CSCOV` option on this socket.
     ///
     /// For more information on this option see [`set_dccp_send_cscov`].
     ///
