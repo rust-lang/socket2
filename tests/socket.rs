@@ -108,13 +108,7 @@ fn protocol_fmt_debug() {
         (Protocol::UDP, "IPPROTO_UDP"),
         #[cfg(target_os = "linux")]
         (Protocol::MPTCP, "IPPROTO_MPTCP"),
-        #[cfg(all(
-            feature = "all",
-            any(
-                target_os = "freebsd",
-                target_os = "linux",
-            )
-        ))]
+        #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
         (Protocol::SCTP, "IPPROTO_SCTP"),
         (500.into(), "500"),
     ];
