@@ -306,6 +306,16 @@ impl Protocol {
     #[cfg(target_os = "linux")]
     /// Protocol corresponding to `MPTCP`.
     pub const MPTCP: Protocol = Protocol(sys::IPPROTO_MPTCP);
+
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "linux",
+        )
+    ))]
+    /// Protocol corresponding to `SCTP`.
+    pub const SCTP: Protocol = Protocol(sys::IPPROTO_SCTP);
 }
 
 impl From<c_int> for Protocol {
