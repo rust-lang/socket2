@@ -1445,7 +1445,7 @@ impl Socket {
         target_os = "solaris",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
-        let recv_tos = if recv_tos { 1 } else { 0 };
+        let recv_tos = i32::from(recv_tos);
 
         unsafe {
             setsockopt(

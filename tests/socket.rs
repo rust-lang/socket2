@@ -1043,7 +1043,7 @@ fn cpu_affinity() {
 
     // NOTE: This requires at least 2 CPU cores.
     let cpu = socket.cpu_affinity().unwrap();
-    let want = if cpu == 0 { 1 } else { 0 };
+    let want = usize::from(cpu == 0);
 
     socket.set_cpu_affinity(want).unwrap();
     assert_eq!(socket.cpu_affinity().unwrap(), want);
