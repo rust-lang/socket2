@@ -55,12 +55,11 @@ use crate::{MaybeUninitSlice, RecvFlags};
 /// use std::net::{SocketAddr, TcpListener};
 /// use socket2::{Socket, Domain, Type};
 ///
-/// // create a TCP listener bound to two addresses
-/// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
+/// // create a TCP listener
+/// let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
 ///
 /// let address: SocketAddr = "[::1]:12345".parse().unwrap();
 /// let address = address.into();
-/// socket.bind(&address)?;
 /// socket.bind(&address)?;
 /// socket.listen(128)?;
 ///
