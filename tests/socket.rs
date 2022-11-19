@@ -1297,3 +1297,33 @@ fn header_included() {
     let got = socket.header_included().expect("failed to get value");
     assert_eq!(got, true, "set and get values differ");
 }
+
+#[test]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "watchos",
+    target_os = "tvos",
+    target_os = "windows"
+))]
+fn tcp_fastopen() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    let baddr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0);
+    let bsaddr = SockAddr::from(baddr);
+    socket.bind(&bsaddr).unwrap();
+    socket.listen(128).unwrap();
+    socket.set_tcp_fastopen(5).unwrap();
+
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    {
+        assert_eq!(socket.tcp_fastopen().unwrap(), 5);
+    }
+
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    {
+        assert_ne!(socket.tcp_fastopen().unwrap(), 0);
+    }
+}
