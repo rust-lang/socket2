@@ -318,6 +318,10 @@ impl Protocol {
     #[cfg(all(feature = "all", target_os = "linux"))]
     #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
     pub const DCCP: Protocol = Protocol(sys::IPPROTO_DCCP);
+
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    /// Protocol corresponding to `SCTP`.
+    pub const SCTP: Protocol = Protocol(sys::IPPROTO_SCTP);
 }
 
 impl From<c_int> for Protocol {

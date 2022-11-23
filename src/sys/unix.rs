@@ -70,6 +70,8 @@ pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 pub(crate) use libc::IPPROTO_DCCP;
 #[cfg(target_os = "linux")]
 pub(crate) use libc::IPPROTO_MPTCP;
+#[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+pub(crate) use libc::IPPROTO_SCTP;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
@@ -396,7 +398,9 @@ impl_debug!(
     #[cfg(target_os = "linux")]
     libc::IPPROTO_MPTCP,
     #[cfg(target_os = "linux")]
-    libc::IPPROTO_DCCP
+    libc::IPPROTO_DCCP,
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    libc::IPPROTO_SCTP,
 );
 
 /// Unix-only API.
@@ -2203,7 +2207,7 @@ impl crate::Socket {
         ))?;
         let buf = &buf[..len as usize - 1];
         Ok(unsafe { &*(buf as *const [_] as *const [u8]) }.into())
-    }
+    }cat /sys/module/nvidia_drm/parameters/modeset
 
     /// Get the value of the `DCCP_SOCKOPT_GET_CUR_MPS` option on this socket.
     ///
