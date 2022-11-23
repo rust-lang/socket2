@@ -397,7 +397,7 @@ impl_debug!(
     libc::IPPROTO_UDP,
     #[cfg(target_os = "linux")]
     libc::IPPROTO_MPTCP,
-    #[cfg(target_os = "linux")]
+    #[cfg(all(feature = "all", target_os = "linux"))]
     libc::IPPROTO_DCCP,
     #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     libc::IPPROTO_SCTP,
@@ -2207,7 +2207,7 @@ impl crate::Socket {
         ))?;
         let buf = &buf[..len as usize - 1];
         Ok(unsafe { &*(buf as *const [_] as *const [u8]) }.into())
-    }cat /sys/module/nvidia_drm/parameters/modeset
+    }
 
     /// Get the value of the `DCCP_SOCKOPT_GET_CUR_MPS` option on this socket.
     ///
