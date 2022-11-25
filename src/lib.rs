@@ -257,6 +257,13 @@ impl Type {
     /// Used for protocols such as UDP.
     pub const DGRAM: Type = Type(sys::SOCK_DGRAM);
 
+    /// Type corresponding to `SOCK_DCCP`.
+    ///
+    /// Used for the DCCP protocol.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
+    pub const DCCP: Type = Type(sys::SOCK_DCCP);
+
     /// Type corresponding to `SOCK_SEQPACKET`.
     #[cfg(feature = "all")]
     #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
@@ -306,6 +313,11 @@ impl Protocol {
     #[cfg(target_os = "linux")]
     /// Protocol corresponding to `MPTCP`.
     pub const MPTCP: Protocol = Protocol(sys::IPPROTO_MPTCP);
+
+    /// Protocol corresponding to `DCCP`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "all", target_os = "linux")))]
+    pub const DCCP: Protocol = Protocol(sys::IPPROTO_DCCP);
 
     #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     /// Protocol corresponding to `SCTP`.
