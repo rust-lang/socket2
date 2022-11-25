@@ -108,6 +108,8 @@ fn protocol_fmt_debug() {
         (Protocol::UDP, "IPPROTO_UDP"),
         #[cfg(target_os = "linux")]
         (Protocol::MPTCP, "IPPROTO_MPTCP"),
+        #[cfg(all(feature = "all", target_os = "linux"))]
+        (Protocol::DCCP, "IPPROTO_DCCP"),
         #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
         (Protocol::SCTP, "IPPROTO_SCTP"),
         (500.into(), "500"),
@@ -1386,4 +1388,35 @@ fn tcp_congestion() {
         cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap(),
         new_tcp_ca,
     );
+}
+
+#[test]
+#[ignore = "DCCP support is not enabled in all kernels of majors Linux distros"]
+#[cfg(all(feature = "all", target_os = "linux"))]
+fn dccp() {
+    let listener = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
+    let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();
+    listener.set_dccp_service(45).unwrap();
+    assert!(listener.dccp_service().unwrap() == 45);
+    assert!(listener.dccp_cur_mps().unwrap() > 0);
+    assert!(listener.dccp_available_ccids::<4>().unwrap().len() >= 3);
+    assert!(
+        listener.dccp_send_cscov().unwrap() == 0,
+        "sender cscov should be zero by default"
+    );
+    listener.set_dccp_ccid(2).unwrap();
+    listener.set_dccp_qpolicy_txqlen(6).unwrap();
+    assert!(listener.dccp_qpolicy_txqlen().unwrap() == 6);
+    listener.bind(&addr).unwrap();
+    listener.listen(10).unwrap();
+
+    let mut client = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
+    client.set_dccp_service(45).unwrap();
+    client.connect(&addr).unwrap();
+
+    let (mut accepted, _) = listener.accept().unwrap();
+    let msg = "Hello World!";
+    assert!(client.write(msg.as_bytes()).unwrap() == msg.len());
+    let mut recv_buf = [0_u8; 64];
+    assert!(accepted.read(&mut recv_buf).unwrap() == msg.len());
 }
