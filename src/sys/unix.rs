@@ -1789,6 +1789,68 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
+    ///
+    /// This value contains the original destination IPv4 address of the connection
+    /// redirected using `iptables` `REDIRECT` or `TPROXY`.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn original_dst(&self) -> io::Result<Option<SockAddr>> {
+        // Safety: `getsockopt` initialises the `SockAddr` for us.
+        unsafe {
+            SockAddr::try_init(|storage, len| {
+                syscall!(getsockopt(
+                    self.as_raw(),
+                    libc::SOL_IP,
+                    libc::SO_ORIGINAL_DST,
+                    storage.cast(),
+                    len
+                ))
+            })
+        }
+        .map_or_else(
+            |e| match e.raw_os_error() {
+                Some(libc::ENOENT) => Ok(None),
+                _ => Err(e),
+            },
+            |(_, addr)| Ok(Some(addr)),
+        )
+    }
+
+    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+    ///
+    /// This value contains the original destination IPv6 address of the connection
+    /// redirected using `ip6tables` `REDIRECT` or `TPROXY`.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn original_dst_ipv6(&self) -> io::Result<Option<SockAddr>> {
+        // Safety: `getsockopt` initialises the `SockAddr` for us.
+        unsafe {
+            SockAddr::try_init(|storage, len| {
+                syscall!(getsockopt(
+                    self.as_raw(),
+                    libc::SOL_IPV6,
+                    libc::IP6T_SO_ORIGINAL_DST,
+                    storage.cast(),
+                    len
+                ))
+            })
+        }
+        .map_or_else(
+            |e| match e.raw_os_error() {
+                Some(libc::ENOENT) => Ok(None),
+                _ => Err(e),
+            },
+            |(_, addr)| Ok(Some(addr)),
+        )
+    }
+
     /// Copies data between a `file` and this socket using the `sendfile(2)`
     /// system call. Because this copying is done within the kernel,
     /// `sendfile()` is more efficient than the combination of `read(2)` and
