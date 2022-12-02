@@ -1798,7 +1798,7 @@ impl crate::Socket {
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
-    pub fn original_dst(&self) -> io::Result<Option<SockAddr>> {
+    pub fn original_dst(&self) -> io::Result<SockAddr> {
         // Safety: `getsockopt` initialises the `SockAddr` for us.
         unsafe {
             SockAddr::try_init(|storage, len| {
@@ -1811,13 +1811,7 @@ impl crate::Socket {
                 ))
             })
         }
-        .map_or_else(
-            |e| match e.raw_os_error() {
-                Some(libc::ENOENT) => Ok(None),
-                _ => Err(e),
-            },
-            |(_, addr)| Ok(Some(addr)),
-        )
+        .map(|(_, addr)| addr)
     }
 
     /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
@@ -1829,7 +1823,7 @@ impl crate::Socket {
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
-    pub fn original_dst_ipv6(&self) -> io::Result<Option<SockAddr>> {
+    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
         // Safety: `getsockopt` initialises the `SockAddr` for us.
         unsafe {
             SockAddr::try_init(|storage, len| {
@@ -1842,13 +1836,7 @@ impl crate::Socket {
                 ))
             })
         }
-        .map_or_else(
-            |e| match e.raw_os_error() {
-                Some(libc::ENOENT) => Ok(None),
-                _ => Err(e),
-            },
-            |(_, addr)| Ok(Some(addr)),
-        )
+        .map(|(_, addr)| addr)
     }
 
     /// Copies data between a `file` and this socket using the `sendfile(2)`
