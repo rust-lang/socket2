@@ -1793,10 +1793,16 @@ impl crate::Socket {
     ///
     /// This value contains the original destination IPv4 address of the connection
     /// redirected using `iptables` `REDIRECT` or `TPROXY`.
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        )))
     )]
     pub fn original_dst(&self) -> io::Result<SockAddr> {
         // Safety: `getsockopt` initialises the `SockAddr` for us.
