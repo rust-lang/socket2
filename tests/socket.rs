@@ -1297,3 +1297,39 @@ fn header_included() {
     let got = socket.header_included().expect("failed to get value");
     assert_eq!(got, true, "set and get values differ");
 }
+
+#[test]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+fn original_dst() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    match socket.original_dst() {
+        Ok(_) => panic!("original_dst on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::ENOENT)),
+    }
+
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    match socket.original_dst() {
+        Ok(_) => panic!("original_dst on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::ENOENT)),
+    }
+}
+
+#[test]
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+fn original_dst_ipv6() {
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    match socket.original_dst_ipv6() {
+        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::ENOENT)),
+    }
+
+    // Not supported on IPv4 socket.
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    match socket.original_dst_ipv6() {
+        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::EOPNOTSUPP)),
+    }
+}
