@@ -1201,6 +1201,33 @@ test!(IPv6 only_v6, set_only_v6(false));
 
 #[cfg(all(
     feature = "all",
+    any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )
+))]
+test!(IPv6 tclass_v6, set_tclass_v6(96));
+
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "fuchsia",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "windows",
+)))]
+test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
+
+#[cfg(all(
+    feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
 test!(

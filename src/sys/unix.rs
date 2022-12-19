@@ -76,6 +76,16 @@ pub(crate) use libc::{
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
 // Used in `Socket`.
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "fuchsia",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "redox",
+    target_os = "solaris",
+)))]
+pub(crate) use libc::IPV6_RECVTCLASS;
 #[cfg(all(feature = "all", not(target_os = "redox")))]
 pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
@@ -2056,6 +2066,91 @@ impl crate::Socket {
     #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     pub fn detach_filter(&self) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
+    }
+
+    /// Get the value of the `IPV6_TCLASS` option for this socket.
+    ///
+    /// For more information about this option, see [`set_tclass_v6`].
+    ///
+    /// [`set_tclass_v6`]: Socket::set_tclass_v6
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "macos",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "macos",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
+    pub fn tclass_v6(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), IPPROTO_IPV6, libc::IPV6_TCLASS)
+                .map(|tclass| tclass as u32)
+        }
+    }
+
+    /// Set the value of the `IPV6_TCLASS` option for this socket.
+    ///
+    /// Specifies the traffic class field that is used in every packets
+    /// sent from this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "macos",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "dragonfly",
+                target_os = "freebsd",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "macos",
+                target_os = "netbsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
+    pub fn set_tclass_v6(&self, tclass: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                IPPROTO_IPV6,
+                libc::IPV6_TCLASS,
+                tclass as c_int,
+            )
+        }
     }
 }
 
