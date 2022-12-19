@@ -1445,8 +1445,6 @@ impl Socket {
         target_os = "solaris",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
-        let recv_tos = i32::from(recv_tos);
-
         unsafe {
             setsockopt(
                 self.as_raw(),
@@ -1665,6 +1663,52 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_V6ONLY,
                 only_v6 as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_RECVTCLASS` option for this socket.
+    ///
+    /// For more information about this option, see [`set_recv_tclass_v6`].
+    ///
+    /// [`set_recv_tclass_v6`]: Socket::set_recv_tclass_v6
+    #[cfg(not(any(
+        target_os = "dragonfly",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "redox",
+        target_os = "solaris",
+    )))]
+    pub fn recv_tclass_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_RECVTCLASS)
+                .map(|recv_tclass| recv_tclass > 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_RECVTCLASS` option for this socket.
+    ///
+    /// If enabled, the `IPV6_TCLASS` ancillary message is passed with incoming
+    /// packets. It contains a byte which specifies the traffic class field of
+    /// the packet header.
+    #[cfg(not(any(
+        target_os = "dragonfly",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "redox",
+        target_os = "solaris",
+    )))]
+    pub fn set_recv_tclass_v6(&self, recv_tclass: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                sys::IPV6_RECVTCLASS,
+                recv_tclass as c_int,
             )
         }
     }
