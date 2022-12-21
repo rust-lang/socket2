@@ -937,15 +937,6 @@ fn sendfile() {
     any(
         target_os = "android",
         target_os = "freebsd",
-        target_os = "linux",
-        target_vendor = "apple",
-    )
-))]
-#[cfg(all(
-    feature = "all",
-    any(
-        target_os = "android",
-        target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
     )
