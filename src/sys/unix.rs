@@ -631,7 +631,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
         }
 
         let timeout = (timeout - elapsed).as_millis();
-        let timeout = clamp(timeout, 1, c_int::MAX as u128) as c_int;
+        let timeout = timeout.clamp(1, c_int::MAX as u128) as c_int;
 
         match syscall!(poll(&mut pollfd, 1, timeout)) {
             Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
@@ -654,20 +654,6 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
             Err(ref err) if err.kind() == io::ErrorKind::Interrupted => continue,
             Err(err) => return Err(err),
         }
-    }
-}
-
-// TODO: use clamp from std lib, stable since 1.50.
-fn clamp<T>(value: T, min: T, max: T) -> T
-where
-    T: Ord,
-{
-    if value <= min {
-        min
-    } else if value >= max {
-        max
-    } else {
-        value
     }
 }
 
@@ -781,6 +767,7 @@ pub(crate) fn recv_from_vectored(
 
 /// Returns the (bytes received, sending address len, `RecvFlags`).
 #[cfg(not(target_os = "redox"))]
+#[allow(clippy::unnecessary_cast)] // For `IovLen::MAX as usize` (Already `usize` on Linux).
 fn recvmsg(
     fd: Socket,
     msg_name: *mut sockaddr_storage,
@@ -841,6 +828,7 @@ pub(crate) fn send_to_vectored(
 
 /// Returns the (bytes received, sending address len, `RecvFlags`).
 #[cfg(not(target_os = "redox"))]
+#[allow(clippy::unnecessary_cast)] // For `IovLen::MAX as usize` (Already `usize` on Linux).
 fn sendmsg(
     fd: Socket,
     msg_name: *const sockaddr_storage,
