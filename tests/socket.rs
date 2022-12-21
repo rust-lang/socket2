@@ -902,7 +902,7 @@ fn sendfile() {
         assert_eq!(n, HELLO_WORLD.data.len());
 
         let mut buf = Vec::with_capacity(HELLO_WORLD.data.len() + 1);
-        let n = receiver.recv(spare_capacity_mut(&mut buf)).unwrap();
+        let n = receiver.recv(buf.spare_capacity_mut()).unwrap();
         assert_eq!(n, HELLO_WORLD.data.len());
         unsafe { buf.set_len(n) };
         assert_eq!(buf, HELLO_WORLD.data);
@@ -923,7 +923,7 @@ fn sendfile() {
         let mut buf = Vec::with_capacity(LOREM.data.len() + 1);
         let mut total = 0;
         while total < LOREM.data.len() {
-            let n = receiver.recv(spare_capacity_mut(&mut buf)).unwrap();
+            let n = receiver.recv(buf.spare_capacity_mut()).unwrap();
             unsafe { buf.set_len(buf.len() + n) };
             total += n;
         }
@@ -932,7 +932,6 @@ fn sendfile() {
     }
 }
 
-// TODO: use `Vec::spare_capacity_mut` once stable.
 #[cfg(all(
     feature = "all",
     any(
@@ -942,15 +941,6 @@ fn sendfile() {
         target_vendor = "apple",
     )
 ))]
-fn spare_capacity_mut(buf: &mut Vec<u8>) -> &mut [MaybeUninit<u8>] {
-    unsafe {
-        std::slice::from_raw_parts_mut(
-            buf.as_mut_ptr().add(buf.len()) as *mut MaybeUninit<u8>,
-            buf.capacity() - buf.len(),
-        )
-    }
-}
-
 #[cfg(all(
     feature = "all",
     any(
