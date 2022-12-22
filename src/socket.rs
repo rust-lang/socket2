@@ -1442,6 +1442,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "haiku",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
         unsafe {
@@ -1467,6 +1468,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "haiku",
     )))]
     pub fn recv_tos(&self) -> io::Result<bool> {
         unsafe {
@@ -1679,6 +1681,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "haiku",
     )))]
     pub fn recv_tclass_v6(&self) -> io::Result<bool> {
         unsafe {
@@ -1700,6 +1703,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "haiku",
     )))]
     pub fn set_recv_tclass_v6(&self, recv_tclass: bool) -> io::Result<()> {
         unsafe {
