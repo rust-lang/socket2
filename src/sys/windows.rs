@@ -776,7 +776,7 @@ pub(crate) fn to_mreqn(
     }
 }
 
-#[allow(unused_unsafe)] // TODO: replace with `unsafe_op_in_unsafe_fn` once stable.
+#[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
     let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
