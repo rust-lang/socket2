@@ -84,6 +84,7 @@ pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "haiku",
 )))]
 pub(crate) use libc::IPV6_RECVTCLASS;
 #[cfg(all(feature = "all", not(target_os = "redox")))]
@@ -96,6 +97,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "haiku",
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
