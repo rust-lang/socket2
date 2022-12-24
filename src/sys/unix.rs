@@ -204,6 +204,9 @@ const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
 #[cfg(target_vendor = "apple")]
 const MAX_BUF_LEN: usize = c_int::MAX as usize - 1;
 
+#[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+const TCP_CA_NAME_MAX: usize = 16;
+
 #[cfg(any(
     all(
         target_os = "linux",
@@ -2153,6 +2156,50 @@ impl crate::Socket {
                 tclass as c_int,
             )
         }
+    }
+
+    /// Get the value of the `TCP_CONGESTION` option for this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_congestion`].
+    ///
+    /// [`set_tcp_congestion`]: Socket::set_tcp_congestion
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
+    )]
+    pub fn tcp_congestion(&self) -> io::Result<String> {
+        unsafe {
+            getsockopt::<[u8; TCP_CA_NAME_MAX]>(self.as_raw(), IPPROTO_TCP, libc::TCP_CONGESTION)
+                .map(|buf| {
+                    String::from_utf8_lossy(&buf)
+                        .trim_matches(char::from(0))
+                        .to_string()
+                })
+        }
+    }
+
+    /// Set the value of the `TCP_CONGESTION` option for this socket.
+    ///
+    /// Specifies the TCP congestion control algorithm to use for this socket.
+    ///
+    /// The value must be a valid TCP congestion control algorithm name of the
+    /// platform. For example, Linux may supports "reno", "cubic".
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
+    )]
+    pub fn set_tcp_congestion(&self, tcp_ca_name: &str) -> io::Result<()> {
+        let name = std::ffi::OsString::from(tcp_ca_name);
+        syscall!(setsockopt(
+            self.as_raw(),
+            IPPROTO_TCP,
+            libc::TCP_CONGESTION,
+            name.as_bytes().as_ptr() as *const std::os::raw::c_void,
+            name.len() as libc::socklen_t,
+        ))
+        .map(|_| ())
     }
 }
 
