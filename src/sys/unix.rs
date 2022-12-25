@@ -2171,21 +2171,21 @@ impl crate::Socket {
     pub fn tcp_congestion(&self) -> io::Result<String> {
         let mut payload: MaybeUninit<[u8; TCP_CA_NAME_MAX]> = MaybeUninit::uninit();
         let mut len = size_of::<[u8; TCP_CA_NAME_MAX]>() as libc::socklen_t;
-        unsafe {
-            syscall!(getsockopt(
-                self.as_raw(),
-                IPPROTO_TCP,
-                libc::TCP_CONGESTION,
-                payload.as_mut_ptr().cast(),
-                &mut len,
-            ))
-            .map(|_| payload.assume_init())
-            .map(|buf| {
-                String::from_utf8_lossy(&buf)
-                    .trim_matches(char::from(0))
-                    .to_string()
-            })
-        }
+        syscall!(getsockopt(
+            self.as_raw(),
+            IPPROTO_TCP,
+            libc::TCP_CONGESTION,
+            payload.as_mut_ptr().cast(),
+            &mut len,
+        ))
+        .map(|_| {
+            let buf = unsafe { payload.assume_init() };
+            let raw_name = String::from_utf8_lossy(&buf);
+            match raw_name.split_once(char::from(0)) {
+                Some((left, _)) => left.to_string(),
+                None => raw_name.to_string(),
+            }
+        })
     }
 
     /// Set the value of the `TCP_CONGESTION` option for this socket.
