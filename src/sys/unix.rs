@@ -2169,13 +2169,22 @@ impl crate::Socket {
         doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
     )]
     pub fn tcp_congestion(&self) -> io::Result<String> {
+        let mut payload: MaybeUninit<[u8; TCP_CA_NAME_MAX]> = MaybeUninit::uninit();
+        let mut len = size_of::<[u8; TCP_CA_NAME_MAX]>() as libc::socklen_t;
         unsafe {
-            getsockopt::<[u8; TCP_CA_NAME_MAX]>(self.as_raw(), IPPROTO_TCP, libc::TCP_CONGESTION)
-                .map(|buf| {
-                    String::from_utf8_lossy(&buf)
-                        .trim_matches(char::from(0))
-                        .to_string()
-                })
+            syscall!(getsockopt(
+                self.as_raw(),
+                IPPROTO_TCP,
+                libc::TCP_CONGESTION,
+                payload.as_mut_ptr().cast(),
+                &mut len,
+            ))
+            .map(|_| payload.assume_init())
+            .map(|buf| {
+                String::from_utf8_lossy(&buf)
+                    .trim_matches(char::from(0))
+                    .to_string()
+            })
         }
     }
 
