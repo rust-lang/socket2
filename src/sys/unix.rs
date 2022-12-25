@@ -2168,7 +2168,7 @@ impl crate::Socket {
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
     )]
-    pub fn tcp_congestion(&self) -> io::Result<String> {
+    pub fn tcp_congestion(&self) -> io::Result<Vec<u8>> {
         let mut payload: MaybeUninit<[u8; TCP_CA_NAME_MAX]> = MaybeUninit::uninit();
         let mut len = size_of::<[u8; TCP_CA_NAME_MAX]>() as libc::socklen_t;
         syscall!(getsockopt(
@@ -2180,11 +2180,8 @@ impl crate::Socket {
         ))
         .map(|_| {
             let buf = unsafe { payload.assume_init() };
-            let raw_name = String::from_utf8_lossy(&buf);
-            match raw_name.split_once(char::from(0)) {
-                Some((left, _)) => left.to_string(),
-                None => raw_name.to_string(),
-            }
+            let name = buf.splitn(2, |num| *num == 0).next().unwrap().to_vec();
+            name
         })
     }
 
@@ -2199,14 +2196,13 @@ impl crate::Socket {
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
     )]
-    pub fn set_tcp_congestion(&self, tcp_ca_name: &str) -> io::Result<()> {
-        let name = std::ffi::OsString::from(tcp_ca_name);
+    pub fn set_tcp_congestion(&self, tcp_ca_name: &[u8]) -> io::Result<()> {
         syscall!(setsockopt(
             self.as_raw(),
             IPPROTO_TCP,
             libc::TCP_CONGESTION,
-            name.as_bytes().as_ptr() as *const std::os::raw::c_void,
-            name.len() as libc::socklen_t,
+            tcp_ca_name.as_ptr() as *const std::os::raw::c_void,
+            tcp_ca_name.len() as libc::socklen_t,
         ))
         .map(|_| ())
     }

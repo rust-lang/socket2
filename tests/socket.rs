@@ -1347,7 +1347,7 @@ fn original_dst_ipv6() {
 fn tcp_congestion() {
     let socket: Socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     // Get and set current tcp_ca
-    let origin_tcp_ca: String = socket
+    let origin_tcp_ca = socket
         .tcp_congestion()
         .expect("failed to get tcp congestion algorithm");
     socket
@@ -1355,11 +1355,11 @@ fn tcp_congestion() {
         .expect("failed to set tcp congestion algorithm");
     // Return a Err when set a non-exist tcp_ca
     socket
-        .set_tcp_congestion("tcp_congestion_does_not_exist")
+        .set_tcp_congestion(b"tcp_congestion_does_not_exist")
         .unwrap_err();
     let cur_tcp_ca = socket.tcp_congestion().unwrap();
     assert_eq!(
         cur_tcp_ca, origin_tcp_ca,
-        "expected {origin_tcp_ca} but get {cur_tcp_ca}"
+        "expected {origin_tcp_ca:?} but get {cur_tcp_ca:?}"
     );
 }
