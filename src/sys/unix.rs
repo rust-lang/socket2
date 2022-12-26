@@ -2180,8 +2180,9 @@ impl crate::Socket {
         ))
         .map(|_| {
             let buf = unsafe { payload.assume_init() };
-            let name = buf.splitn(2, |num| *num == 0).next().unwrap().to_vec();
-            name
+            let buf = &buf[..len as usize];
+            // TODO: use `MaybeUninit::slice_assume_init_ref` once stable.
+            unsafe { &*(buf as *const [_] as *const [u8]) }.into()
         })
     }
 

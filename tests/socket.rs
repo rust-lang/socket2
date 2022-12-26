@@ -1362,4 +1362,26 @@ fn tcp_congestion() {
         cur_tcp_ca, origin_tcp_ca,
         "expected {origin_tcp_ca:?} but get {cur_tcp_ca:?}"
     );
+    let cur_tcp_ca = cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap();
+    const OPTIONS: [&[u8]; 2] = [
+        b"cubic",
+        #[cfg(target_os = "linux")] // or Android.
+        b"reno",
+        #[cfg(target_os = "freebsd")]
+        b"newreno",
+    ];
+    // Set a new tcp ca
+    let new_tcp_ca = if cur_tcp_ca == OPTIONS[0] {
+        OPTIONS[1]
+    } else {
+        OPTIONS[0]
+    };
+    socket.set_tcp_congestion(new_tcp_ca).unwrap();
+    // Check if new tcp ca is successfully set
+    let cur_tcp_ca = socket.tcp_congestion().unwrap();
+    assert_eq!(
+        cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap(),
+        new_tcp_ca,
+        "expected {new_tcp_ca:?}, but get {cur_tcp_ca:?}"
+    );
 }
