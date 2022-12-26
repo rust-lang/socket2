@@ -1371,11 +1371,14 @@ fn tcp_congestion() {
         b"newreno",
     ];
     // Set a new tcp ca
+    #[cfg(target_os = "linux")]
     let new_tcp_ca = if cur_tcp_ca == OPTIONS[0] {
         OPTIONS[1]
     } else {
         OPTIONS[0]
     };
+    #[cfg(target_os = "freebsd")]
+    let new_tcp_ca = OPTIONS[1];
     socket.set_tcp_congestion(new_tcp_ca).unwrap();
     // Check if new tcp ca is successfully set
     let cur_tcp_ca = socket.tcp_congestion().unwrap();
