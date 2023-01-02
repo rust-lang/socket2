@@ -482,6 +482,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::eq_op)] // allow a0 == a0 check
     fn test_eq(a0: SockAddr, a1: SockAddr, b: SockAddr) {
         assert!(a0 == a0);
         assert!(a0 == a1);
