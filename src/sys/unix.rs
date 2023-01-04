@@ -616,7 +616,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
         }
 
         let timeout = (timeout - elapsed).as_millis();
-        let timeout = clamp(timeout, 1, c_int::MAX as u128) as c_int;
+        let timeout = timeout.clamp(1, c_int::MAX as u128) as c_int;
 
         match syscall!(poll(&mut pollfd, 1, timeout)) {
             Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
@@ -640,14 +640,6 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
             Err(err) => return Err(err),
         }
     }
-}
-
-// TODO: use clamp from std lib, stable since 1.50.
-fn clamp<T>(value: T, min: T, max: T) -> T
-where
-    T: Ord,
-{
-    value.clamp(min, max)
 }
 
 pub(crate) fn listen(fd: Socket, backlog: c_int) -> io::Result<()> {
