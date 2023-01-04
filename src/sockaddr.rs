@@ -532,6 +532,11 @@ mod tests {
         }
     }
 
+    #[quickcheck]
+    fn consistent_hash(x: SockAddr) -> bool {
+        calculate_hash(&x) == calculate_hash(&x)
+    }
+
     fn test_hash(a0: SockAddr, a1: SockAddr, b: SockAddr) {
         assert!(calculate_hash(&a0) == calculate_hash(&a0));
         assert!(calculate_hash(&a0) == calculate_hash(&a1));
