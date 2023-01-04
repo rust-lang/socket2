@@ -647,13 +647,7 @@ fn clamp<T>(value: T, min: T, max: T) -> T
 where
     T: Ord,
 {
-    if value <= min {
-        min
-    } else if value >= max {
-        max
-    } else {
-        value
-    }
+    value.clamp(min, max)
 }
 
 pub(crate) fn listen(fd: Socket, backlog: c_int) -> io::Result<()> {
@@ -782,7 +776,7 @@ fn recvmsg(
     msg.msg_name = msg_name.cast();
     msg.msg_namelen = msg_namelen;
     msg.msg_iov = bufs.as_mut_ptr().cast();
-    msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
+    msg.msg_iovlen = min(bufs.len(), IovLen::MAX) as IovLen;
     syscall!(recvmsg(fd, &mut msg, flags))
         .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
 }
@@ -842,7 +836,7 @@ fn sendmsg(
     msg.msg_namelen = msg_namelen;
     // Safety: Same as above about `*const` -> `*mut`.
     msg.msg_iov = bufs.as_ptr() as *mut _;
-    msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
+    msg.msg_iovlen = min(bufs.len(), IovLen::MAX) as IovLen;
     syscall!(sendmsg(fd, &msg, flags)).map(|n| n as usize)
 }
 
