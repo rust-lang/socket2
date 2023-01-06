@@ -48,7 +48,3 @@ features = [
 [features]
 # Enable all API, even ones not available on all OSs.
 all = []
-
-[dev-dependencies]
-quickcheck = "1.0.3"
-quickcheck_macros = "1.0.0"

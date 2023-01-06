@@ -59,12 +59,6 @@
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
-#[cfg(test)]
-extern crate quickcheck;
-#[cfg(test)]
-#[macro_use(quickcheck)]
-extern crate quickcheck_macros;
-
 use std::fmt;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;

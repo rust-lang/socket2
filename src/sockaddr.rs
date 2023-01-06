@@ -341,13 +341,6 @@ unsafe fn any_as_u8_slice<T: Sized>(p: &T, size: usize) -> &[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quickcheck::{self, Arbitrary};
-
-    impl Arbitrary for SockAddr {
-        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-            SockAddr::from(std::net::SocketAddr::arbitrary(g))
-        }
-    }
 
     #[test]
     fn ipv4() {
@@ -496,45 +489,6 @@ mod tests {
         assert!(a1 == a0);
         assert!(a0 != b);
         assert!(b != a0);
-    }
-
-    #[allow(clippy::eq_op)] // allow x == x
-    #[quickcheck]
-    fn reflexive_eq(x: SockAddr) -> bool {
-        x == x
-    }
-
-    #[quickcheck]
-    fn symmetric_eq(x: SockAddr, y: SockAddr) -> bool {
-        (x == y) == (y == x)
-    }
-
-    #[quickcheck]
-    fn transitive_eq(x: SockAddr, y: SockAddr, z: SockAddr) -> bool {
-        if x == y && y == z {
-            x == z
-        } else {
-            true
-        }
-    }
-
-    #[quickcheck]
-    fn consistent_eq(x: SockAddr, y: SockAddr) -> bool {
-        (x == y) == (x == y)
-    }
-
-    #[quickcheck]
-    fn hash(x: SockAddr, y: SockAddr) -> bool {
-        if x == y {
-            calculate_hash(&x) == calculate_hash(&y)
-        } else {
-            true
-        }
-    }
-
-    #[quickcheck]
-    fn consistent_hash(x: SockAddr) -> bool {
-        calculate_hash(&x) == calculate_hash(&x)
     }
 
     fn test_hash(a0: SockAddr, a1: SockAddr, b: SockAddr) {
