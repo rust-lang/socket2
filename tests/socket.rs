@@ -1385,6 +1385,5 @@ fn tcp_congestion() {
     assert_eq!(
         cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap(),
         new_tcp_ca,
-        "expected {new_tcp_ca:?}, but get {cur_tcp_ca:?}"
     );
 }

@@ -2169,8 +2169,8 @@ impl crate::Socket {
         doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
     )]
     pub fn tcp_congestion(&self) -> io::Result<Vec<u8>> {
-        let mut payload: MaybeUninit<[u8; TCP_CA_NAME_MAX]> = MaybeUninit::uninit();
-        let mut len = size_of::<[u8; TCP_CA_NAME_MAX]>() as libc::socklen_t;
+        let mut payload: [u8; TCP_CA_NAME_MAX] = [0; TCP_CA_NAME_MAX];
+        let mut len = payload.len() as libc::socklen_t;
         syscall!(getsockopt(
             self.as_raw(),
             IPPROTO_TCP,
@@ -2179,8 +2179,7 @@ impl crate::Socket {
             &mut len,
         ))
         .map(|_| {
-            let buf = unsafe { payload.assume_init() };
-            let buf = &buf[..len as usize];
+            let buf = &payload[..len as usize];
             // TODO: use `MaybeUninit::slice_assume_init_ref` once stable.
             unsafe { &*(buf as *const [_] as *const [u8]) }.into()
         })
@@ -2202,7 +2201,7 @@ impl crate::Socket {
             self.as_raw(),
             IPPROTO_TCP,
             libc::TCP_CONGESTION,
-            tcp_ca_name.as_ptr() as *const std::os::raw::c_void,
+            tcp_ca_name.as_ptr() as *const _,
             tcp_ca_name.len() as libc::socklen_t,
         ))
         .map(|_| ())
