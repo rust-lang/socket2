@@ -204,6 +204,10 @@ const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
 #[cfg(target_vendor = "apple")]
 const MAX_BUF_LEN: usize = c_int::MAX as usize - 1;
 
+// TCP_CA_NAME_MAX isn't defined in user space include files(not in libc)
+#[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+const TCP_CA_NAME_MAX: usize = 16;
+
 #[cfg(any(
     all(
         target_os = "linux",
@@ -2153,6 +2157,55 @@ impl crate::Socket {
                 tclass as c_int,
             )
         }
+    }
+
+    /// Get the value of the `TCP_CONGESTION` option for this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_congestion`].
+    ///
+    /// [`set_tcp_congestion`]: Socket::set_tcp_congestion
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
+    )]
+    pub fn tcp_congestion(&self) -> io::Result<Vec<u8>> {
+        let mut payload: [u8; TCP_CA_NAME_MAX] = [0; TCP_CA_NAME_MAX];
+        let mut len = payload.len() as libc::socklen_t;
+        syscall!(getsockopt(
+            self.as_raw(),
+            IPPROTO_TCP,
+            libc::TCP_CONGESTION,
+            payload.as_mut_ptr().cast(),
+            &mut len,
+        ))
+        .map(|_| {
+            let buf = &payload[..len as usize];
+            // TODO: use `MaybeUninit::slice_assume_init_ref` once stable.
+            unsafe { &*(buf as *const [_] as *const [u8]) }.into()
+        })
+    }
+
+    /// Set the value of the `TCP_CONGESTION` option for this socket.
+    ///
+    /// Specifies the TCP congestion control algorithm to use for this socket.
+    ///
+    /// The value must be a valid TCP congestion control algorithm name of the
+    /// platform. For example, Linux may supports "reno", "cubic".
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux"))))
+    )]
+    pub fn set_tcp_congestion(&self, tcp_ca_name: &[u8]) -> io::Result<()> {
+        syscall!(setsockopt(
+            self.as_raw(),
+            IPPROTO_TCP,
+            libc::TCP_CONGESTION,
+            tcp_ca_name.as_ptr() as *const _,
+            tcp_ca_name.len() as libc::socklen_t,
+        ))
+        .map(|_| ())
     }
 }
 

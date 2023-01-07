@@ -1341,3 +1341,49 @@ fn original_dst_ipv6() {
         Err(err) => assert_eq!(err.raw_os_error(), Some(libc::EOPNOTSUPP)),
     }
 }
+
+#[test]
+#[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+fn tcp_congestion() {
+    let socket: Socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    // Get and set current tcp_ca
+    let origin_tcp_ca = socket
+        .tcp_congestion()
+        .expect("failed to get tcp congestion algorithm");
+    socket
+        .set_tcp_congestion(&origin_tcp_ca)
+        .expect("failed to set tcp congestion algorithm");
+    // Return a Err when set a non-exist tcp_ca
+    socket
+        .set_tcp_congestion(b"tcp_congestion_does_not_exist")
+        .unwrap_err();
+    let cur_tcp_ca = socket.tcp_congestion().unwrap();
+    assert_eq!(
+        cur_tcp_ca, origin_tcp_ca,
+        "expected {origin_tcp_ca:?} but get {cur_tcp_ca:?}"
+    );
+    let cur_tcp_ca = cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap();
+    const OPTIONS: [&[u8]; 2] = [
+        b"cubic",
+        #[cfg(target_os = "linux")] // or Android.
+        b"reno",
+        #[cfg(target_os = "freebsd")]
+        b"newreno",
+    ];
+    // Set a new tcp ca
+    #[cfg(target_os = "linux")]
+    let new_tcp_ca = if cur_tcp_ca == OPTIONS[0] {
+        OPTIONS[1]
+    } else {
+        OPTIONS[0]
+    };
+    #[cfg(target_os = "freebsd")]
+    let new_tcp_ca = OPTIONS[1];
+    socket.set_tcp_congestion(new_tcp_ca).unwrap();
+    // Check if new tcp ca is successfully set
+    let cur_tcp_ca = socket.tcp_congestion().unwrap();
+    assert_eq!(
+        cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap(),
+        new_tcp_ca,
+    );
+}
