@@ -1138,6 +1138,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "nto",
     )))]
     pub fn join_multicast_v4_n(
         &self,
@@ -1167,6 +1168,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "nto",
     )))]
     pub fn leave_multicast_v4_n(
         &self,
@@ -1198,6 +1200,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
+        target_os = "nto",
     )))]
     pub fn join_ssm_v4(
         &self,
@@ -1232,6 +1235,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
+        target_os = "nto",
     )))]
     pub fn leave_ssm_v4(
         &self,
@@ -1407,6 +1411,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "windows",
+        target_os = "nto",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
         let recv_tos = if recv_tos { 1 } else { 0 };
@@ -1435,6 +1440,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "windows",
+        target_os = "nto",
     )))]
     pub fn recv_tos(&self) -> io::Result<bool> {
         unsafe {

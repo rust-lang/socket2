@@ -85,6 +85,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "nto",
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
@@ -112,6 +113,7 @@ pub(crate) use libc::{
     target_os = "openbsd",
     target_os = "redox",
     target_os = "fuchsia",
+    target_os = "nto",
 )))]
 pub(crate) use libc::{
     ip_mreq_source as IpMreqSource, IP_ADD_SOURCE_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP,
@@ -124,7 +126,8 @@ pub(crate) use libc::{
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
-    target_vendor = "apple"
+    target_vendor = "apple",
+    target_os = "nto",
 )))]
 pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
 #[cfg(any(
@@ -136,6 +139,7 @@ pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
     target_os = "openbsd",
     target_os = "solaris",
     target_vendor = "apple",
+    target_os = "nto",
 ))]
 pub(crate) use libc::{
     IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP, IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP,
@@ -158,9 +162,14 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
-#[cfg(target_vendor = "apple")]
+#[cfg(any(target_vendor = "apple", target_os = "nto"))]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
-#[cfg(not(any(target_vendor = "apple", target_os = "haiku", target_os = "openbsd")))]
+#[cfg(not(any(
+    target_vendor = "apple",
+    target_os = "haiku",
+    target_os = "openbsd",
+    target_os = "nto"
+)))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
 /// Helper macro to execute a system call that returns an `io::Result`.
@@ -220,6 +229,7 @@ type IovLen = usize;
     target_os = "openbsd",
     target_os = "solaris",
     target_vendor = "apple",
+    target_os = "nto",
 ))]
 type IovLen = c_int;
 
@@ -316,7 +326,8 @@ impl Type {
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
-            target_os = "openbsd"
+            target_os = "openbsd",
+            target_os = "nto", /* From 7.0 up */
         )
     ))]
     #[cfg_attr(
@@ -331,7 +342,8 @@ impl Type {
                 target_os = "illumos",
                 target_os = "linux",
                 target_os = "netbsd",
-                target_os = "openbsd"
+                target_os = "openbsd",
+                target_os = "nto",
             )
         )))
     )]
@@ -347,7 +359,8 @@ impl Type {
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
-        target_os = "openbsd"
+        target_os = "openbsd",
+        target_os = "nto",
     ))]
     pub(crate) const fn _cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
@@ -930,6 +943,12 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
         }
     }
 
+    #[cfg(target_os = "nto")]
+    if let Some(time) = keepalive.time {
+        let secs = into_timeval(Some(time));
+        unsafe { setsockopt(fd, libc::IPPROTO_TCP, KEEPALIVE_TIME, secs)? }
+    }
+
     Ok(())
 }
 
@@ -1028,6 +1047,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "nto",
 )))]
 pub(crate) fn to_mreqn(
     multiaddr: &Ipv4Addr,
@@ -1197,6 +1217,7 @@ impl crate::Socket {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
+            target_os = "nto",
         )
     ))]
     #[cfg_attr(
@@ -1208,6 +1229,7 @@ impl crate::Socket {
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "linux",
+                target_os = "nto",
             )
         )))
     )]

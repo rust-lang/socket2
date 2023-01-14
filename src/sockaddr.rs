@@ -234,7 +234,8 @@ impl From<SocketAddrV4> for SockAddr {
                 target_os = "ios",
                 target_os = "macos",
                 target_os = "netbsd",
-                target_os = "openbsd"
+                target_os = "openbsd",
+                target_os = "nto",
             ))]
             sin_len: 0,
         };
@@ -273,7 +274,8 @@ impl From<SocketAddrV6> for SockAddr {
                 target_os = "ios",
                 target_os = "macos",
                 target_os = "netbsd",
-                target_os = "openbsd"
+                target_os = "openbsd",
+                target_os = "nto",
             ))]
             sin6_len: 0,
             #[cfg(any(target_os = "solaris", target_os = "illumos"))]
@@ -302,6 +304,7 @@ impl fmt::Debug for SockAddr {
             target_os = "netbsd",
             target_os = "openbsd",
             target_os = "vxworks",
+            target_os = "nto",
         ))]
         f.field("ss_len", &self.storage.ss_len);
         f.field("ss_family", &self.storage.ss_family)
