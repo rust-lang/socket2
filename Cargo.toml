@@ -34,7 +34,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 features = ["all"]
 
 [target."cfg(unix)".dependencies]
-libc = "0.2.124"
+libc = "0.2.139"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.36"
