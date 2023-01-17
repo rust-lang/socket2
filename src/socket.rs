@@ -11,7 +11,9 @@ use std::io::{self, Read, Write};
 #[cfg(not(target_os = "redox"))]
 use std::io::{IoSlice, IoSliceMut};
 use std::mem::MaybeUninit;
-use std::net::{self, Ipv4Addr, Ipv6Addr, Shutdown};
+#[cfg(not(target_os = "nto"))]
+use std::net::Ipv6Addr;
+use std::net::{self, Ipv4Addr, Shutdown};
 #[cfg(unix)]
 use std::os::unix::io::{FromRawFd, IntoRawFd};
 #[cfg(windows)]
@@ -1138,6 +1140,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "nto",
     )))]
     pub fn join_multicast_v4_n(
         &self,
@@ -1167,6 +1170,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "nto",
     )))]
     pub fn leave_multicast_v4_n(
         &self,
@@ -1198,6 +1202,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
+        target_os = "nto",
     )))]
     pub fn join_ssm_v4(
         &self,
@@ -1232,6 +1237,7 @@ impl Socket {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "fuchsia",
+        target_os = "nto",
     )))]
     pub fn leave_ssm_v4(
         &self,
@@ -1407,6 +1413,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "windows",
+        target_os = "nto",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
         let recv_tos = if recv_tos { 1 } else { 0 };
@@ -1435,6 +1442,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "windows",
+        target_os = "nto",
     )))]
     pub fn recv_tos(&self) -> io::Result<bool> {
         unsafe {
@@ -1457,6 +1465,7 @@ impl Socket {
     /// This function specifies a new multicast group for this socket to join.
     /// The address must be a valid multicast address, and `interface` is the
     /// index of the interface to join/leave (or 0 to indicate any interface).
+    #[cfg(not(target_os = "nto"))]
     pub fn join_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let mreq = sys::Ipv6Mreq {
             ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
@@ -1480,6 +1489,7 @@ impl Socket {
     /// For more information about this option, see [`join_multicast_v6`].
     ///
     /// [`join_multicast_v6`]: Socket::join_multicast_v6
+    #[cfg(not(target_os = "nto"))]
     pub fn leave_multicast_v6(&self, multiaddr: &Ipv6Addr, interface: u32) -> io::Result<()> {
         let mreq = sys::Ipv6Mreq {
             ipv6mr_multiaddr: sys::to_in6_addr(multiaddr),
