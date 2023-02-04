@@ -37,7 +37,7 @@ features = ["all"]
 libc = "0.2.139"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.36"
+version = "0.45"
 features = [
   "Win32_Foundation",
   "Win32_Networking_WinSock",
