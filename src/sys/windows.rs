@@ -68,14 +68,14 @@ pub(crate) type socklen_t = i32;
 #[cfg(feature = "all")]
 pub(crate) use windows_sys::Win32::Networking::WinSock::IP_HDRINCL;
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
-    linger, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP, IPV6_MREQ as Ipv6Mreq,
+    IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP, IPV6_MREQ as Ipv6Mreq,
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_RECVTCLASS,
     IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_ADD_SOURCE_MEMBERSHIP,
     IP_DROP_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP, IP_MREQ as IpMreq,
     IP_MREQ_SOURCE as IpMreqSource, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
-    IP_RECVTOS, IP_TOS, IP_TTL, MSG_OOB, MSG_PEEK, SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_LINGER,
-    SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF, SO_SNDTIMEO, SO_TYPE,
-    TCP_NODELAY,
+    IP_RECVTOS, IP_TOS, IP_TTL, LINGER as linger, MSG_OOB, MSG_PEEK, SO_BROADCAST, SO_ERROR,
+    SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
+    SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 pub(crate) const IPPROTO_IP: c_int = windows_sys::Win32::Networking::WinSock::IPPROTO_IP as c_int;
 pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SOL_SOCKET as c_int;
@@ -781,7 +781,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
     let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
     let len = {
-        let storage: &mut windows_sys::Win32::Networking::WinSock::sockaddr_un =
+        let storage: &mut windows_sys::Win32::Networking::WinSock::SOCKADDR_UN =
             unsafe { &mut *(&mut storage as *mut sockaddr_storage).cast() };
 
         // Windows expects a UTF-8 path here even though Windows paths are
