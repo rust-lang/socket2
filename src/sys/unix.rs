@@ -609,7 +609,8 @@ pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<So
     syscall!(socket(family, ty, protocol))
 }
 
-#[cfg(feature = "all")]
+#[cfg(all(feature = "all", unix))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
 pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<[Socket; 2]> {
     let mut fds = [0, 0];
     syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr())).map(|_| fds)
@@ -898,8 +899,11 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     }
 }
 
-#[cfg(feature = "all")]
-#[cfg(not(any(target_os = "haiku", target_os = "openbsd")))]
+#[cfg(all(feature = "all", not(any(target_os = "haiku", target_os = "openbsd"))))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(all(feature = "all", not(any(target_os = "haiku", target_os = "openbsd")))))
+)]
 pub(crate) fn keepalive_time(fd: Socket) -> io::Result<Duration> {
     unsafe {
         getsockopt::<c_int>(fd, IPPROTO_TCP, KEEPALIVE_TIME)
@@ -1158,7 +1162,7 @@ impl crate::Socket {
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
-    #[cfg(all(feature = "all", any(doc, target_vendor = "apple")))]
+    #[cfg(all(feature = "all", target_vendor = "apple"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
     pub fn set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
         self._set_nosigpipe(nosigpipe)

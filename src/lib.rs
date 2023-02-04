@@ -512,7 +512,6 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
-            doc,
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",

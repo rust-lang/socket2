@@ -1367,7 +1367,7 @@ fn tcp_congestion() {
     let cur_tcp_ca = cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap();
     const OPTIONS: [&[u8]; 2] = [
         b"cubic",
-        #[cfg(target_os = "linux")] // or Android.
+        #[cfg(target_os = "linux")]
         b"reno",
         #[cfg(target_os = "freebsd")]
         b"newreno",

@@ -147,7 +147,7 @@ impl Socket {
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::pair_raw`] can be used if you don't want to set those flags.
     #[doc = man_links!(unix: socketpair(2))]
-    #[cfg(any(doc, all(feature = "all", unix)))]
+    #[cfg(all(feature = "all", unix))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn pair(
         domain: Domain,
@@ -164,7 +164,7 @@ impl Socket {
     /// Creates a pair of sockets which are connected to each other.
     ///
     /// This function corresponds to `socketpair(2)`.
-    #[cfg(any(doc, all(feature = "all", unix)))]
+    #[cfg(all(feature = "all", unix))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn pair_raw(
         domain: Domain,
@@ -1091,7 +1091,7 @@ impl Socket {
     /// For more information about this option, see [`set_ip_transparent`].
     ///
     /// [`set_ip_transparent`]: Socket::set_ip_transparent
-    #[cfg(any(doc, all(feature = "all", target_os = "linux")))]
+    #[cfg(all(feature = "all", target_os = "linux"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn ip_transparent(&self) -> io::Result<bool> {
         unsafe {
@@ -1115,7 +1115,7 @@ impl Socket {
     ///
     /// TProxy redirection with the iptables TPROXY target also
     /// requires that this option be set on the redirected socket.
-    #[cfg(any(doc, all(feature = "all", target_os = "linux")))]
+    #[cfg(all(feature = "all", target_os = "linux"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
         unsafe {
@@ -1737,12 +1737,9 @@ impl Socket {
     ///
     /// This returns the value of `TCP_KEEPALIVE` on macOS and iOS and `TCP_KEEPIDLE` on all other
     /// supported Unix operating systems.
-    #[cfg(any(
-        doc,
-        all(
-            feature = "all",
-            not(any(windows, target_os = "haiku", target_os = "openbsd"))
-        )
+    #[cfg(all(
+        feature = "all",
+        not(any(windows, target_os = "haiku", target_os = "openbsd"))
     ))]
     #[cfg_attr(
         docsrs,
@@ -1763,7 +1760,6 @@ impl Socket {
     #[cfg(all(
         feature = "all",
         any(
-            doc,
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
@@ -1805,7 +1801,6 @@ impl Socket {
     #[cfg(all(
         feature = "all",
         any(
-            doc,
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
