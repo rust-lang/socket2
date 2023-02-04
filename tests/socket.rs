@@ -72,7 +72,7 @@ fn domain_fmt_debug() {
     let mut buf = Vec::new();
     for (input, want) in tests {
         buf.clear();
-        write!(buf, "{:?}", input).unwrap();
+        write!(buf, "{input:?}").unwrap();
         let got = str::from_utf8(&buf).unwrap();
         assert_eq!(got, *want);
     }
@@ -93,7 +93,7 @@ fn type_fmt_debug() {
     let mut buf = Vec::new();
     for (input, want) in tests {
         buf.clear();
-        write!(buf, "{:?}", input).unwrap();
+        write!(buf, "{input:?}").unwrap();
         let got = str::from_utf8(&buf).unwrap();
         assert_eq!(got, *want);
     }
@@ -118,7 +118,7 @@ fn protocol_fmt_debug() {
     let mut buf = Vec::new();
     for (input, want) in tests {
         buf.clear();
-        write!(buf, "{:?}", input).unwrap();
+        write!(buf, "{input:?}").unwrap();
         let got = str::from_utf8(&buf).unwrap();
         assert_eq!(got, *want);
     }
@@ -323,7 +323,7 @@ where
     let mut flags = 0;
     if unsafe { GetHandleInformation(socket.as_raw_socket() as _, &mut flags) } == 0 {
         let err = io::Error::last_os_error();
-        panic!("unexpected error: {}", err);
+        panic!("unexpected error: {err}");
     }
     assert_eq!(
         flags & HANDLE_FLAG_INHERIT != 0,
@@ -365,8 +365,7 @@ where
         )
     };
     if res != 0 {
-        let err = io::Error::last_os_error();
-        panic!("unexpected error: {}", err);
+        panic!("unexpected error: {}", io::Error::last_os_error());
     }
     assert_eq!(length as usize, size_of::<libc::c_int>());
     assert_eq!(flags, want as _, "non-blocking option");
@@ -382,8 +381,8 @@ fn connect_timeout_unrouteable() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     match socket.connect_timeout(&addr, Duration::from_millis(250)) {
         Ok(_) => panic!("unexpected success"),
-        Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {}
-        Err(e) => panic!("unexpected error {}", e),
+        Err(ref err) if err.kind() == io::ErrorKind::TimedOut => {}
+        Err(err) => panic!("unexpected error {}", err),
     }
 }
 
@@ -399,10 +398,10 @@ fn connect_timeout_unbound() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     match socket.connect_timeout(&addr, Duration::from_millis(250)) {
         Ok(_) => panic!("unexpected success"),
-        Err(ref e)
-            if e.kind() == io::ErrorKind::ConnectionRefused
-                || e.kind() == io::ErrorKind::TimedOut => {}
-        Err(e) => panic!("unexpected error {}", e),
+        Err(ref err)
+            if err.kind() == io::ErrorKind::ConnectionRefused
+                || err.kind() == io::ErrorKind::TimedOut => {}
+        Err(err) => panic!("unexpected error {}", err),
     }
 }
 
@@ -445,7 +444,7 @@ fn unix_sockets_supported() -> bool {
             {
                 return false;
             }
-            Err(err) => panic!("socket error: {}", err),
+            Err(err) => panic!("socket error: {err}"),
         }
     }
     true
@@ -804,7 +803,7 @@ fn device() {
         if let Err(err) = socket.bind_device(Some(interface.as_bytes())) {
             // Network interface is not available try another.
             if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
-                eprintln!("error binding to device (`{}`): {}", interface, err);
+                eprintln!("error binding to device (`{interface}`): {err}");
                 continue;
             } else {
                 panic!("unexpected error binding device: {}", err);
@@ -844,7 +843,7 @@ fn device() {
         if let Err(err) = socket.bind_device_by_index(iface_index) {
             // Network interface is not available try another.
             if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
-                eprintln!("error binding to device (`{}`): {}", interface, err);
+                eprintln!("error binding to device (`{interface}`): {err}");
                 continue;
             } else {
                 panic!("unexpected error binding device: {}", err);

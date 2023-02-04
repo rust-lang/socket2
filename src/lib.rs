@@ -89,7 +89,7 @@ macro_rules! impl_debug {
                         $(#[$target])*
                         $libc :: $flag => stringify!($flag),
                     )+
-                    n => return write!(f, "{}", n),
+                    n => return write!(f, "{n}"),
                 };
                 f.write_str(string)
             }
