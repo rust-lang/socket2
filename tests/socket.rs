@@ -532,6 +532,21 @@ fn out_of_band() {
 }
 
 #[test]
+#[cfg(not(target_os = "redox"))] // cfg of `udp_pair_unconnected()`
+fn udp_peek_sender() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+
+    let socket_a_addr = socket_a.local_addr().unwrap();
+    let socket_b_addr = socket_b.local_addr().unwrap();
+
+    socket_b.send_to(b"Hello, world!", &socket_a_addr).unwrap();
+
+    let sender_addr = socket_a.peek_sender().unwrap();
+
+    assert_eq!(sender_addr.as_socket(), socket_b_addr.as_socket());
+}
+
+#[test]
 #[cfg(not(target_os = "redox"))]
 fn send_recv_vectored() {
     let (socket_a, socket_b) = udp_pair_connected();

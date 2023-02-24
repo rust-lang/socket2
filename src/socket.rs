@@ -596,9 +596,34 @@ impl Socket {
     /// `peek_from` makes the same safety guarantees regarding the `buf`fer as
     /// [`recv`].
     ///
+    /// # Note: Datagram Sockets
+    /// For datagram sockets, the behavior of this method when `buf` is smaller than
+    /// the datagram at the head of the receive queue differs between Windows and
+    /// Unix-like platforms (Linux, macOS, BSDs, etc: colloquially termed "*nix").
+    ///
+    /// On *nix platforms, the datagram is truncated to the length of `buf`.
+    ///
+    /// On Windows, an error corresponding to `WSAEMSGSIZE` will be returned.
+    ///
+    /// For consistency between platforms, be sure to provide a sufficiently large buffer to avoid
+    /// truncation; the exact size required depends on the underlying protocol.
+    ///
+    /// If you just want to know the sender of the data, try [`peek_sender`].
+    ///
     /// [`recv`]: Socket::recv
+    /// [`peek_sender`]: Socket::peek_sender
     pub fn peek_from(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<(usize, SockAddr)> {
         self.recv_from_with_flags(buf, sys::MSG_PEEK)
+    }
+
+    /// Retrieve the sender for the data at the head of the receive queue.
+    ///
+    /// This is equivalent to calling [`peek_from`] with a zero-sized buffer,
+    /// but suppresses the `WSAEMSGSIZE` error on Windows.
+    ///
+    /// [`peek_from`]: Socket::peek_from
+    pub fn peek_sender(&self) -> io::Result<SockAddr> {
+        sys::peek_sender(self.as_raw())
     }
 
     /// Sends data on the socket to a connected peer.

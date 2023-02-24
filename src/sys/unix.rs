@@ -749,6 +749,15 @@ pub(crate) fn recv_from(
     }
 }
 
+pub(crate) fn peek_sender(fd: Socket) -> io::Result<SockAddr> {
+    // Unix-like platforms simply truncate the returned data, so this implementation is trivial.
+    // However, for Windows this requires suppressing the `WSAEMSGSIZE` error,
+    // so that requires a different approach.
+    // NOTE: macOS does not populate `sockaddr` if you pass a zero-sized buffer.
+    let (_, sender) = recv_from(fd, &mut [MaybeUninit::uninit(); 8], MSG_PEEK)?;
+    Ok(sender)
+}
+
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn recv_vectored(
     fd: Socket,
