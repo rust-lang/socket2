@@ -475,10 +475,11 @@ impl TcpKeepalive {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
+            target_os = "ios",
             target_os = "linux",
+            target_os = "macos",
             target_os = "netbsd",
-            target_vendor = "apple",
-            windows,
+            target_os = "windows",
         )
     ))]
     #[cfg_attr(
@@ -491,10 +492,11 @@ impl TcpKeepalive {
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "illumos",
+                target_os = "ios",
                 target_os = "linux",
+                target_os = "macos",
                 target_os = "netbsd",
-                target_vendor = "apple",
-                windows,
+                target_os = "windows",
             )
         )))
     )]
@@ -517,9 +519,10 @@ impl TcpKeepalive {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
+            target_os = "ios",
             target_os = "linux",
+            target_os = "macos",
             target_os = "netbsd",
-            target_vendor = "apple",
         )
     ))]
     #[cfg_attr(
@@ -532,9 +535,10 @@ impl TcpKeepalive {
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "illumos",
+                target_os = "ios",
                 target_os = "linux",
+                target_os = "macos",
                 target_os = "netbsd",
-                target_vendor = "apple",
             )
         )))
     )]
