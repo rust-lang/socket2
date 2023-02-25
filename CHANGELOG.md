@@ -1,3 +1,82 @@
+# 0.5.0
+
+## Changed
+
+* **BREAKING** `SockAddr::init` is renamed to `try_init` to indicate it can fail
+  (https://github.com/rust-lang/socket2/pull/328).
+* **BREAKING** Remove the returned `Result` from `SockAddr::vsock`, it can't
+  fail (https://github.com/rust-lang/socket2/pull/328).
+* **BREAKING** `From<S>` is now implemented using the I/O traits `AsFd` and
+  `AsRawSocket`
+  (https://github.com/rust-lang/socket2/pull/325):
+* **BREAKING** renamed `SockAddr::vsock_addr` `SockAddr::as_vsock_addr` to match
+  the IPv4 and IPv6 methods
+  (https://github.com/rust-lang/socket2/pull/334).
+* Redox now works on a stable compiler
+  (https://github.com/rust-lang/socket2/pull/326).
+* Remove copy from `From<SocketAddrV{4,6}>` implementation for `SockAddr`
+  (https://github.com/rust-lang/socket2/pull/335).
+* Marked function as constant where possible.
+* Updated to Rust edition 2021
+  (https://github.com/rust-lang/socket2/pull/393).
+
+## Added
+
+* Links to OS documentation to a lot of methods
+  (https://github.com/rust-lang/socket2/pull/319).
+* I/O-safety traits (https://github.com/rust-lang/socket2/pull/325):
+  * `AsFd` for `Socket` (Unix only).
+  * `From<OwnedFd>` for `Socket` (Unix only).
+  * `From<Socket>` for `OwnedFd` (Unix only).
+  * `AsSocket` for `Socket` (Windows only).
+  * `From<OwnedSocket>` for `Socket` (Windows only).
+  * `From<Socket>` for `OwnedSocket` (Windows only).
+* Unix socket support on Windows
+  (https://github.com/rust-lang/socket2/pull/249).
+* `SockAddr::is_ipv{4,6}` and `SockAddr::domain`
+  (https://github.com/rust-lang/socket2/pull/334).
+* `Socket::nonblocking`
+  (https://github.com/rust-lang/socket2/pull/348).
+* `Socket::original_dst(_ipv6)`
+  (https://github.com/rust-lang/socket2/pull/360).
+* `Socket::(set_)recv_tclass_v6` and `Socket::(set_)tclass_v6`
+  (https://github.com/rust-lang/socket2/pull/364).
+* `Socket::(set_)tcp_congestion`
+  (https://github.com/rust-lang/socket2/pull/371).
+* Support for various DCCP socket options in the form of
+  (https://github.com/rust-lang/socket2/pull/359):
+  * `Socket::(set_)dccp_service`
+  * `Socket::dccp_available_ccids`
+  * `Socket::dccp_qpolicy_txqlen`
+  * `Socket::dccp_recv_cscov`
+  * `Socket::dccp_send_cscov`
+  * `Socket::dccp_server_timewait`
+  * `Socket::dccp_server_timewait`
+  * `Socket::dccp_tx_ccid`
+  * `Socket::dccp_xx_ccid`
+  * `Socket::set_dccp_ccid`
+  * `Socket::set_dccp_qpolicy_txqlen`
+  * `Socket::set_dccp_recv_cscov`
+  * `Socket::set_dccp_send_cscov`
+  * `Socket::set_dccp_server_timewait`
+  * `Socket::dccp_cur_mps`
+* `Socket::peek_send`
+  (https://github.com/rust-lang/socket2/pull/389).
+* `Protocol::MPTCP`
+  (https://github.com/rust-lang/socket2/pull/349).
+* `Protocol::SCTP`
+  (https://github.com/rust-lang/socket2/pull/356).
+* `Protocol::DCCP`
+  (https://github.com/rust-lang/socket2/pull/359).
+* `Type::DCCP`
+  (https://github.com/rust-lang/socket2/pull/359).
+* Implement `Eq` and `Hash` for `SockAddr`
+  (https://github.com/rust-lang/socket2/pull/374).
+* Support for QNX Neutrino
+  (https://github.com/rust-lang/socket2/pull/380).
+* Support for AIX
+  (https://github.com/rust-lang/socket2/pull/351).
+
 # 0.4.7
 
 * Fixes compilation on OpenBSD
