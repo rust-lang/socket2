@@ -467,9 +467,21 @@ impl TcpKeepalive {
     ///
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.
-    #[cfg(all(
-        feature = "all",
-        any(
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "windows",
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(any(
             target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
@@ -480,24 +492,6 @@ impl TcpKeepalive {
             target_os = "macos",
             target_os = "netbsd",
             target_os = "windows",
-        )
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(
-                target_os = "android",
-                target_os = "dragonfly",
-                target_os = "freebsd",
-                target_os = "fuchsia",
-                target_os = "illumos",
-                target_os = "ios",
-                target_os = "linux",
-                target_os = "macos",
-                target_os = "netbsd",
-                target_os = "windows",
-            )
         )))
     )]
     pub const fn with_interval(self, interval: Duration) -> Self {
