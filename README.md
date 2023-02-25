@@ -21,11 +21,10 @@ See the [API documentation] for more.
 
 # Branches
 
-Currently Socket2 supports two versions: v0.4 and v0.3. Version 0.4 is developed
-in the [v0.4.x branch] branch, version 0.3 in the [v0.3.x branch]. Version 0.5
-is currently being developed in the master branch.
+Currently Socket2 supports two versions: v0.5 and v0.4. Version 0.5 is being
+developed in the master branch. Version 0.4 is developed in the [v0.4.x branch]
+branch.
 
-[v0.3.x branch]: https://github.com/rust-lang/socket2/tree/v0.3.x
 [v0.4.x branch]: https://github.com/rust-lang/socket2/tree/v0.4.x
 
 # OS support
