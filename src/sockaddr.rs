@@ -303,9 +303,11 @@ impl fmt::Debug for SockAddr {
             target_os = "ios",
             target_os = "macos",
             target_os = "netbsd",
-            target_os = "openbsd",
-            target_os = "vxworks",
             target_os = "nto",
+            target_os = "openbsd",
+            target_os = "tvos",
+            target_os = "vxworks",
+            target_os = "watchos",
         ))]
         f.field("ss_len", &self.storage.ss_len);
         f.field("ss_family", &self.storage.ss_family)
