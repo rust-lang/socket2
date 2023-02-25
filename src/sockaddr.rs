@@ -3,6 +3,7 @@ use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::path::Path;
 use std::{fmt, io, ptr};
+use libc::{AF_LOCAL, AF_UNIX, sockaddr_un};
 
 #[cfg(windows)]
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
@@ -184,10 +185,62 @@ impl SockAddr {
         self.storage.ss_family == AF_INET6 as sa_family_t
     }
 
+    /// Returns true if this address is for local interprocess communication, i.e. it is from the
+    /// `AF_UNIX` (AKA `AF_LOCAL`) family, false otherwise.
+    pub fn is_local(&self) -> bool {
+        self.storage.ss_family == AF_UNIX as sa_family_t
+    }
+
+    /// Returns true if this address is an unnamed address from the `AF_UNIX` (AKA `AF_LOCAL`)
+    /// family (for local interprocess communication), false otherwise.
+    pub fn is_unnamed(&self) -> bool {
+        self.as_sockaddr_un()
+            .map(|storage| {
+                self.len == crate::sys::offset_of_path(storage) as u32
+            }).unwrap_or_default()
+    }
+
     /// Returns a raw pointer to the address storage.
     #[cfg(all(unix, not(target_os = "redox")))]
     pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
         &self.storage
+    }
+
+
+    /// Returns the underlying `sockaddr_un` object if this addres is from the `AF_UNIX` family,
+    /// otherwise returns `None`.
+    fn as_sockaddr_un(&self) -> Option<&mut sockaddr_un> {
+        self.is_local()
+            .then(|| {
+            // SAFETY: if local, i.e. the `ss_family` field is `AF_UNIX` then storage must be a
+            // `sockaddr_un`.
+            unsafe { &mut *ptr::addr_of_mut!(storage).cast::<libc::sockaddr_un>() }
+        })
+    }
+
+    /// Returns this address as a `Path` if it is an `AF_UNIX` pathname address, otherwise returns
+    /// `None`.
+    pub fn as_pathname(&self) -> Option<&Path> {
+        self.as_sockaddr_un()
+            .and_then(|storage| {
+            (storage.sun_path[0] != 0).then(|| {
+                // The -1 is for the terminating null.
+                let path_len = self.len - crate::sys::offset_of_path(storage) - 1;
+                Path::new(&storage.sun_path[..path_len])
+            })
+        })
+    }
+
+    /// Returns this address as a slice of bytes representing an abstract address if it is an
+    /// `AF_UNIX` abstracT address, otherwise returns `None`.
+    pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
+        self.as_sockaddr_un()
+            .and_then(|storage| {
+            (storage.sun_path[0] == 0).then(|| {
+                let path_len = self.len - crate::sys::offset_of_path(storage);
+                &storage.sun_path[..path_len]
+            })
+        })
     }
 
     /// Returns this address as a `SocketAddr` if it is in the `AF_INET` (IPv4)

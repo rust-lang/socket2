@@ -569,6 +569,14 @@ impl<'a> MaybeUninitSlice<'a> {
     }
 }
 
+/// Returns the offset of the `sun_path` member of the passed unix socket address.
+pub(crate) fn offset_of_path(storage: &libc::sockaddr_un) -> usize {
+    let base = storage as *const _ as usize;
+    let path = ptr::addr_of!(storage.sun_path) as usize;
+    path - base
+}
+
+
 #[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
@@ -603,9 +611,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
             );
         }
 
-        let base = storage as *const _ as usize;
-        let path = ptr::addr_of!(storage.sun_path) as usize;
-        let sun_path_offset = path - base;
+        let sun_path_offset = offset_of_path(storage);
         sun_path_offset
             + bytes.len()
             + match bytes.first() {
