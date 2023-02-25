@@ -477,6 +477,8 @@ impl TcpKeepalive {
         target_os = "linux",
         target_os = "macos",
         target_os = "netbsd",
+        target_os = "tvos",
+        target_os = "watchos",
         target_os = "windows",
     ))]
     #[cfg_attr(
@@ -491,6 +493,8 @@ impl TcpKeepalive {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "tvos",
+            target_os = "watchos",
             target_os = "windows",
         )))
     )]
@@ -517,6 +521,8 @@ impl TcpKeepalive {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "tvos",
+            target_os = "watchos",
         )
     ))]
     #[cfg_attr(
@@ -533,6 +539,8 @@ impl TcpKeepalive {
                 target_os = "linux",
                 target_os = "macos",
                 target_os = "netbsd",
+                target_os = "tvos",
+                target_os = "watchos",
             )
         )))
     )]

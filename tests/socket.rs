@@ -7,6 +7,8 @@
         target_os = "ios",
         target_os = "linux",
         target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
     )
 ))]
 use std::fs::File;
@@ -27,6 +29,8 @@ use std::net::{Ipv6Addr, SocketAddrV6};
         target_os = "ios",
         target_os = "linux",
         target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
     )
 ))]
 use std::num::NonZeroUsize;
@@ -177,7 +181,12 @@ fn set_nonblocking() {
 fn assert_common_flags(socket: &Socket, expected: bool) {
     #[cfg(unix)]
     assert_close_on_exec(socket, expected);
-    #[cfg(any(target_os = "ios", target_os = "macos"))]
+    #[cfg(any(
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
+    ))]
     assert_flag_no_sigpipe(socket, expected);
     #[cfg(windows)]
     assert_flag_no_inherit(socket, expected);
@@ -334,7 +343,15 @@ where
     );
 }
 
-#[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
+    )
+))]
 #[test]
 fn set_nosigpipe() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
@@ -348,7 +365,12 @@ fn set_nosigpipe() {
 }
 
 /// Assert that `SO_NOSIGPIPE` is set on `socket`.
-#[cfg(any(target_os = "ios", target_os = "macos"))]
+#[cfg(any(
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "tvos",
+    target_os = "watchos",
+))]
 #[track_caller]
 pub fn assert_flag_no_sigpipe<S>(socket: &S, want: bool)
 where
@@ -746,6 +768,8 @@ fn tcp_keepalive() {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "tvos",
+            target_os = "watchos",
             target_os = "windows",
         )
     ))]
@@ -761,6 +785,8 @@ fn tcp_keepalive() {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "tvos",
+            target_os = "watchos",
         )
     ))]
     let params = params.with_retries(10);
@@ -786,6 +812,8 @@ fn tcp_keepalive() {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "tvos",
+            target_os = "watchos",
         )
     ))]
     assert_eq!(
@@ -805,6 +833,8 @@ fn tcp_keepalive() {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "tvos",
+            target_os = "watchos",
         )
     ))]
     assert_eq!(socket.keepalive_retries().unwrap(), 10);
@@ -844,7 +874,15 @@ fn device() {
     panic!("failed to bind to any device.");
 }
 
-#[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
+    )
+))]
 #[test]
 fn device() {
     // Some common network interface on macOS.
@@ -889,6 +927,8 @@ fn device() {
         target_os = "ios",
         target_os = "linux",
         target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
     )
 ))]
 #[test]
@@ -1036,7 +1076,12 @@ fn r#type() {
     // macos doesn't support seqpacket
     #[cfg(all(
         unix,
-        not(any(target_os = "ios", target_os = "macos")),
+        not(any(
+            target_os = "ios",
+            target_os = "macos",
+            target_os = "tvos",
+            target_os = "watchos",
+        )),
         feature = "all",
     ))]
     {
