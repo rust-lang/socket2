@@ -770,7 +770,7 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     socket._set_cloexec(true)?;
 
     // On Apple platforms set `NOSIGPIPE`.
-    #[cfg(target_vendor = "apple")]
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
     socket._set_nosigpipe(true)?;
 
     Ok(socket)
@@ -1794,9 +1794,10 @@ impl Socket {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
+            target_os = "ios",
             target_os = "linux",
+            target_os = "macos",
             target_os = "netbsd",
-            target_vendor = "apple",
         )
     ))]
     #[cfg_attr(
@@ -1809,9 +1810,10 @@ impl Socket {
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "illumos",
+                target_os = "ios",
                 target_os = "linux",
+                target_os = "macos",
                 target_os = "netbsd",
-                target_vendor = "apple",
             )
         )))
     )]
@@ -1835,9 +1837,10 @@ impl Socket {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
+            target_os = "ios",
             target_os = "linux",
+            target_os = "macos",
             target_os = "netbsd",
-            target_vendor = "apple",
         )
     ))]
     #[cfg_attr(
@@ -1850,9 +1853,10 @@ impl Socket {
                 target_os = "freebsd",
                 target_os = "fuchsia",
                 target_os = "illumos",
+                target_os = "ios",
                 target_os = "linux",
+                target_os = "macos",
                 target_os = "netbsd",
-                target_vendor = "apple",
             )
         )))
     )]

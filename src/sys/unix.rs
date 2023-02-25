@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::Shutdown;
 use std::net::{Ipv4Addr, Ipv6Addr};
-#[cfg(all(feature = "all", target_vendor = "apple"))]
+#[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
 use std::num::NonZeroU32;
 #[cfg(all(
     feature = "all",
@@ -21,8 +21,9 @@ use std::num::NonZeroU32;
         target_os = "aix",
         target_os = "android",
         target_os = "freebsd",
+        target_os = "ios",
         target_os = "linux",
-        target_vendor = "apple",
+        target_os = "macos",
     )
 ))]
 use std::num::NonZeroUsize;
@@ -33,8 +34,9 @@ use std::os::unix::ffi::OsStrExt;
         target_os = "aix",
         target_os = "android",
         target_os = "freebsd",
+        target_os = "ios",
         target_os = "linux",
-        target_vendor = "apple",
+        target_os = "macos",
     )
 ))]
 use std::os::unix::io::RawFd;
@@ -46,7 +48,7 @@ use std::ptr;
 use std::time::{Duration, Instant};
 use std::{io, slice};
 
-#[cfg(not(target_vendor = "apple"))]
+#[cfg(not(any(target_os = "ios", target_os = "macos")))]
 use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
@@ -117,9 +119,9 @@ pub(crate) use libc::IP_RECVTOS;
     target_os = "illumos",
 )))]
 pub(crate) use libc::IP_TOS;
-#[cfg(not(target_vendor = "apple"))]
+#[cfg(not(any(target_os = "ios", target_os = "macos")))]
 pub(crate) use libc::SO_LINGER;
-#[cfg(target_vendor = "apple")]
+#[cfg(any(target_os = "ios", target_os = "macos"))]
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
 pub(crate) use libc::{
     ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
@@ -145,11 +147,12 @@ pub(crate) use libc::{
     target_os = "freebsd",
     target_os = "haiku",
     target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
     target_os = "netbsd",
+    target_os = "nto",
     target_os = "openbsd",
     target_os = "solaris",
-    target_os = "nto",
-    target_vendor = "apple"
 )))]
 pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
 #[cfg(any(
@@ -157,10 +160,11 @@ pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
     target_os = "freebsd",
     target_os = "haiku",
     target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris",
-    target_vendor = "apple",
 ))]
 pub(crate) use libc::{
     IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP, IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP,
@@ -173,9 +177,10 @@ pub(crate) use libc::{
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "illumos",
+        target_os = "ios",
         target_os = "linux",
+        target_os = "macos",
         target_os = "netbsd",
-        target_vendor = "apple",
     )
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
@@ -183,13 +188,14 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
-#[cfg(any(target_vendor = "apple", target_os = "nto"))]
+#[cfg(any(target_os = "ios", target_os = "macos", target_os = "nto"))]
 use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
 #[cfg(not(any(
-    target_vendor = "apple",
     target_os = "haiku",
-    target_os = "openbsd",
+    target_os = "ios",
+    target_os = "macos",
     target_os = "nto",
+    target_os = "openbsd",
 )))]
 use libc::TCP_KEEPIDLE as KEEPALIVE_TIME;
 
@@ -207,7 +213,7 @@ macro_rules! syscall {
 }
 
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
-#[cfg(not(target_vendor = "apple"))]
+#[cfg(not(any(target_os = "ios", target_os = "macos")))]
 const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
 
 // The maximum read limit on most posix-like systems is `SSIZE_MAX`, with the
@@ -218,7 +224,7 @@ const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
 // intentionally showing odd behavior by rejecting any read with a size larger
 // than or equal to INT_MAX. To handle both of these the read size is capped on
 // both platforms.
-#[cfg(target_vendor = "apple")]
+#[cfg(any(target_os = "ios", target_os = "macos"))]
 const MAX_BUF_LEN: usize = c_int::MAX as usize - 1;
 
 // TCP_CA_NAME_MAX isn't defined in user space include files(not in libc)
@@ -251,11 +257,12 @@ type IovLen = usize;
     target_os = "fuchsia",
     target_os = "haiku",
     target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
     target_os = "netbsd",
+    target_os = "nto",
     target_os = "openbsd",
     target_os = "solaris",
-    target_os = "nto",
-    target_vendor = "apple",
 ))]
 type IovLen = c_int;
 
@@ -939,9 +946,10 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "illumos",
+        target_os = "ios",
         target_os = "linux",
+        target_os = "macos",
         target_os = "netbsd",
-        target_vendor = "apple",
     ))]
     {
         if let Some(interval) = keepalive.interval {
@@ -1177,13 +1185,16 @@ impl crate::Socket {
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
-    #[cfg(all(feature = "all", target_vendor = "apple"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
+    #[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "ios", target_os = "macos"))))
+    )]
     pub fn set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
         self._set_nosigpipe(nosigpipe)
     }
 
-    #[cfg(target_vendor = "apple")]
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
     pub(crate) fn _set_nosigpipe(&self, nosigpipe: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1621,8 +1632,11 @@ impl crate::Socket {
     ///
     /// One can use [`libc::if_nametoindex`] to convert an interface alias to an
     /// index.
-    #[cfg(all(feature = "all", target_vendor = "apple"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
+    #[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "ios", target_os = "macos"))))
+    )]
     pub fn bind_device_by_index(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         let index = interface.map_or(0, NonZeroU32::get);
         unsafe { setsockopt(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF, index) }
@@ -1633,8 +1647,11 @@ impl crate::Socket {
     ///
     /// Returns `None` if the socket is not bound to any interface, otherwise
     /// returns an interface index.
-    #[cfg(all(feature = "all", target_vendor = "apple"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_vendor = "apple"))))]
+    #[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "ios", target_os = "macos"))))
+    )]
     pub fn device_index(&self) -> io::Result<Option<NonZeroU32>> {
         let index =
             unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF)? };
@@ -1921,8 +1938,9 @@ impl crate::Socket {
             target_os = "aix",
             target_os = "android",
             target_os = "freebsd",
+            target_os = "ios",
             target_os = "linux",
-            target_vendor = "apple",
+            target_os = "macos",
         )
     ))]
     #[cfg_attr(
@@ -1933,8 +1951,9 @@ impl crate::Socket {
                 target_os = "aix",
                 target_os = "android",
                 target_os = "freebsd",
+                target_os = "ios",
                 target_os = "linux",
-                target_vendor = "apple",
+                target_os = "macos",
             )
         )))
     )]
@@ -1950,7 +1969,7 @@ impl crate::Socket {
         self._sendfile(file.as_raw_fd(), offset as _, length)
     }
 
-    #[cfg(all(feature = "all", target_vendor = "apple"))]
+    #[cfg(all(feature = "all", any(target_os = "ios", target_os = "macos")))]
     fn _sendfile(
         &self,
         file: RawFd,
