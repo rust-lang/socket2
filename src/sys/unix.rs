@@ -408,7 +408,8 @@ impl Type {
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
-            target_os = "openbsd"
+            target_os = "openbsd",
+            target_os = "solaris",
         )
     ))]
     #[cfg_attr(
@@ -423,7 +424,8 @@ impl Type {
                 target_os = "illumos",
                 target_os = "linux",
                 target_os = "netbsd",
-                target_os = "openbsd"
+                target_os = "openbsd",
+                target_os = "solaris",
             )
         )))
     )]
@@ -439,7 +441,8 @@ impl Type {
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
-        target_os = "openbsd"
+        target_os = "openbsd",
+        target_os = "solaris",
     ))]
     pub(crate) const fn _cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
