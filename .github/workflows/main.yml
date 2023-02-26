@@ -7,7 +7,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: full
-
 jobs:
   Test:
     name: Test
@@ -36,7 +35,7 @@ jobs:
             os: windows-latest
             rust: stable
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
     - name: Install Rust (rustup)
       run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
       shell: bash
@@ -44,17 +43,15 @@ jobs:
       uses: taiki-e/install-action@cargo-hack
     - name: Run tests
       run: cargo hack test --feature-powerset && cargo hack test --feature-powerset --release
-
   Rustfmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
     - name: Install Rust
       run: rustup update stable && rustup default stable && rustup component add rustfmt
     - name: Check formatting
       run: cargo fmt --all -- --check
-
   Check:
     name: Check
     runs-on: ubuntu-latest
@@ -63,7 +60,7 @@ jobs:
       matrix:
         target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd", "x86_64-unknown-redox"]
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
     - name: Install Rust
       run: rustup update stable && rustup default stable
     - name: Install Target
@@ -72,12 +69,11 @@ jobs:
       uses: taiki-e/install-action@cargo-hack
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
-
   Clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
     - name: Install Rust
       run: rustup update stable && rustup default stable && rustup component add clippy
     - name: Run Clippy
