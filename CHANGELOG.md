@@ -1,3 +1,18 @@
+# 0.5.1
+
+## Added
+
+* `Type::cloexec` for Redox and Solaris
+  (https://github.com/rust-lang/socket2/pull/398).
+* Generate documentation for more targets on docs.rs
+  (https://github.com/rust-lang/socket2/pull/398).
+
+
+## Fixed
+
+* Generatation of documentation on docs.rs
+  (https://github.com/rust-lang/socket2/pull/398).
+
 # 0.5.0
 
 ## Changed
