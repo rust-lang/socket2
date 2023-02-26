@@ -367,7 +367,7 @@ impl Socket {
     ///
     /// On Windows it is not possible retrieve the nonblocking mode status.
     #[cfg(all(feature = "all", unix))]
-    #[cfg_attr(docsrs, doc(all(feature = "all", unix)))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn nonblocking(&self) -> io::Result<bool> {
         sys::nonblocking(self.as_raw())
     }
@@ -1084,7 +1084,7 @@ impl Socket {
     ///
     /// [`set_header_included`]: Socket::set_header_included
     #[cfg(all(feature = "all", not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(all(feature = "all", not(target_os = "redox"))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
     pub fn header_included(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_HDRINCL)
@@ -1104,7 +1104,7 @@ impl Socket {
     /// [`IP_TTL`]: Socket::set_ttl
     /// [`IP_TOS`]: Socket::set_tos
     #[cfg(all(feature = "all", not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(all(feature = "all", not(target_os = "redox"))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
     pub fn set_header_included(&self, included: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
