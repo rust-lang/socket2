@@ -1221,6 +1221,15 @@ impl crate::Socket {
     /// # Notes
     ///
     /// On supported platforms you can use [`Type::cloexec`].
+    #[cfg_attr(
+        any(
+            target_os = "ios",
+            target_os = "macos",
+            target_os = "tvos",
+            target_os = "watchos"
+        ),
+        allow(rustdoc::broken_intra_doc_links)
+    )]
     #[cfg(feature = "all")]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn set_cloexec(&self, close_on_exec: bool) -> io::Result<()> {

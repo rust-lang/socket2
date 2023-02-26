@@ -425,6 +425,7 @@ impl Socket {
     ///
     /// [`recv`]: Socket::recv
     /// [`out_of_band_inline`]: Socket::out_of_band_inline
+    #[cfg_attr(target_os = "redox", allow(rustdoc::broken_intra_doc_links))]
     pub fn recv_out_of_band(&self, buf: &mut [MaybeUninit<u8>]) -> io::Result<usize> {
         self.recv_with_flags(buf, sys::MSG_OOB)
     }
@@ -640,7 +641,7 @@ impl Socket {
     /// Identical to [`send`] but allows for specification of arbitrary flags to the underlying
     /// `send` call.
     ///
-    /// [`send`]: #method.send
+    /// [`send`]: Socket::send
     pub fn send_with_flags(&self, buf: &[u8], flags: c_int) -> io::Result<usize> {
         sys::send(self.as_raw(), buf, flags)
     }
@@ -672,8 +673,9 @@ impl Socket {
     ///
     /// For more information, see [`send`], [`out_of_band_inline`].
     ///
-    /// [`send`]: #method.send
-    /// [`out_of_band_inline`]: #method.out_of_band_inline
+    /// [`send`]: Socket::send
+    /// [`out_of_band_inline`]: Socket::out_of_band_inline
+    #[cfg_attr(target_os = "redox", allow(rustdoc::broken_intra_doc_links))]
     pub fn send_out_of_band(&self, buf: &[u8]) -> io::Result<usize> {
         self.send_with_flags(buf, sys::MSG_OOB)
     }
@@ -1103,6 +1105,10 @@ impl Socket {
     /// [raw(7)]: https://man7.org/linux/man-pages/man7/raw.7.html
     /// [`IP_TTL`]: Socket::set_ttl
     /// [`IP_TOS`]: Socket::set_tos
+    #[cfg_attr(
+        any(target_os = "illumos", target_os = "solaris"),
+        allow(rustdoc::broken_intra_doc_links)
+    )]
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
     pub fn set_header_included(&self, included: bool) -> io::Result<()> {
