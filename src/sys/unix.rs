@@ -409,6 +409,7 @@ impl Type {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
+            target_os = "redox",
             target_os = "solaris",
         )
     ))]
@@ -425,6 +426,7 @@ impl Type {
                 target_os = "linux",
                 target_os = "netbsd",
                 target_os = "openbsd",
+                target_os = "redox",
                 target_os = "solaris",
             )
         )))
@@ -442,6 +444,7 @@ impl Type {
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd",
+        target_os = "redox",
         target_os = "solaris",
     ))]
     pub(crate) const fn _cloexec(self) -> Type {
