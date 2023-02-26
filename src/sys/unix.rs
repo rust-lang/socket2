@@ -1461,7 +1461,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_cork`].
     ///
-    /// [`set_cork`]: Socket::set_cork
+    /// [`set_cork`]: crate::Socket::set_cork
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -1512,7 +1512,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_quickack`].
     ///
-    /// [`set_quickack`]: Socket::set_quickack
+    /// [`set_quickack`]: crate::Socket::set_quickack
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -1563,7 +1563,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_thin_linear_timeouts`].
     ///
-    /// [`set_thin_linear_timeouts`]: Socket::set_thin_linear_timeouts
+    /// [`set_thin_linear_timeouts`]: crate::Socket::set_thin_linear_timeouts
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -2225,7 +2225,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_tcp_user_timeout`].
     ///
-    /// [`set_tcp_user_timeout`]: Socket::set_tcp_user_timeout
+    /// [`set_tcp_user_timeout`]: crate::Socket::set_tcp_user_timeout
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -2276,6 +2276,8 @@ impl crate::Socket {
     /// Detach Berkeley Packet Filter(BPF) from this socket.
     ///
     /// For more information about this option, see [`attach_filter`]
+    ///
+    /// [`attach_filter`]: crate::Socket::attach_filter
     #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     pub fn detach_filter(&self) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
@@ -2285,7 +2287,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_tclass_v6`].
     ///
-    /// [`set_tclass_v6`]: Socket::set_tclass_v6
+    /// [`set_tclass_v6`]: crate::Socket::set_tclass_v6
     #[cfg(all(
         feature = "all",
         any(
@@ -2370,7 +2372,7 @@ impl crate::Socket {
     ///
     /// For more information about this option, see [`set_tcp_congestion`].
     ///
-    /// [`set_tcp_congestion`]: Socket::set_tcp_congestion
+    /// [`set_tcp_congestion`]: crate::Socket::set_tcp_congestion
     #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     #[cfg_attr(
         docsrs,
