@@ -50,7 +50,6 @@
 //! This crate has a single feature `all`, which enables all functions even ones
 //! that are not available on all OSs.
 
-#![doc(html_root_url = "https://docs.rs/socket2/0.5")]
 #![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 // Show required OS/features on docs.rs.
 #![cfg_attr(docsrs, feature(doc_cfg))]
