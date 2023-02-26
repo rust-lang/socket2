@@ -36,11 +36,10 @@ jobs:
             rust: stable
     steps:
     - uses: actions/checkout@v3
-    - name: Install Rust (rustup)
-      run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
-      shell: bash
-    - name: Install cargo-hack
-      uses: taiki-e/install-action@cargo-hack
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+    - uses: taiki-e/install-action@cargo-hack
     - name: Run tests
       run: cargo hack test --feature-powerset && cargo hack test --feature-powerset --release
   Rustfmt:
@@ -48,8 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install Rust
-      run: rustup update stable && rustup default stable && rustup component add rustfmt
+    - uses: dtolnay/rust-toolchain@stable
     - name: Check formatting
       run: cargo fmt --all -- --check
   Check:
@@ -61,12 +59,10 @@ jobs:
         target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd", "x86_64-unknown-redox"]
     steps:
     - uses: actions/checkout@v3
-    - name: Install Rust
-      run: rustup update stable && rustup default stable
-    - name: Install Target
-      run: rustup target add ${{ matrix.target }}
-    - name: Install cargo-hack
-      uses: taiki-e/install-action@cargo-hack
+    - uses: dtolnay/rust-toolchain@nightly # NOTE: need nightly for `doc_cfg` feature.
+      with:
+        targets: ${{ matrix.target }}
+    - uses: taiki-e/install-action@cargo-hack
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
     - name: Check docs for docs.rs
@@ -76,7 +72,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install Rust
-      run: rustup update stable && rustup default stable && rustup component add clippy
+    - uses: dtolnay/rust-toolchain@stable
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
