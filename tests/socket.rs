@@ -183,7 +183,7 @@ fn socket_address_unix_abstract_namespace() {
         addr.len() as usize,
         std::mem::size_of::<libc::sockaddr_un>()
     );
-    assert!(addr.is_unnamed());
+    assert!(!addr.is_unnamed());
     assert_eq!(addr.as_abstract_namespace(), Some(path.as_bytes()));
     assert!(addr.as_pathname().is_none());
     assert!(!addr.is_unnamed());
