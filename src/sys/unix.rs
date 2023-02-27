@@ -730,7 +730,7 @@ impl SockAddr {
         {
             self.as_sockaddr_un()
                 .and_then(|storage| {
-                    (storage.sun_path[0] == 0).then(|| {
+                    (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] == 0).then(|| {
                         self.path_bytes(storage, false)
                     })
                 })
