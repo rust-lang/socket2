@@ -59,6 +59,7 @@ use std::path::Path;
 use std::ptr;
 use std::time::{Duration, Instant};
 use std::{io, slice};
+use std::ffi::OsStr;
 
 #[cfg(not(any(
     target_os = "ios",
@@ -95,7 +96,7 @@ pub(crate) use libc::IPPROTO_SCTP;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
-    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_un, sockaddr_storage, socklen_t,
+    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
 };
 // Used in `RecvFlags`.
 #[cfg(not(target_os = "redox"))]
@@ -570,7 +571,7 @@ impl<'a> MaybeUninitSlice<'a> {
 }
 
 /// Returns the offset of the `sun_path` member of the passed unix socket address.
-pub(crate) fn offset_of_path(storage: &sockaddr_un) -> usize {
+pub(crate) fn offset_of_path(storage: &libc::sockaddr_un) -> usize {
     let base = storage as *const _ as usize;
     let path = ptr::addr_of!(storage.sun_path) as usize;
     path - base
@@ -582,7 +583,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
     let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
     let len = {
-        let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<sockaddr_un>() };
+        let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<libc::sockaddr_un>() };
 
         let bytes = path.as_os_str().as_bytes();
         let too_long = match bytes.first() {
@@ -664,6 +665,78 @@ impl SockAddr {
         } else {
             None
         }
+    }
+
+    /// Returns true if this address is an unnamed address from the `AF_UNIX` (AKA `AF_LOCAL`)
+    /// family (for local interprocess communication), false otherwise.
+    pub fn is_unnamed(&self) -> bool {
+        self.as_sockaddr_un()
+            .map(|storage| {
+                self.len() == offset_of_path(storage) as u32
+                    // On some non-linux platforms a zeroed path is returned for unnamed.
+                    // Abstract addresses only exist on Linux.
+                    || (cfg!(not(any(target_os = "linux", target_os = "android")))
+                    && storage.sun_path[0] == 0)
+            }).unwrap_or_default()
+    }
+
+    /// Returns the underlying `sockaddr_un` object if this addres is from the `AF_UNIX` family,
+    /// otherwise returns `None`.
+    pub(crate) fn as_sockaddr_un(&self) -> Option<&libc::sockaddr_un> {
+        self.is_unix()
+            .then(|| {
+                // SAFETY: if local, i.e. the `ss_family` field is `AF_UNIX` then storage must be a
+                // `sockaddr_un`.
+                unsafe { &*ptr::addr_of!(self.storage).cast::<libc::sockaddr_un>() }
+            })
+    }
+
+    /// Get the length of the path bytes of the address, not including any terminating null.
+    fn path_len(&self, storage: &libc::sockaddr_un, null_terminated: bool) -> usize {
+        self.len() as usize - offset_of_path(storage) - if null_terminated { 1 } else { 0 }
+    }
+
+    /// Get a u8 slice for the bytes of the pathname or abstract name.
+    fn path_bytes(&self, storage: &libc::sockaddr_un, null_terminated: bool) -> &[u8]{
+        let path_len = self.path_len(storage, null_terminated);
+        // SAFETY: the pointed objects of type `i8` have the same memory layout as `u8`. The path is
+        // the last field in the storage and so it length is equal to
+        //          TOTAL_LENGTH - OFFSET_OF_PATH -1        if the path is null-terminated.
+        //          TOTAL_LENGTH - OFFSET_OF_PATH           if the path is not null-terminated.
+        // There is no safe way to convert a `&[i8]` ot `&[u8]`
+        unsafe{ slice::from_raw_parts(storage.sun_path.as_ptr() as *const u8, path_len) }
+    }
+
+    /// Returns this address as a `Path` if it is an `AF_UNIX` pathname address, otherwise returns
+    /// `None`.
+    pub fn as_pathname(&self) -> Option<&Path> {
+        self.as_sockaddr_un()
+            .and_then(|storage| {
+                (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] != 0).then(|| {
+                    // The -1 is for the terminating null.
+                    let path_slice = self.path_bytes(storage, true);
+                    Path::new::<OsStr>(OsStrExt::from_bytes(path_slice))
+                })
+            })
+    }
+
+    /// Returns this address as a slice of bytes representing an abstract address if it is an
+    /// `AF_UNIX` abstract address, otherwise returns `None`.
+    ///
+    /// Abstract addresses are a Linux extension, so this method returns None on all non-Linux
+    /// platforms.
+    pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
+        #[cfg(any(target_os = "linux", target_os = "android"))]
+        {
+            self.as_sockaddr_un()
+                .and_then(|storage| {
+                    (storage.sun_path[0] == 0).then(|| {
+                        self.path_bytes(storage, false)
+                    })
+                })
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        None
     }
 }
 
