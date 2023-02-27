@@ -38,11 +38,11 @@ use std::num::NonZeroUsize;
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
+use std::path::Path;
 use std::str;
 use std::thread;
 use std::time::Duration;
 use std::{env, fs};
-use std::path::Path;
 
 #[cfg(windows)]
 use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
@@ -184,10 +184,7 @@ fn socket_address_unix_abstract_namespace() {
         std::mem::size_of::<libc::sockaddr_un>()
     );
     assert!(addr.is_unnamed());
-    assert_eq!(
-        addr.as_abstract_namespace(),
-        Some(path.as_bytes())
-    );
+    assert_eq!(addr.as_abstract_namespace(), Some(path.as_bytes()));
     assert!(addr.as_pathname().is_none());
     assert!(!addr.is_unnamed());
 }

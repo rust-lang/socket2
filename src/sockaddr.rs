@@ -7,7 +7,10 @@ use std::{fmt, io, ptr};
 #[cfg(windows)]
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
 
-use crate::sys::{c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET, AF_INET6, AF_UNIX};
+use crate::sys::{
+    c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
+    AF_INET6, AF_UNIX,
+};
 use crate::Domain;
 
 /// The address of a socket.
