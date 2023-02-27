@@ -95,7 +95,7 @@ pub(crate) use libc::IPPROTO_SCTP;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
-    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
+    sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_un, sockaddr_storage, socklen_t,
 };
 // Used in `RecvFlags`.
 #[cfg(not(target_os = "redox"))]
@@ -570,7 +570,7 @@ impl<'a> MaybeUninitSlice<'a> {
 }
 
 /// Returns the offset of the `sun_path` member of the passed unix socket address.
-pub(crate) fn offset_of_path(storage: &libc::sockaddr_un) -> usize {
+pub(crate) fn offset_of_path(storage: &sockaddr_un) -> usize {
     let base = storage as *const _ as usize;
     let path = ptr::addr_of!(storage.sun_path) as usize;
     path - base
@@ -582,7 +582,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
     let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
     let len = {
-        let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<libc::sockaddr_un>() };
+        let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<sockaddr_un>() };
 
         let bytes = path.as_os_str().as_bytes();
         let too_long = match bytes.first() {
