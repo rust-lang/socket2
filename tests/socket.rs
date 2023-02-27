@@ -42,6 +42,7 @@ use std::str;
 use std::thread;
 use std::time::Duration;
 use std::{env, fs};
+use std::path::Path;
 
 #[cfg(windows)]
 use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
@@ -144,17 +145,51 @@ fn socket_address_unix() {
     let addr = SockAddr::unix(string).unwrap();
     assert!(addr.as_socket_ipv4().is_none());
     assert!(addr.as_socket_ipv6().is_none());
+    assert!(!addr.is_ipv4());
+    assert!(!addr.is_ipv6());
+    assert!(addr.is_unix());
+    assert_eq!(addr.domain(), Domain::UNIX);
+    #[cfg(unix)]
+    {
+        assert!(!addr.is_unnamed());
+        assert_eq!(addr.as_pathname(), Some(Path::new(string)));
+        assert_eq!(addr.as_abstract_namespace(), None);
+    }
+}
+
+#[test]
+fn socket_address_unix_unnamed() {
+    let addr = SockAddr::unix("").unwrap();
+    assert!(addr.as_socket_ipv4().is_none());
+    assert!(addr.as_socket_ipv6().is_none());
+    assert!(!addr.is_ipv4());
+    assert!(!addr.is_ipv6());
+    assert!(addr.is_unix());
+    assert_eq!(addr.domain(), Domain::UNIX);
+    #[cfg(unix)]
+    {
+        assert!(addr.is_unnamed());
+        assert_eq!(addr.as_pathname(), None);
+        assert_eq!(addr.as_abstract_namespace(), None);
+    }
 }
 
 #[test]
 #[cfg(all(any(target_os = "linux", target_os = "android"), feature = "all"))]
 fn socket_address_unix_abstract_namespace() {
     let path = "\0h".repeat(108 / 2);
-    let addr = SockAddr::unix(path).unwrap();
+    let addr = SockAddr::unix(&path).unwrap();
     assert_eq!(
         addr.len() as usize,
         std::mem::size_of::<libc::sockaddr_un>()
     );
+    assert!(addr.is_unnamed());
+    assert_eq!(
+        addr.as_abstract_namespace(),
+        Some(path.as_bytes())
+    );
+    assert!(addr.as_pathname().is_none());
+    assert!(!addr.is_unnamed());
 }
 
 #[test]

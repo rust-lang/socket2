@@ -346,8 +346,6 @@ unsafe fn any_as_u8_slice<T: Sized>(p: &T, size: usize) -> &[u8] {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(unix)]
-    use crate::sys::offset_of_path;
     use super::*;
 
     #[test]
@@ -404,26 +402,6 @@ mod tests {
             assert!(addr.as_pathname().is_none());
             assert!(addr.as_abstract_namespace().is_none());
         }
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn unix_pathname() {
-        let path_str = "/whatever/path";
-        let path = Path::new(path_str);
-        let addr = SockAddr::unix(path).unwrap();
-        assert!(addr.is_unix());
-        assert!(!addr.is_unnamed());
-        assert!(!addr.is_ipv4());
-        assert!(!addr.is_ipv6());
-        assert_eq!(addr.family(), AF_UNIX as sa_family_t);
-        assert_eq!(addr.domain(), Domain::UNIX);
-        let storage = addr.as_sockaddr_un().unwrap();
-        // The + 1 is the terminating null.
-        assert_eq!(addr.len() as usize, offset_of_path(storage) + path_str.len() + 1);
-        assert_eq!(addr.as_pathname(), Some(path));
-        assert!(addr.as_socket_ipv4().is_none());
-        assert!(addr.as_socket_ipv6().is_none());
     }
 
     #[test]
