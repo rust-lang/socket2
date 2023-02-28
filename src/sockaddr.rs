@@ -19,7 +19,7 @@ use crate::Domain;
 /// [`SocketAddr`], [`SocketAddrV4`], and [`SocketAddrV6`] types.
 #[derive(Clone)]
 pub struct SockAddr {
-    pub(crate) storage: sockaddr_storage,
+    storage: sockaddr_storage,
     len: socklen_t,
 }
 

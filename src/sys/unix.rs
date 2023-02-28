@@ -686,7 +686,7 @@ impl SockAddr {
         self.is_unix().then(|| {
             // SAFETY: if local, i.e. the `ss_family` field is `AF_UNIX` then storage must be a
             // `sockaddr_un`.
-            unsafe { &*ptr::addr_of!(self.storage).cast::<libc::sockaddr_un>() }
+            unsafe { &*self.as_ptr().cast::<libc::sockaddr_un>() }
         })
     }
 
