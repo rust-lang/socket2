@@ -666,8 +666,8 @@ impl SockAddr {
         }
     }
 
-    /// Returns true if this address is an unnamed address from the `AF_UNIX` (AKA `AF_LOCAL`)
-    /// family (for local interprocess communication), false otherwise.
+    /// Returns true if this address is an unnamed address from the `AF_UNIX` family (for local
+    /// interprocess communication), false otherwise.
     pub fn is_unnamed(&self) -> bool {
         self.as_sockaddr_un()
             .map(|storage| {
@@ -684,8 +684,8 @@ impl SockAddr {
     /// otherwise returns `None`.
     pub(crate) fn as_sockaddr_un(&self) -> Option<&libc::sockaddr_un> {
         self.is_unix().then(|| {
-            // SAFETY: if local, i.e. the `ss_family` field is `AF_UNIX` then storage must be a
-            // `sockaddr_un`.
+            // SAFETY: if unix socket, i.e. the `ss_family` field is `AF_UNIX` then storage must be
+            // a `sockaddr_un`.
             unsafe { &*self.as_ptr().cast::<libc::sockaddr_un>() }
         })
     }
