@@ -674,7 +674,7 @@ impl SockAddr {
                 self.len() == offset_of_path(storage) as u32
                     // On some non-linux platforms a zeroed path is returned for unnamed.
                     // Abstract addresses only exist on Linux.
-                    || (cfg!(not(any(target_os = "linux", target_os = "android")))
+                    || (cfg!(not(any(target_os = "linux", target_os = "android", target_os = "fuchsia")))
                     && storage.sun_path[0] == 0)
             })
             .unwrap_or_default()
@@ -724,14 +724,14 @@ impl SockAddr {
     /// Abstract addresses are a Linux extension, so this method returns None on all non-Linux
     /// platforms.
     pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
-        #[cfg(any(target_os = "linux", target_os = "android"))]
+        #[cfg(any(target_os = "linux", target_os = "android", target_os = "fuchsia"))]
         {
             self.as_sockaddr_un().and_then(|storage| {
                 (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] == 0)
                     .then(|| self.path_bytes(storage, false))
             })
         }
-        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "fuchsia")))]
         None
     }
 }
