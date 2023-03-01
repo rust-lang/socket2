@@ -176,7 +176,10 @@ fn socket_address_unix_unnamed() {
 }
 
 #[test]
-#[cfg(all(any(target_os = "linux", target_os = "android", target_os = "fuchsia"), feature = "all"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "android", target_os = "fuchsia"),
+    feature = "all"
+))]
 fn socket_address_unix_abstract_namespace() {
     let path = "\0h".repeat(108 / 2);
     let addr = SockAddr::unix(&path).unwrap();
@@ -185,7 +188,8 @@ fn socket_address_unix_abstract_namespace() {
         std::mem::size_of::<libc::sockaddr_un>()
     );
     assert!(!addr.is_unnamed());
-    assert_eq!(addr.as_abstract_namespace(), Some(path.as_bytes()));
+    // The first byte is the opening null bytes of an abstract address, should not be included.
+    assert_eq!(addr.as_abstract_namespace(), Some(&path.as_bytes()[1..]));
     assert!(addr.as_pathname().is_none());
     assert!(!addr.is_unnamed());
 }
