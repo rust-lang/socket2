@@ -184,8 +184,8 @@ impl SockAddr {
         self.storage.ss_family == AF_INET6 as sa_family_t
     }
 
-    /// Returns true if this address is for local interprocess communication, i.e. it is from the
-    /// `AF_UNIX` (AKA `AF_LOCAL`) family, false otherwise.
+    /// Returns true if this address is of a unix socket (for local interprocess communication),
+    /// i.e. it is from the `AF_UNIX` family, false otherwise.
     pub fn is_unix(&self) -> bool {
         self.storage.ss_family == AF_UNIX as sa_family_t
     }
