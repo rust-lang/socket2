@@ -710,7 +710,7 @@ impl SockAddr {
         // Where the 1 is either a terminating null if we have a pathname address, or the initial
         // null byte, if it's an abstract name address. In the latter case, the path bytes start
         // after the initial null byte, hence the `offset`.
-        // There is no safe way to convert a `&[i8]` ot `&[u8]`
+        // There is no safe way to convert a `&[i8]` to `&[u8]`
         unsafe {
             slice::from_raw_parts(
                 (storage.sun_path.as_ptr() as *const u8).offset(abstract_name as isize),
