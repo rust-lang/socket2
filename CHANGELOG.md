@@ -1,3 +1,8 @@
+# 0.4.8
+
+* Add `Socket::peek_sender` (backport)
+  (https://github.com/rust-lang/socket2/pull/404).
+
 # 0.4.7
 
 * Fixes compilation on OpenBSD
