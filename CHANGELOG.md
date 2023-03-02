@@ -7,7 +7,6 @@
 * Generate documentation for more targets on docs.rs
   (https://github.com/rust-lang/socket2/pull/398).
 
-
 ## Fixed
 
 * Generatation of documentation on docs.rs
@@ -91,6 +90,11 @@
   (https://github.com/rust-lang/socket2/pull/380).
 * Support for AIX
   (https://github.com/rust-lang/socket2/pull/351).
+
+# 0.4.8
+
+* Add `Socket::peek_sender` (backport)
+  (https://github.com/rust-lang/socket2/pull/404).
 
 # 0.4.7
 
