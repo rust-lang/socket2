@@ -91,7 +91,14 @@
 * Support for AIX
   (https://github.com/rust-lang/socket2/pull/351).
 
-# 0.4.8
+# 0.4.9
+
+* Fixed compilation on Windows
+  (https://github.com/rust-lang/socket2/pull/409).
+
+# 0.4.8 (yanked)
+
+This release was broken for Windows.
 
 * Add `Socket::peek_sender` (backport)
   (https://github.com/rust-lang/socket2/pull/404).
