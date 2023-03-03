@@ -176,10 +176,7 @@ fn socket_address_unix_unnamed() {
 }
 
 #[test]
-#[cfg(all(
-    any(target_os = "linux", target_os = "android"),
-    feature = "all"
-))]
+#[cfg(all(any(target_os = "linux", target_os = "android"), feature = "all"))]
 fn socket_address_unix_abstract_namespace() {
     let path = "\0h".repeat(108 / 2);
     let addr = SockAddr::unix(&path).unwrap();
