@@ -32,6 +32,7 @@ use winapi::um::winsock2::{
     self as sock, u_long, POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND,
     WSAPOLLFD,
 };
+use winapi::um::winsock2::{SOCKET_ERROR, WSAEMSGSIZE, WSAESHUTDOWN};
 
 use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
 
@@ -469,7 +470,7 @@ pub(crate) fn recv_from(
 pub(crate) fn peek_sender(socket: Socket) -> io::Result<SockAddr> {
     // Safety: `recvfrom` initialises the `SockAddr` for us.
     let ((), sender) = unsafe {
-        SockAddr::try_init(|storage, addrlen| {
+        SockAddr::init(|storage, addrlen| {
             let res = syscall!(
                 recvfrom(
                     socket,
