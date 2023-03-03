@@ -674,7 +674,8 @@ impl SockAddr {
                 self.len() == offset_of_path(storage) as u32
                     // On some non-linux platforms a zeroed path is returned for unnamed.
                     // Abstract addresses only exist on Linux.
-                    || (cfg!(not(any(target_os = "linux", target_os = "android", target_os = "fuchsia")))
+                    // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
+                    || (cfg!(not(any(target_os = "linux", target_os = "android")))
                     && storage.sun_path[0] == 0)
             })
             .unwrap_or_default()
@@ -736,14 +737,15 @@ impl SockAddr {
     /// Abstract addresses are a Linux extension, so this method returns `None` on all non-Linux
     /// platforms.
     pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
-        #[cfg(any(target_os = "linux", target_os = "android", target_os = "fuchsia"))]
+        // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
+        #[cfg(any(target_os = "linux", target_os = "android"))]
         {
             self.as_sockaddr_un().and_then(|storage| {
                 (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] == 0)
                     .then(|| self.path_bytes(storage, true))
             })
         }
-        #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "fuchsia")))]
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
         None
     }
 }

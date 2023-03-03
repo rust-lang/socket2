@@ -177,7 +177,7 @@ fn socket_address_unix_unnamed() {
 
 #[test]
 #[cfg(all(
-    any(target_os = "linux", target_os = "android", target_os = "fuchsia"),
+    any(target_os = "linux", target_os = "android"),
     feature = "all"
 ))]
 fn socket_address_unix_abstract_namespace() {
