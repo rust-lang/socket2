@@ -675,6 +675,7 @@ impl SockAddr {
                     // On some non-linux platforms a zeroed path is returned for unnamed.
                     // Abstract addresses only exist on Linux.
                     // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
+                    // See https://github.com/rust-lang/socket2/pull/403#discussion_r1123557978
                     || (cfg!(not(any(target_os = "linux", target_os = "android")))
                     && storage.sun_path[0] == 0)
             })
@@ -738,6 +739,7 @@ impl SockAddr {
     /// platforms.
     pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
         // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
+        // See https://github.com/rust-lang/socket2/pull/403#discussion_r1123557978
         #[cfg(any(target_os = "linux", target_os = "android"))]
         {
             self.as_sockaddr_un().and_then(|storage| {
