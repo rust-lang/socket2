@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use std::cmp::min;
+use std::ffi::OsStr;
 #[cfg(not(target_os = "redox"))]
 use std::io::IoSlice;
 use std::marker::PhantomData;
@@ -569,6 +570,13 @@ impl<'a> MaybeUninitSlice<'a> {
     }
 }
 
+/// Returns the offset of the `sun_path` member of the passed unix socket address.
+pub(crate) fn offset_of_path(storage: &libc::sockaddr_un) -> usize {
+    let base = storage as *const _ as usize;
+    let path = ptr::addr_of!(storage.sun_path) as usize;
+    path - base
+}
+
 #[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
@@ -603,9 +611,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
             );
         }
 
-        let base = storage as *const _ as usize;
-        let path = ptr::addr_of!(storage.sun_path) as usize;
-        let sun_path_offset = path - base;
+        let sun_path_offset = offset_of_path(storage);
         sun_path_offset
             + bytes.len()
             + match bytes.first() {
@@ -658,6 +664,91 @@ impl SockAddr {
         } else {
             None
         }
+    }
+
+    /// Returns true if this address is an unnamed address from the `AF_UNIX` family (for local
+    /// interprocess communication), false otherwise.
+    pub fn is_unnamed(&self) -> bool {
+        self.as_sockaddr_un()
+            .map(|storage| {
+                self.len() == offset_of_path(storage) as u32
+                    // On some non-linux platforms a zeroed path is returned for unnamed.
+                    // Abstract addresses only exist on Linux.
+                    // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
+                    // See https://github.com/rust-lang/socket2/pull/403#discussion_r1123557978
+                    || (cfg!(not(any(target_os = "linux", target_os = "android")))
+                    && storage.sun_path[0] == 0)
+            })
+            .unwrap_or_default()
+    }
+
+    /// Returns the underlying `sockaddr_un` object if this addres is from the `AF_UNIX` family,
+    /// otherwise returns `None`.
+    pub(crate) fn as_sockaddr_un(&self) -> Option<&libc::sockaddr_un> {
+        self.is_unix().then(|| {
+            // SAFETY: if unix socket, i.e. the `ss_family` field is `AF_UNIX` then storage must be
+            // a `sockaddr_un`.
+            unsafe { &*self.as_ptr().cast::<libc::sockaddr_un>() }
+        })
+    }
+
+    /// Get the length of the path bytes of the address, not including the terminating or initial
+    /// (for abstract names) null byte.
+    ///
+    /// Should not be called on unnamed addresses.
+    fn path_len(&self, storage: &libc::sockaddr_un) -> usize {
+        debug_assert!(!self.is_unnamed());
+        self.len() as usize - offset_of_path(storage) - 1
+    }
+
+    /// Get a u8 slice for the bytes of the pathname or abstract name.
+    ///
+    /// Should not be called on unnamed addresses.
+    fn path_bytes(&self, storage: &libc::sockaddr_un, abstract_name: bool) -> &[u8] {
+        debug_assert!(!self.is_unnamed());
+        // SAFETY: the pointed objects of type `i8` have the same memory layout as `u8`. The path is
+        // the last field in the storage and so its length is equal to
+        //          TOTAL_LENGTH - OFFSET_OF_PATH -1
+        // Where the 1 is either a terminating null if we have a pathname address, or the initial
+        // null byte, if it's an abstract name address. In the latter case, the path bytes start
+        // after the initial null byte, hence the `offset`.
+        // There is no safe way to convert a `&[i8]` to `&[u8]`
+        unsafe {
+            slice::from_raw_parts(
+                (storage.sun_path.as_ptr() as *const u8).offset(abstract_name as isize),
+                self.path_len(storage),
+            )
+        }
+    }
+
+    /// Returns this address as a `Path` reference if it is an `AF_UNIX` pathname address, otherwise
+    /// returns `None`.
+    pub fn as_pathname(&self) -> Option<&Path> {
+        self.as_sockaddr_un().and_then(|storage| {
+            (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] != 0).then(|| {
+                let path_slice = self.path_bytes(storage, false);
+                Path::new::<OsStr>(OsStrExt::from_bytes(path_slice))
+            })
+        })
+    }
+
+    /// Returns this address as a slice of bytes representing an abstract address if it is an
+    /// `AF_UNIX` abstract address, otherwise returns `None`.
+    ///
+    /// Abstract addresses are a Linux extension, so this method returns `None` on all non-Linux
+    /// platforms.
+    pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
+        // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
+        // See https://github.com/rust-lang/socket2/pull/403#discussion_r1123557978
+        #[cfg(any(target_os = "linux", target_os = "android"))]
+        {
+            self.as_sockaddr_un().and_then(|storage| {
+                (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] == 0)
+                    .then(|| self.path_bytes(storage, true))
+            })
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        None
     }
 }
 

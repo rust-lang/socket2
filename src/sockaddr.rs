@@ -9,7 +9,7 @@ use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
 
 use crate::sys::{
     c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
-    AF_INET6,
+    AF_INET6, AF_UNIX,
 };
 use crate::Domain;
 
@@ -184,6 +184,12 @@ impl SockAddr {
         self.storage.ss_family == AF_INET6 as sa_family_t
     }
 
+    /// Returns true if this address is of a unix socket (for local interprocess communication),
+    /// i.e. it is from the `AF_UNIX` family, false otherwise.
+    pub fn is_unix(&self) -> bool {
+        self.storage.ss_family == AF_UNIX as sa_family_t
+    }
+
     /// Returns a raw pointer to the address storage.
     #[cfg(all(unix, not(target_os = "redox")))]
     pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
@@ -351,6 +357,8 @@ mod tests {
         let std = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
         let addr = SockAddr::from(std);
         assert!(addr.is_ipv4());
+        assert!(!addr.is_ipv6());
+        assert!(!addr.is_unix());
         assert_eq!(addr.family(), AF_INET as sa_family_t);
         assert_eq!(addr.domain(), Domain::IPV4);
         assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
@@ -364,6 +372,11 @@ mod tests {
         assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
         assert_eq!(addr.as_socket_ipv4(), Some(std));
         assert!(addr.as_socket_ipv6().is_none());
+        #[cfg(unix)]
+        {
+            assert!(addr.as_pathname().is_none());
+            assert!(addr.as_abstract_namespace().is_none());
+        }
     }
 
     #[test]
@@ -372,6 +385,8 @@ mod tests {
         let std = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
         let addr = SockAddr::from(std);
         assert!(addr.is_ipv6());
+        assert!(!addr.is_ipv4());
+        assert!(!addr.is_unix());
         assert_eq!(addr.family(), AF_INET6 as sa_family_t);
         assert_eq!(addr.domain(), Domain::IPV6);
         assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
@@ -385,6 +400,11 @@ mod tests {
         assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
         assert!(addr.as_socket_ipv4().is_none());
         assert_eq!(addr.as_socket_ipv6(), Some(std));
+        #[cfg(unix)]
+        {
+            assert!(addr.as_pathname().is_none());
+            assert!(addr.as_abstract_namespace().is_none());
+        }
     }
 
     #[test]

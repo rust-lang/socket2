@@ -39,7 +39,7 @@ platforms the `all` feature is used, to indicate to the user that they're using
 API that might is not available on all platforms.
 
 The main `Socket` type is defined in `src/socket.rs` with additional methods
-defined on in the the `src/sys/*.rs` files, as per above. The methods on
+defined in the `src/sys/*.rs` files, as per above. The methods on
 `Socket` are split into multiple `impl` blocks. The first `impl` block contains
 a collection of system calls for creating and using the socket, e.g.
 `socket(2)`, `bind(2)`, `listen(2)`, etc. The other implementation blocks are
@@ -51,7 +51,7 @@ such as `Socket::freebind` which is (at the time of writing) only available on
 Android, Linux and Fuchsia, which is defined in the `src/sys/*.rs` files.
 
 Other types are mostly defined in `src/lib.rs`, except for `SockAddr` and
-`SockRef` which have there own file. These types follow the same structure as
+`SockRef` which have their own file. These types follow the same structure as
 `Socket`, where OS specific methods are defined in `src/sys/*.rs`, e.g.
 `Type::cloexec`.
 
