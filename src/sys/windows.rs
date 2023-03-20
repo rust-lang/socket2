@@ -31,7 +31,7 @@ use windows_sys::Win32::System::Threading::INFINITE;
 use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
-pub(crate) type c_int = i32;
+pub(crate) type c_int = std::os::raw::c_int;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
 ///
@@ -61,9 +61,9 @@ pub(crate) use windows_sys::Win32::Networking::WinSock::{
     SOCKADDR_STORAGE as sockaddr_storage,
 };
 #[allow(non_camel_case_types)]
-pub(crate) type sa_family_t = u16;
+pub(crate) type sa_family_t = windows_sys::Win32::Networking::WinSock::sa_family_t;
 #[allow(non_camel_case_types)]
-pub(crate) type socklen_t = i32;
+pub(crate) type socklen_t = windows_sys::Win32::Networking::WinSock::socklen_t;
 // Used in `Socket`.
 #[cfg(feature = "all")]
 pub(crate) use windows_sys::Win32::Networking::WinSock::IP_HDRINCL;
@@ -110,7 +110,7 @@ impl_debug!(
     self::AF_INET,
     self::AF_INET6,
     self::AF_UNIX,
-    self::AF_UNSPEC, // = 0.
+    self::AF_UNSPEC,
 );
 
 /// Windows only API.
