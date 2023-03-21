@@ -173,6 +173,11 @@ impl SockAddr {
         ptr::addr_of!(self.storage).cast()
     }
 
+    /// Retuns the address as the storage.
+    pub const fn as_storage(self) -> sockaddr_storage {
+        self.storage
+    }
+
     /// Returns true if this address is in the `AF_INET` (IPv4) family, false otherwise.
     pub const fn is_ipv4(&self) -> bool {
         self.storage.ss_family == AF_INET as sa_family_t
