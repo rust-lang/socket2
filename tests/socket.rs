@@ -926,7 +926,7 @@ fn device() {
     const INTERFACES: &[&str] = &["lo\0", "lo0\0", "en0\0"];
 
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    assert_eq!(socket.device_index().unwrap(), None);
+    assert_eq!(socket.device_index_v4().unwrap(), None);
 
     for interface in INTERFACES.iter() {
         let iface_index = std::num::NonZeroU32::new(unsafe {
@@ -936,7 +936,7 @@ fn device() {
         if iface_index.is_none() {
             continue;
         }
-        if let Err(err) = socket.bind_device_by_index(iface_index) {
+        if let Err(err) = socket.bind_device_by_index_v4(iface_index) {
             // Network interface is not available try another.
             if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
                 eprintln!("error binding to device (`{interface}`): {err}");
@@ -945,10 +945,55 @@ fn device() {
                 panic!("unexpected error binding device: {}", err);
             }
         }
-        assert_eq!(socket.device_index().unwrap(), iface_index);
+        assert_eq!(socket.device_index_v4().unwrap(), iface_index);
 
-        socket.bind_device_by_index(None).unwrap();
-        assert_eq!(socket.device_index().unwrap(), None);
+        socket.bind_device_by_index_v4(None).unwrap();
+        assert_eq!(socket.device_index_v4().unwrap(), None);
+        // Just need to do it with one interface.
+        return;
+    }
+
+    panic!("failed to bind to any device.");
+}
+
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
+    )
+))]
+#[test]
+fn device_v6() {
+    // Some common network interface on macOS.
+    const INTERFACES: &[&str] = &["lo\0", "lo0\0", "en0\0"];
+
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    assert_eq!(socket.device_index_v6().unwrap(), None);
+
+    for interface in INTERFACES.iter() {
+        let iface_index = std::num::NonZeroU32::new(unsafe {
+            libc::if_nametoindex(interface.as_ptr() as *const _)
+        });
+        // If no index is returned, try another interface alias
+        if iface_index.is_none() {
+            continue;
+        }
+        if let Err(err) = socket.bind_device_by_index_v6(iface_index) {
+            // Network interface is not available try another.
+            if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
+                eprintln!("error binding to device (`{interface}`): {err}");
+                continue;
+            } else {
+                panic!("unexpected error binding device: {}", err);
+            }
+        }
+        assert_eq!(socket.device_index_v6().unwrap(), iface_index);
+
+        socket.bind_device_by_index_v6(None).unwrap();
+        assert_eq!(socket.device_index_v6().unwrap(), None);
         // Just need to do it with one interface.
         return;
     }
