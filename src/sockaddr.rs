@@ -234,7 +234,8 @@ impl From<SocketAddrV4> for SockAddr {
                 target_os = "ios",
                 target_os = "macos",
                 target_os = "netbsd",
-                target_os = "openbsd"
+                target_os = "openbsd",
+                target_os = "nto"
             ))]
             sin_len: 0,
         };
@@ -273,7 +274,8 @@ impl From<SocketAddrV6> for SockAddr {
                 target_os = "ios",
                 target_os = "macos",
                 target_os = "netbsd",
-                target_os = "openbsd"
+                target_os = "openbsd",
+                target_os = "nto"
             ))]
             sin6_len: 0,
             #[cfg(any(target_os = "solaris", target_os = "illumos"))]
