@@ -1497,7 +1497,7 @@ fn tcp_congestion() {
 
 #[test]
 #[ignore = "DCCP support is not enabled in all kernels of majors Linux distros"]
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
 fn dccp() {
     let listener = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
     let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();

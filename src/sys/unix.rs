@@ -2533,8 +2533,11 @@ impl crate::Socket {
     ///
     /// [`connect`]: crate::Socket::connect
     /// [`bind`]: crate::Socket::bind
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn set_dccp_service(&self, code: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2551,8 +2554,11 @@ impl crate::Socket {
     /// For more information about this option see [`set_dccp_service`]
     ///
     /// [`set_dccp_service`]: crate::Socket::set_dccp_service
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_service(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SERVICE) }
     }
@@ -2560,8 +2566,11 @@ impl crate::Socket {
     /// Set value for the `DCCP_SOCKOPT_CCID` option on this socket.
     ///
     /// This option sets both the TX and RX CCIDs at the same time.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn set_dccp_ccid(&self, ccid: u8) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_CCID, ccid) }
     }
@@ -2571,8 +2580,11 @@ impl crate::Socket {
     /// For more information about this option see [`set_dccp_ccid`].
     ///
     /// [`set_dccp_ccid`]: crate::Socket::set_dccp_ccid
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_tx_ccid(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_TX_CCID) }
     }
@@ -2582,8 +2594,11 @@ impl crate::Socket {
     /// For more information about this option see [`set_dccp_ccid`].
     ///
     /// [`set_dccp_ccid`]: crate::Socket::set_dccp_ccid
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_xx_ccid(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RX_CCID) }
     }
@@ -2592,8 +2607,11 @@ impl crate::Socket {
     ///
     /// Enables a listening socket to hold timewait state when closing the
     /// connection. This option must be set after `accept` returns.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn set_dccp_server_timewait(&self, hold_timewait: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2610,8 +2628,11 @@ impl crate::Socket {
     /// For more information see [`set_dccp_server_timewait`]
     ///
     /// [`set_dccp_server_timewait`]: crate::Socket::set_dccp_server_timewait
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_server_timewait(&self) -> io::Result<bool> {
         unsafe {
             getsockopt(
@@ -2629,8 +2650,11 @@ impl crate::Socket {
     /// the entire packet and that only fully covered application data is
     /// accepted by the receiver. Hence, when using this feature on the sender,
     /// it must be enabled at the receiver too, with suitable choice of CsCov.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn set_dccp_send_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2647,8 +2671,11 @@ impl crate::Socket {
     /// For more information on this option see [`set_dccp_send_cscov`].
     ///
     /// [`set_dccp_send_cscov`]: crate::Socket::set_dccp_send_cscov
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_send_cscov(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_SEND_CSCOV) }
     }
@@ -2658,8 +2685,11 @@ impl crate::Socket {
     /// This option is only useful when combined with [`set_dccp_send_cscov`].
     ///
     /// [`set_dccp_send_cscov`]: crate::Socket::set_dccp_send_cscov
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn set_dccp_recv_cscov(&self, level: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2676,8 +2706,11 @@ impl crate::Socket {
     /// For more information on this option see [`set_dccp_recv_cscov`].
     ///
     /// [`set_dccp_recv_cscov`]: crate::Socket::set_dccp_recv_cscov
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_recv_cscov(&self) -> io::Result<u32> {
         unsafe { getsockopt(self.as_raw(), libc::SOL_DCCP, libc::DCCP_SOCKOPT_RECV_CSCOV) }
     }
@@ -2686,8 +2719,11 @@ impl crate::Socket {
     ///
     /// This option sets the maximum length of the output queue. A zero value is
     /// interpreted as unbounded queue length.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn set_dccp_qpolicy_txqlen(&self, length: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2704,8 +2740,11 @@ impl crate::Socket {
     /// For more information on this option see [`set_dccp_qpolicy_txqlen`].
     ///
     /// [`set_dccp_qpolicy_txqlen`]: crate::Socket::set_dccp_qpolicy_txqlen
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_qpolicy_txqlen(&self) -> io::Result<u32> {
         unsafe {
             getsockopt(
@@ -2725,8 +2764,11 @@ impl crate::Socket {
     /// of writing.
     ///
     /// [documentation]: https://www.kernel.org/doc/html/latest/networking/dccp.html
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_available_ccids<const N: usize>(&self) -> io::Result<CcidEndpoints<N>> {
         let mut endpoints = [0; N];
         let mut length = endpoints.len() as libc::socklen_t;
@@ -2744,8 +2786,11 @@ impl crate::Socket {
     ///
     /// This option retrieves the current maximum packet size (application
     /// payload size) in bytes.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(feature = "all", target_os = "linux", target_env = "gnu"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", target_os = "linux", target_env = "gnu")))
+    )]
     pub fn dccp_cur_mps(&self) -> io::Result<u32> {
         unsafe {
             getsockopt(
