@@ -26,7 +26,7 @@ use windows_sys::Win32::Networking::WinSock::{
     SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
     WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
 };
-use windows_sys::Win32::System::WindowsProgramming::INFINITE;
+use windows_sys::Win32::System::Threading::INFINITE;
 
 use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
 
@@ -638,7 +638,7 @@ pub(crate) fn send_to_vectored(
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
-pub(crate) fn timeout_opt(fd: Socket, lvl: c_int, name: u32) -> io::Result<Option<Duration>> {
+pub(crate) fn timeout_opt(fd: Socket, lvl: c_int, name: i32) -> io::Result<Option<Duration>> {
     unsafe { getsockopt(fd, lvl, name).map(from_ms) }
 }
 
@@ -656,7 +656,7 @@ fn from_ms(duration: u32) -> Option<Duration> {
 pub(crate) fn set_timeout_opt(
     socket: Socket,
     level: c_int,
-    optname: u32,
+    optname: i32,
     duration: Option<Duration>,
 ) -> io::Result<()> {
     let duration = into_ms(duration);
@@ -703,14 +703,14 @@ pub(crate) fn set_tcp_keepalive(socket: Socket, keepalive: &TcpKeepalive) -> io:
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
 // NOTE: `optname` is actually `i32`, but all constants are `u32`.
-pub(crate) unsafe fn getsockopt<T>(socket: Socket, level: c_int, optname: u32) -> io::Result<T> {
+pub(crate) unsafe fn getsockopt<T>(socket: Socket, level: c_int, optname: i32) -> io::Result<T> {
     let mut optval: MaybeUninit<T> = MaybeUninit::uninit();
     let mut optlen = mem::size_of::<T>() as c_int;
     syscall!(
         getsockopt(
             socket,
             level as i32,
-            optname as i32,
+            optname,
             optval.as_mut_ptr().cast(),
             &mut optlen,
         ),
@@ -729,14 +729,14 @@ pub(crate) unsafe fn getsockopt<T>(socket: Socket, level: c_int, optname: u32) -
 pub(crate) unsafe fn setsockopt<T>(
     socket: Socket,
     level: c_int,
-    optname: u32,
+    optname: i32,
     optval: T,
 ) -> io::Result<()> {
     syscall!(
         setsockopt(
             socket,
             level as i32,
-            optname as i32,
+            optname,
             (&optval as *const T).cast(),
             mem::size_of::<T>() as c_int,
         ),
