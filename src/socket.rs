@@ -1106,7 +1106,7 @@ impl Socket {
     /// [`IP_TTL`]: Socket::set_ttl
     /// [`IP_TOS`]: Socket::set_tos
     #[cfg_attr(
-        any(target_os = "illumos", target_os = "solaris"),
+        any(target_os = "fuchsia", target_os = "illumos", target_os = "solaris"),
         allow(rustdoc::broken_intra_doc_links)
     )]
     #[cfg(all(feature = "all", not(target_os = "redox")))]
