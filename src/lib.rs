@@ -318,9 +318,21 @@ impl Protocol {
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub const DCCP: Protocol = Protocol(sys::IPPROTO_DCCP);
 
-    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     /// Protocol corresponding to `SCTP`.
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     pub const SCTP: Protocol = Protocol(sys::IPPROTO_SCTP);
+
+    /// Protocol corresponding to `UDPLITE`.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    pub const UDPLITE: Protocol = Protocol(sys::IPPROTO_UDPLITE);
 }
 
 impl From<c_int> for Protocol {
