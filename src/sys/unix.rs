@@ -93,6 +93,16 @@ pub(crate) use libc::IPPROTO_DCCP;
 pub(crate) use libc::IPPROTO_MPTCP;
 #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
 pub(crate) use libc::IPPROTO_SCTP;
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+    )
+))]
+pub(crate) use libc::IPPROTO_UDPLITE;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
 pub(crate) use libc::{
@@ -500,6 +510,16 @@ impl_debug!(
     libc::IPPROTO_DCCP,
     #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     libc::IPPROTO_SCTP,
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    libc::IPPROTO_UDPLITE,
 );
 
 /// Unix-only API.
