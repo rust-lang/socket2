@@ -260,6 +260,14 @@ impl SockAddr {
             _ => None,
         }
     }
+
+    /// Returns the initialised storage bytes.
+    fn as_bytes(&self) -> &[u8] {
+        // SAFETY: `self.storage` is a C struct which can always be treated a
+        // slice of bytes. Futhermore we ensure we don't read any unitialised
+        // bytes by using `self.len`.
+        unsafe { std::slice::from_raw_parts(self.as_ptr().cast(), self.len as usize) }
+    }
 }
 
 impl From<SocketAddr> for SockAddr {
@@ -339,11 +347,7 @@ impl fmt::Debug for SockAddr {
 
 impl PartialEq for SockAddr {
     fn eq(&self, other: &Self) -> bool {
-        unsafe {
-            let these_bytes: &[u8] = any_as_u8_slice(&self.storage, self.len as usize);
-            let those_bytes: &[u8] = any_as_u8_slice(&other.storage, other.len as usize);
-            these_bytes == those_bytes
-        }
+        self.as_bytes() == other.as_bytes()
     }
 }
 
@@ -351,15 +355,8 @@ impl Eq for SockAddr {}
 
 impl Hash for SockAddr {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        unsafe {
-            let these_bytes: &[u8] = any_as_u8_slice(&self.storage, self.len as usize);
-            these_bytes.hash(state);
-        }
+        self.as_bytes().hash(state);
     }
-}
-
-unsafe fn any_as_u8_slice<T: Sized>(p: &T, size: usize) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, size)
 }
 
 #[cfg(test)]
