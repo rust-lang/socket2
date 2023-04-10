@@ -155,6 +155,8 @@ fn socket_address_unix() {
         assert!(!addr.is_unnamed());
         assert_eq!(addr.as_pathname(), Some(Path::new(string)));
         assert_eq!(addr.as_abstract_namespace(), None);
+        let unix = addr.as_unix().unwrap();
+        assert_eq!(addr.as_pathname(), unix.as_pathname());
     }
 }
 
@@ -172,6 +174,7 @@ fn socket_address_unix_unnamed() {
         assert!(addr.is_unnamed());
         assert_eq!(addr.as_pathname(), None);
         assert_eq!(addr.as_abstract_namespace(), None);
+        assert!(addr.as_unix().is_none());
     }
 }
 
