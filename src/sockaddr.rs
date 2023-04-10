@@ -153,6 +153,16 @@ impl SockAddr {
         crate::sys::unix_sockaddr(path.as_ref())
     }
 
+    /// Set the length of the address.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that the address up to `length` bytes are properly
+    /// initialised.
+    pub unsafe fn set_length(&mut self, length: socklen_t) {
+        self.len = length;
+    }
+
     /// Returns this address's family.
     pub const fn family(&self) -> sa_family_t {
         self.storage.ss_family
