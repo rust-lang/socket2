@@ -741,8 +741,17 @@ impl SockAddr {
         }
     }
 
-    /// Returns this address as a `Path` reference if it is an `AF_UNIX` pathname address, otherwise
-    /// returns `None`.
+    /// Returns this address as Unix `SocketAddr` if it is an `AF_UNIX` pathname
+    /// address, otherwise returns `None`.
+    pub fn as_unix(&self) -> Option<std::os::unix::net::SocketAddr> {
+        let path = self.as_pathname()?;
+        // SAFETY: we can represent this as a valid pathname, then so can the
+        // standard library.
+        Some(std::os::unix::net::SocketAddr::from_pathname(path).unwrap())
+    }
+
+    /// Returns this address as a `Path` reference if it is an `AF_UNIX`
+    /// pathname address, otherwise returns `None`.
     pub fn as_pathname(&self) -> Option<&Path> {
         self.as_sockaddr_un().and_then(|storage| {
             (self.len() > offset_of_path(storage) as u32 && storage.sun_path[0] != 0).then(|| {
