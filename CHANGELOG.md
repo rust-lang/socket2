@@ -1,3 +1,22 @@
+# 0.5.2
+
+* Add Unix socket methods to `SockAddr`
+  (https://github.com/rust-lang/socket2/pull/403 and
+  https://github.com/rust-lang/socket2/pull/429).
+* Added `SockAddr::as_storage`
+  (https://github.com/rust-lang/socket2/pull/417).
+* Added `SockAddr::set_length`
+  (https://github.com/rust-lang/socket2/pull/428).
+* Added `Protocol::UDPLITE`
+  (https://github.com/rust-lang/socket2/pull/427).
+* Update windows-sys to 0.48
+  (https://github.com/rust-lang/socket2/pull/422).
+* Fixes Fuchsia target after it changes in 1.68, see
+  <https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1680-2023-03-09>
+  (https://github.com/rust-lang/socket2/pull/423).
+* Fixes musl target and adds it to the CI
+  (https://github.com/rust-lang/socket2/pull/426).
+
 # 0.5.1
 
 ## Added
