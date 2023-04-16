@@ -691,7 +691,7 @@ impl SockAddr {
     pub fn is_unnamed(&self) -> bool {
         self.as_sockaddr_un()
             .map(|storage| {
-                self.len() == offset_of_path(storage).try_into().unwrap()
+                self.len() == offset_of_path(storage) as _
                     // On some non-linux platforms a zeroed path is returned for unnamed.
                     // Abstract addresses only exist on Linux.
                     // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
@@ -754,11 +754,10 @@ impl SockAddr {
     /// pathname address, otherwise returns `None`.
     pub fn as_pathname(&self) -> Option<&Path> {
         self.as_sockaddr_un().and_then(|storage| {
-            (self.len() > offset_of_path(storage).try_into().unwrap() && storage.sun_path[0] != 0)
-                .then(|| {
-                    let path_slice = self.path_bytes(storage, false);
-                    Path::new::<OsStr>(OsStrExt::from_bytes(path_slice))
-                })
+            (self.len() > offset_of_path(storage) as _ && storage.sun_path[0] != 0).then(|| {
+                let path_slice = self.path_bytes(storage, false);
+                Path::new::<OsStr>(OsStrExt::from_bytes(path_slice))
+            })
         })
     }
 
@@ -773,8 +772,7 @@ impl SockAddr {
         #[cfg(any(target_os = "linux", target_os = "android"))]
         {
             self.as_sockaddr_un().and_then(|storage| {
-                (self.len() > offset_of_path(storage).try_into().unwrap()
-                    && storage.sun_path[0] == 0)
+                (self.len() > offset_of_path(storage) as _ && storage.sun_path[0] == 0)
                     .then(|| self.path_bytes(storage, true))
             })
         }
