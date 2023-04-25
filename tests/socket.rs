@@ -1528,3 +1528,21 @@ fn dccp() {
     let mut recv_buf = [0_u8; 64];
     assert!(accepted.read(&mut recv_buf).unwrap() == msg.len());
 }
+
+#[test]
+#[cfg(all(feature = "all", target_os = "linux"))]
+fn cookie() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    let first_socket_cookie = socket.cookie();
+    match first_socket_cookie {
+        Ok(_) => {}
+        Err(err) => panic!("Could not get socket cookie, err: {err}"),
+    }
+
+    //Fetch cookie again and make sure it's the same value (ALWAYS should be, smoke test)
+    let second_socket_cookie = socket.cookie();
+    match second_socket_cookie {
+        Ok(cookie) => assert_eq!(cookie, first_socket_cookie.unwrap()),
+        Err(err) => panic!("Could not get socket cookie a second time, err: {err}"),
+    }
+}
