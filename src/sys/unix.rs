@@ -2418,6 +2418,18 @@ impl crate::Socket {
         unsafe { setsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_DETACH_FILTER, 0) }
     }
 
+    /// Gets the value for the `SO_COOKIE` option on this socket.
+    ///
+    /// The socket cookie is a unique, kernel-managed identifier tied to each socket.
+    /// Therefore, there is no corresponding `set` helper.
+    ///
+    /// For more information about this option, see [Linux patch](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=5daab9db7b65df87da26fd8cfa695fb9546a1ddb)
+    #[cfg(all(feature = "all", any(target_os = "linux")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", any(target_os = "linux")))))]
+    pub fn cookie(&self) -> io::Result<u64> {
+        unsafe { getsockopt::<libc::c_ulonglong>(self.as_raw(), libc::SOL_SOCKET, libc::SO_COOKIE) }
+    }
+
     /// Get the value of the `IPV6_TCLASS` option for this socket.
     ///
     /// For more information about this option, see [`set_tclass_v6`].
