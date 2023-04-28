@@ -1448,6 +1448,7 @@ impl Socket {
     #[cfg(not(any(
         target_os = "dragonfly",
         target_os = "fuchsia",
+        target_os = "haiku",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
@@ -1479,6 +1480,7 @@ impl Socket {
     #[cfg(not(any(
         target_os = "dragonfly",
         target_os = "fuchsia",
+        target_os = "haiku",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
