@@ -1,3 +1,10 @@
+# 0.5.3
+
+* Added support for two new Android targets `armv7-linux-androideabi` and
+  `i686-linux-android` (https://github.com/rust-lang/socket2/pull/434).
+* Added `Socket::cookie` to retrieve `SO_COOKIE` on Linux
+  (https://github.com/rust-lang/socket2/pull/437).
+
 # 0.5.2
 
 * Add Unix socket methods to `SockAddr`
