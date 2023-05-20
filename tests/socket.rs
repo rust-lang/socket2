@@ -1228,6 +1228,8 @@ test!(reuse_address, set_reuse_address(true));
     not(any(windows, target_os = "solaris", target_os = "illumos"))
 ))]
 test!(reuse_port, set_reuse_port(true));
+#[cfg(all(feature = "all", target_os = "freebsd"))]
+test!(reuse_port_lb, set_reuse_port_lb(true));
 #[cfg(all(feature = "all", unix, not(target_os = "redox")))]
 test!(
     #[cfg_attr(target_os = "linux", ignore = "Different value returned")]
