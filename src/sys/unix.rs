@@ -1983,6 +1983,35 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `SO_REUSEPORT_LB` option on this socket.
+    ///
+    /// For more information about this option, see [`set_reuse_port_lb`].
+    ///
+    /// [`set_reuse_port_lb`]: crate::Socket::set_reuse_port_lb
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    pub fn reuse_port_lb(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_REUSEPORT_LB)
+                .map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set value for the `SO_REUSEPORT_LB` option on this socket.
+    ///
+    /// This allows multiple programs or threads to bind to the same port and
+    /// incoming connections will be load balanced using a hash function.
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    pub fn set_reuse_port_lb(&self, reuse: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_REUSEPORT_LB,
+                reuse as c_int,
+            )
+        }
+    }
+
     /// Get the value of the `IP_FREEBIND` option on this socket.
     ///
     /// For more information about this option, see [`set_freebind`].
