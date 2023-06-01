@@ -593,6 +593,46 @@ fn out_of_band() {
 }
 
 #[test]
+#[cfg(not(target_os = "redox"))]
+fn recv_ancillary_data() {
+    use libc::setsockopt;
+
+    let (socket_a, socket_b) = udp_pair_connected();
+    let enabled = 1 as u32;
+    let ret = unsafe {
+        setsockopt(
+            socket_b.as_raw_fd(),
+            libc::IPPROTO_IPV6,
+            libc::IPV6_RECVPKTINFO,
+            &enabled as *const u32 as *const libc::c_void,
+            mem::size_of::<u32>() as libc::socklen_t,
+        )
+    };
+    assert_eq!(ret, 0);
+
+    let sent = socket_a.send(DATA).unwrap();
+    assert_eq!(sent, DATA.len());
+
+    let mut buf = [MaybeUninit::<u8>::uninit(); 16];
+    let mut ancillary = [MaybeUninit::<u8>::uninit(); 128];
+    let (received, _) = socket_b
+        .recv_with_ancillary_data(&mut buf, &mut ancillary)
+        .unwrap();
+    assert_eq!(received, DATA.len());
+    assert_eq!(unsafe { assume_init(&buf[..received]) }, DATA);
+
+    let ancillary = unsafe { assume_init(&ancillary[..]) };
+    let cmsg_len = ancillary[0..core::mem::size_of::<libc::size_t>()]
+        .try_into()
+        .map(usize::from_le_bytes)
+        .unwrap();
+    assert_eq!(
+        cmsg_len,
+        core::mem::size_of::<libc::cmsghdr>() + core::mem::size_of::<libc::in6_pktinfo>()
+    );
+}
+
+#[test]
 #[cfg(not(target_os = "redox"))] // cfg of `udp_pair_unconnected()`
 fn udp_peek_sender() {
     let (socket_a, socket_b) = udp_pair_unconnected();

@@ -950,7 +950,18 @@ pub(crate) fn recv_vectored(
     bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
-    recvmsg(fd, ptr::null_mut(), bufs, flags).map(|(n, _, recv_flags)| (n, recv_flags))
+    recvmsg(fd, ptr::null_mut(), bufs, &mut [], flags).map(|(n, _, recv_flags)| (n, recv_flags))
+}
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn recv_vectored_with_ancillary_data(
+    fd: Socket,
+    bufs: &mut [crate::MaybeUninitSlice<'_>],
+    ancillary_data: &mut [MaybeUninit<u8>],
+    flags: c_int,
+) -> io::Result<(usize, RecvFlags)> {
+    recvmsg(fd, ptr::null_mut(), bufs, ancillary_data, flags)
+        .map(|(n, _, recv_flags)| (n, recv_flags))
 }
 
 #[cfg(not(target_os = "redox"))]
@@ -963,7 +974,7 @@ pub(crate) fn recv_from_vectored(
     // manually.
     unsafe {
         SockAddr::try_init(|storage, len| {
-            recvmsg(fd, storage, bufs, flags).map(|(n, addrlen, recv_flags)| {
+            recvmsg(fd, storage, bufs, &mut [], flags).map(|(n, addrlen, recv_flags)| {
                 // Set the correct address length.
                 *len = addrlen;
                 (n, recv_flags)
@@ -980,6 +991,7 @@ fn recvmsg(
     fd: Socket,
     msg_name: *mut sockaddr_storage,
     bufs: &mut [crate::MaybeUninitSlice<'_>],
+    ancillary_data: &mut [MaybeUninit<u8>],
     flags: c_int,
 ) -> io::Result<(usize, libc::socklen_t, RecvFlags)> {
     let msg_namelen = if msg_name.is_null() {
@@ -993,6 +1005,8 @@ fn recvmsg(
     msg.msg_namelen = msg_namelen;
     msg.msg_iov = bufs.as_mut_ptr().cast();
     msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
+    msg.msg_control = ancillary_data.as_mut_ptr().cast();
+    msg.msg_controllen = ancillary_data.len() as _;
     syscall!(recvmsg(fd, &mut msg, flags))
         .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
 }
