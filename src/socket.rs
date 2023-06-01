@@ -442,6 +442,29 @@ impl Socket {
         sys::recv(self.as_raw(), buf, flags)
     }
 
+    /// Receives normal and ancillary data on the socket from the remote address to which it is
+    /// connected by setting the `msg_control` field with syscall recvmsg.
+    ///
+    /// In addition to the data received with [`recv`], this method also returns ancillary data.
+    /// To be noted that the ancillary data is not associated with out-of-band (OOB) data.
+    ///
+    /// [`recv`]: Socket::recv
+    #[doc = man_links!(recvmsg(2))]
+    #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(target_os = "redox")))]
+    pub fn recv_with_ancillary_data(
+        &self,
+        buf: &mut [MaybeUninit<u8>],
+        ancillary_data: &mut [MaybeUninit<u8>],
+    ) -> io::Result<(usize, RecvFlags)> {
+        sys::recv_vectored_with_ancillary_data(
+            self.as_raw(),
+            &mut [MaybeUninitSlice::new(buf)],
+            ancillary_data,
+            0,
+        )
+    }
+
     /// Receives data on the socket from the remote address to which it is
     /// connected. Unlike [`recv`] this allows passing multiple buffers.
     ///
@@ -496,6 +519,20 @@ impl Socket {
         flags: c_int,
     ) -> io::Result<(usize, RecvFlags)> {
         sys::recv_vectored(self.as_raw(), bufs, flags)
+    }
+
+    /// Identical to [`recv_with_ancillary_data`] but allows passing multiple buffers and flags.
+    ///
+    /// [`recv_with_ancillary_data`]: Socket::recv_with_ancillary_data
+    #[cfg(not(target_os = "redox"))]
+    #[cfg_attr(docsrs, doc(cfg(target_os = "redox")))]
+    pub fn recv_vectored_with_ancillary_data_and_flags(
+        &self,
+        bufs: &mut [MaybeUninitSlice<'_>],
+        ancillary_data: &mut [MaybeUninit<u8>],
+        flags: c_int,
+    ) -> io::Result<(usize, RecvFlags)> {
+        sys::recv_vectored_with_ancillary_data(self.as_raw(), bufs, ancillary_data, flags)
     }
 
     /// Receives data on the socket from the remote adress to which it is
