@@ -70,9 +70,9 @@ use std::{io, slice};
 use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
-#[cfg(not(target_os = "redox"))]
-use crate::RecvFlags;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+#[cfg(not(target_os = "redox"))]
+use crate::{MsgHdr, RecvFlags};
 
 pub(crate) use libc::c_int;
 
@@ -1036,7 +1036,8 @@ pub(crate) fn send(fd: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn send_vectored(fd: Socket, bufs: &[IoSlice<'_>], flags: c_int) -> io::Result<usize> {
-    sendmsg(fd, ptr::null(), 0, bufs, flags)
+    let msg = MsgHdr::new().with_buffers(bufs);
+    sendmsg(fd, &msg, flags)
 }
 
 pub(crate) fn send_to(fd: Socket, buf: &[u8], addr: &SockAddr, flags: c_int) -> io::Result<usize> {
@@ -1058,30 +1059,13 @@ pub(crate) fn send_to_vectored(
     addr: &SockAddr,
     flags: c_int,
 ) -> io::Result<usize> {
-    sendmsg(fd, addr.as_storage_ptr(), addr.len(), bufs, flags)
+    let msg = MsgHdr::new().with_addr(addr).with_buffers(bufs);
+    sendmsg(fd, &msg, flags)
 }
 
-/// Returns the (bytes received, sending address len, `RecvFlags`).
 #[cfg(not(target_os = "redox"))]
-#[allow(clippy::unnecessary_cast)] // For `IovLen::MAX as usize` (Already `usize` on Linux).
-fn sendmsg(
-    fd: Socket,
-    msg_name: *const sockaddr_storage,
-    msg_namelen: socklen_t,
-    bufs: &[IoSlice<'_>],
-    flags: c_int,
-) -> io::Result<usize> {
-    // libc::msghdr contains unexported padding fields on Fuchsia.
-    let mut msg: libc::msghdr = unsafe { mem::zeroed() };
-    // Safety: we're creating a `*mut` pointer from a reference, which is UB
-    // once actually used. However the OS should not write to it in the
-    // `sendmsg` system call.
-    msg.msg_name = (msg_name as *mut sockaddr_storage).cast();
-    msg.msg_namelen = msg_namelen;
-    // Safety: Same as above about `*const` -> `*mut`.
-    msg.msg_iov = bufs.as_ptr() as *mut _;
-    msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
-    syscall!(sendmsg(fd, &msg, flags)).map(|n| n as usize)
+fn sendmsg(fd: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+    syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.

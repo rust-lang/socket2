@@ -205,12 +205,6 @@ impl SockAddr {
         self.storage.ss_family == AF_UNIX as sa_family_t
     }
 
-    /// Returns a raw pointer to the address storage.
-    #[cfg(all(unix, not(target_os = "redox")))]
-    pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
-        &self.storage
-    }
-
     /// Returns this address as a `SocketAddr` if it is in the `AF_INET` (IPv4)
     /// or `AF_INET6` (IPv6) family, otherwise returns `None`.
     pub fn as_socket(&self) -> Option<SocketAddr> {
