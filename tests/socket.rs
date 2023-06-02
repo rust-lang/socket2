@@ -705,6 +705,24 @@ fn send_from_recv_to_vectored() {
 
 #[test]
 #[cfg(not(target_os = "redox"))]
+fn sendmsg() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+
+    const DATA: &[u8] = b"Hello, World!";
+
+    let bufs = &[IoSlice::new(DATA)];
+    let addr_b = socket_b.local_addr().unwrap();
+    let msg = socket2::MsgHdr::new().with_addr(&addr_b).with_buffers(bufs);
+    let sent = socket_a.sendmsg(&msg, 0).unwrap();
+    assert_eq!(sent, DATA.len());
+
+    let mut buf = Vec::with_capacity(DATA.len() + 1);
+    let received = socket_b.recv(buf.spare_capacity_mut()).unwrap();
+    assert_eq!(received, DATA.len());
+}
+
+#[test]
+#[cfg(not(target_os = "redox"))]
 fn recv_vectored_truncated() {
     let (socket_a, socket_b) = udp_pair_connected();
 
