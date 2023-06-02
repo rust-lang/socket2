@@ -642,6 +642,33 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     Ok(unsafe { SockAddr::new(storage, len as socklen_t) })
 }
 
+// Used in `MsgHdr`.
+#[cfg(not(target_os = "redox"))]
+pub(crate) use libc::msghdr;
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
+    msg.msg_name = name.as_ptr().cast_mut().cast();
+    msg.msg_namelen = name.len();
+}
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut libc::iovec, len: usize) {
+    msg.msg_iov = ptr;
+    msg.msg_iovlen = len as _;
+}
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn set_msghdr_control(msg: &mut msghdr, ptr: *mut libc::c_void, len: usize) {
+    msg.msg_control = ptr;
+    msg.msg_controllen = len as _;
+}
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: libc::c_int) {
+    msg.msg_flags = flags;
+}
+
 /// Unix only API.
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.

@@ -59,6 +59,12 @@
 #![doc(test(attr(deny(warnings))))]
 
 use std::fmt;
+#[cfg(not(target_os = "redox"))]
+use std::io::IoSlice;
+#[cfg(not(target_os = "redox"))]
+use std::marker::PhantomData;
+#[cfg(not(target_os = "redox"))]
+use std::mem;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
@@ -560,5 +566,99 @@ impl TcpKeepalive {
             retries: Some(retries),
             ..self
         }
+    }
+}
+
+/// Configuration of a `{send,recv}msg` system call.
+///
+/// This wraps `msghdr` on Unix and `WSAMSG` on Windows.
+#[cfg(not(target_os = "redox"))]
+pub struct MsgHdr<'addr, 'bufs, 'control> {
+    inner: sys::msghdr,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(&'addr SockAddr, &'bufs [&'bufs [u8]], &'control [u8])>,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
+    /// Create a new `MsgHdr` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MsgHdr<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `msghdr` and `WSAMSG`.
+        MsgHdr {
+            inner: unsafe { mem::zeroed() },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
+    /// and `namelen` on Windows.
+    pub fn with_addr(mut self, addr: &'addr SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner, addr);
+        self
+    }
+
+    /// Set the mutable address (name) of the message. Same as [`with_addr`],
+    /// but with a mutable address.
+    ///
+    /// [`with_addr`]: MsgHdr::with_addr
+    pub fn with_addr_mut(mut self, addr: &'addr mut SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner, addr);
+        self
+    }
+
+    /// Set the buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
+    /// and `dwBufferCount` on Windows.
+    pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'bufs>]) -> Self {
+        let ptr = bufs.as_ptr().cast_mut().cast();
+        sys::set_msghdr_iov(&mut self.inner, ptr, bufs.len());
+        self
+    }
+
+    /// Set the mutable buffer(s) of the message. Same as [`with_buffers`], but
+    /// with mutable buffers.
+    ///
+    /// [`with_buffers`]: MsgHdr::with_buffers
+    pub fn with_buffers_mut(mut self, bufs: &'bufs mut [MaybeUninitSlice<'bufs>]) -> Self {
+        sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), bufs.len());
+        self
+    }
+
+    /// Set the control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
+    /// `Control` on Windows.
+    pub fn with_control(mut self, buf: &'control [u8]) -> Self {
+        let ptr = buf.as_ptr().cast_mut().cast();
+        sys::set_msghdr_control(&mut self.inner, ptr, buf.len());
+        self
+    }
+
+    /// Set the mutable control buffer of the message. Same as [`with_control`],
+    /// but with a mutable buffers.
+    ///
+    /// [`with_control`]: MsgHdr::with_control
+    pub fn with_control_mut(mut self, buf: &'control mut [u8]) -> Self {
+        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), buf.len());
+        self
+    }
+
+    /// Set the flags of the message.
+    ///
+    /// Corresponds to setting `msg_flags` on Unix and `dwFlags` on Windows.
+    pub fn with_flags(mut self, flags: sys::c_int) -> Self {
+        sys::set_msghdr_flags(&mut self.inner, flags);
+        self
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MsgHdr".fmt(fmt)
     }
 }
