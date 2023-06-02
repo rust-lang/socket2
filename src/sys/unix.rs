@@ -1831,8 +1831,8 @@ impl crate::Socket {
     /// Sets the value for the `SO_SETFIB` option on this socket.
     ///
     /// Bind socket to the specified forwarding table (VRF) on a FreeBSD.
-    #[cfg(all(feature = "all", any(target_os = "freebsd")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", any(target_os = "freebsd")))))]
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "freebsd"))))]
     pub fn set_fib(&self, fib: u32) -> io::Result<()> {
         syscall!(setsockopt(
             self.as_raw(),
@@ -2587,8 +2587,8 @@ impl crate::Socket {
     /// Therefore, there is no corresponding `set` helper.
     ///
     /// For more information about this option, see [Linux patch](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=5daab9db7b65df87da26fd8cfa695fb9546a1ddb)
-    #[cfg(all(feature = "all", any(target_os = "linux")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", any(target_os = "linux")))))]
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
     pub fn cookie(&self) -> io::Result<u64> {
         unsafe { getsockopt::<libc::c_ulonglong>(self.as_raw(), libc::SOL_SOCKET, libc::SO_COOKIE) }
     }
