@@ -187,6 +187,28 @@ impl<'a> MaybeUninitSlice<'a> {
     }
 }
 
+// Used in `MsgHdr`.
+pub(crate) use windows_sys::Win32::Networking::WinSock::WSAMSG as msghdr;
+
+pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
+    msg.name = name.as_ptr().cast_mut().cast();
+    msg.namelen = name.len();
+}
+
+pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut WSABUF, len: usize) {
+    msg.lpBuffers = ptr;
+    msg.dwBufferCount = len as _;
+}
+
+pub(crate) fn set_msghdr_control(msg: &mut msghdr, ptr: *mut u8, len: usize) {
+    msg.Control.buf = ptr;
+    msg.Control.len = len as u32;
+}
+
+pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: c_int) {
+    msg.dwFlags = flags as u32;
+}
+
 fn init() {
     static INIT: Once = Once::new();
 
