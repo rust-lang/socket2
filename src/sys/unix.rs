@@ -1064,7 +1064,7 @@ pub(crate) fn send_to_vectored(
 }
 
 #[cfg(not(target_os = "redox"))]
-fn sendmsg(fd: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+pub(crate) fn sendmsg(fd: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
     syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
 }
 

@@ -28,7 +28,7 @@ use windows_sys::Win32::Networking::WinSock::{
 };
 use windows_sys::Win32::System::Threading::INFINITE;
 
-use crate::{RecvFlags, SockAddr, TcpKeepalive, Type};
+use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
 pub(crate) type c_int = std::os::raw::c_int;
@@ -650,6 +650,23 @@ pub(crate) fn send_to_vectored(
             flags as u32,
             addr.as_ptr(),
             addr.len(),
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        SOCKET_ERROR
+    )
+    .map(|_| nsent as usize)
+}
+
+pub(crate) fn sendmsg(socket: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+    let mut nsent = 0;
+    syscall!(
+        WSASendMsg(
+            socket,
+            &msg.inner,
+            flags as u32,
+            &mut nsent,
             ptr::null_mut(),
             None,
         ),
