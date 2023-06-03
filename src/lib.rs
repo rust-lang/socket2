@@ -569,14 +569,15 @@ impl TcpKeepalive {
     }
 }
 
-/// Configuration of a `{send,recv}msg` system call.
+/// Configuration of a `sendmsg(2)` system call.
 ///
-/// This wraps `msghdr` on Unix and `WSAMSG` on Windows.
+/// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdrMut`]
+/// for the variant used by `recvmsg(2)`.
 #[cfg(not(target_os = "redox"))]
 pub struct MsgHdr<'addr, 'bufs, 'control> {
     inner: sys::msghdr,
     #[allow(clippy::type_complexity)]
-    _lifetimes: PhantomData<(&'addr SockAddr, &'bufs [&'bufs [u8]], &'control [u8])>,
+    _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
 }
 
 #[cfg(not(target_os = "redox"))]
@@ -600,15 +601,6 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
         self
     }
 
-    /// Set the mutable address (name) of the message. Same as [`with_addr`],
-    /// but with a mutable address.
-    ///
-    /// [`with_addr`]: MsgHdr::with_addr
-    pub fn with_addr_mut(mut self, addr: &'addr mut SockAddr) -> Self {
-        sys::set_msghdr_name(&mut self.inner, addr);
-        self
-    }
-
     /// Set the buffer(s) of the message.
     ///
     /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
@@ -619,15 +611,6 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
         self
     }
 
-    /// Set the mutable buffer(s) of the message. Same as [`with_buffers`], but
-    /// with mutable buffers.
-    ///
-    /// [`with_buffers`]: MsgHdr::with_buffers
-    pub fn with_buffers_mut(mut self, bufs: &'bufs mut [MaybeUninitSlice<'bufs>]) -> Self {
-        sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), bufs.len());
-        self
-    }
-
     /// Set the control buffer of the message.
     ///
     /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
@@ -635,15 +618,6 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     pub fn with_control(mut self, buf: &'control [u8]) -> Self {
         let ptr = buf.as_ptr().cast_mut().cast();
         sys::set_msghdr_control(&mut self.inner, ptr, buf.len());
-        self
-    }
-
-    /// Set the mutable control buffer of the message. Same as [`with_control`],
-    /// but with a mutable buffers.
-    ///
-    /// [`with_control`]: MsgHdr::with_control
-    pub fn with_control_mut(mut self, buf: &'control mut [u8]) -> Self {
-        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), buf.len());
         self
     }
 
