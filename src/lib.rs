@@ -636,3 +636,70 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
         "MsgHdr".fmt(fmt)
     }
 }
+
+/// Configuration of a `recvmsg(2)` system call.
+///
+/// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdr`] for
+/// the variant used by `sendmsg(2)`.
+#[cfg(not(target_os = "redox"))]
+pub struct MsgHdrMut<'addr, 'bufs, 'control> {
+    inner: sys::msghdr,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(
+        &'addr mut SockAddr,
+        &'bufs mut MaybeUninitSlice<'bufs>,
+        &'control mut [u8],
+    )>,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
+    /// Create a new `MsgHdrMut` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MsgHdrMut<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `msghdr` and `WSAMSG`.
+        MsgHdrMut {
+            inner: unsafe { mem::zeroed() },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the mutable address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
+    /// and `namelen` on Windows.
+    pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner, addr);
+        self
+    }
+
+    /// Set the mutable buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
+    /// and `dwBufferCount` on Windows.
+    pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'bufs>]) -> Self {
+        sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), bufs.len());
+        self
+    }
+
+    /// Set the mutable control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
+    /// `Control` on Windows.
+    pub fn with_control(mut self, buf: &'control mut [MaybeUninit<u8>]) -> Self {
+        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), buf.len());
+        self
+    }
+
+    /// Returns the flags of the message.
+    pub fn flags(&self) -> RecvFlags {
+        sys::msghdr_flags(&self.inner)
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MsgHdrMut".fmt(fmt)
+    }
+}

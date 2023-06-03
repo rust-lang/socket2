@@ -669,6 +669,11 @@ pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: libc::c_int) {
     msg.msg_flags = flags;
 }
 
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn msghdr_flags(msg: &msghdr) -> RecvFlags {
+    RecvFlags(msg.msg_flags)
+}
+
 /// Unix only API.
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
