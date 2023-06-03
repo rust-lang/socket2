@@ -605,7 +605,7 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     ///
     /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
     /// and `dwBufferCount` on Windows.
-    pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'bufs>]) -> Self {
+    pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'_>]) -> Self {
         let ptr = bufs.as_ptr().cast_mut().cast();
         sys::set_msghdr_iov(&mut self.inner, ptr, bufs.len());
         self
@@ -677,7 +677,7 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     ///
     /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
     /// and `dwBufferCount` on Windows.
-    pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'bufs>]) -> Self {
+    pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'_>]) -> Self {
         sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), bufs.len());
         self
     }
