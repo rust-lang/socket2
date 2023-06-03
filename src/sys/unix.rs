@@ -72,7 +72,7 @@ use libc::{in6_addr, in_addr};
 
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
-use crate::{MsgHdr, RecvFlags};
+use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
 pub(crate) use libc::c_int;
 
@@ -982,7 +982,9 @@ pub(crate) fn recv_vectored(
     bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
-    recvmsg(fd, ptr::null_mut(), bufs, flags).map(|(n, _, recv_flags)| (n, recv_flags))
+    let mut msg = MsgHdrMut::new().with_buffers(bufs);
+    let n = recvmsg(fd, &mut msg, flags)?;
+    Ok((n, msg.flags()))
 }
 
 #[cfg(not(target_os = "redox"))]
@@ -991,42 +993,25 @@ pub(crate) fn recv_from_vectored(
     bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
-    // Safety: `recvmsg` initialises the address storage and we set the length
+    let mut msg = MsgHdrMut::new().with_buffers(bufs);
+    // SAFETY: `recvmsg` initialises the address storage and we set the length
     // manually.
-    unsafe {
+    let (n, addr) = unsafe {
         SockAddr::try_init(|storage, len| {
-            recvmsg(fd, storage, bufs, flags).map(|(n, addrlen, recv_flags)| {
-                // Set the correct address length.
-                *len = addrlen;
-                (n, recv_flags)
-            })
-        })
-    }
-    .map(|((n, recv_flags), addr)| (n, recv_flags, addr))
+            msg.inner.msg_name = storage.cast();
+            msg.inner.msg_namelen = *len;
+            let n = recvmsg(fd, &mut msg, flags)?;
+            // Set the correct address length.
+            *len = msg.inner.msg_namelen;
+            Ok(n)
+        })?
+    };
+    Ok((n, msg.flags(), addr))
 }
 
-/// Returns the (bytes received, sending address len, `RecvFlags`).
 #[cfg(not(target_os = "redox"))]
-#[allow(clippy::unnecessary_cast)] // For `IovLen::MAX as usize` (Already `usize` on Linux).
-fn recvmsg(
-    fd: Socket,
-    msg_name: *mut sockaddr_storage,
-    bufs: &mut [crate::MaybeUninitSlice<'_>],
-    flags: c_int,
-) -> io::Result<(usize, libc::socklen_t, RecvFlags)> {
-    let msg_namelen = if msg_name.is_null() {
-        0
-    } else {
-        size_of::<sockaddr_storage>() as libc::socklen_t
-    };
-    // libc::msghdr contains unexported padding fields on Fuchsia.
-    let mut msg: libc::msghdr = unsafe { mem::zeroed() };
-    msg.msg_name = msg_name.cast();
-    msg.msg_namelen = msg_namelen;
-    msg.msg_iov = bufs.as_mut_ptr().cast();
-    msg.msg_iovlen = min(bufs.len(), IovLen::MAX as usize) as IovLen;
-    syscall!(recvmsg(fd, &mut msg, flags))
-        .map(|n| (n as usize, msg.msg_namelen, RecvFlags(msg.msg_flags)))
+fn recvmsg(fd: Socket, msg: &mut MsgHdrMut<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+    syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
 }
 
 pub(crate) fn send(fd: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {
