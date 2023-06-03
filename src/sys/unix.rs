@@ -655,7 +655,7 @@ pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut libc::iovec, len: usize) {
     msg.msg_iov = ptr;
-    msg.msg_iovlen = len as _;
+    msg.msg_iovlen = min(len, IovLen::MAX as usize) as IovLen;
 }
 
 #[cfg(not(target_os = "redox"))]
