@@ -197,7 +197,7 @@ pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
 
 pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut WSABUF, len: usize) {
     msg.lpBuffers = ptr;
-    msg.dwBufferCount = len as _;
+    msg.dwBufferCount = min(len, u32::MAX as usize) as u32;
 }
 
 pub(crate) fn set_msghdr_control(msg: &mut msghdr, ptr: *mut u8, len: usize) {
