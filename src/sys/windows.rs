@@ -28,7 +28,7 @@ use windows_sys::Win32::Networking::WinSock::{
 };
 use windows_sys::Win32::System::Threading::INFINITE;
 
-use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
+use crate::{MsgHdr, MsgHdrMut, RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
 pub(crate) type c_int = std::os::raw::c_int;
@@ -207,6 +207,10 @@ pub(crate) fn set_msghdr_control(msg: &mut msghdr, ptr: *mut u8, len: usize) {
 
 pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: c_int) {
     msg.dwFlags = flags as u32;
+}
+
+pub(crate) fn msghdr_flags(msg: &msghdr) -> RecvFlags {
+    RecvFlags(msg.dwFlags as c_int)
 }
 
 fn init() {
