@@ -648,11 +648,12 @@ pub(crate) use libc::msghdr;
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
-    msg.msg_name = name.as_ptr().cast_mut().cast();
+    msg.msg_name = name.as_ptr() as *mut _;
     msg.msg_namelen = name.len();
 }
 
 #[cfg(not(target_os = "redox"))]
+#[allow(clippy::unnecessary_cast)] // IovLen type can be `usize`.
 pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut libc::iovec, len: usize) {
     msg.msg_iov = ptr;
     msg.msg_iovlen = min(len, IovLen::MAX as usize) as IovLen;

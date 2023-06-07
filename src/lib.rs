@@ -606,7 +606,7 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
     /// and `dwBufferCount` on Windows.
     pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'_>]) -> Self {
-        let ptr = bufs.as_ptr().cast_mut().cast();
+        let ptr = bufs.as_ptr() as *mut _;
         sys::set_msghdr_iov(&mut self.inner, ptr, bufs.len());
         self
     }
@@ -616,7 +616,7 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
     /// `Control` on Windows.
     pub fn with_control(mut self, buf: &'control [u8]) -> Self {
-        let ptr = buf.as_ptr().cast_mut().cast();
+        let ptr = buf.as_ptr() as *mut _;
         sys::set_msghdr_control(&mut self.inner, ptr, buf.len());
         self
     }

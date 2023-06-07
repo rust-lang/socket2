@@ -191,7 +191,7 @@ impl<'a> MaybeUninitSlice<'a> {
 pub(crate) use windows_sys::Win32::Networking::WinSock::WSAMSG as msghdr;
 
 pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
-    msg.name = name.as_ptr().cast_mut().cast();
+    msg.name = name.as_ptr() as *mut _;
     msg.namelen = name.len();
 }
 
