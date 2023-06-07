@@ -21,6 +21,8 @@ use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
+#[cfg(all(unix, not(target_os = "redox")))]
+use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
@@ -625,6 +627,19 @@ impl Socket {
     /// [`peek_from`]: Socket::peek_from
     pub fn peek_sender(&self) -> io::Result<SockAddr> {
         sys::peek_sender(self.as_raw())
+    }
+
+    /// Receive a message from a socket using a message structure.
+    ///
+    /// This is not supported on Windows as calling `WSARecvMsg` (the `recvmsg`
+    /// equivalent) is not straight forward on Windows. See
+    /// <https://github.com/microsoft/Windows-classic-samples/blob/7cbd99ac1d2b4a0beffbaba29ea63d024ceff700/Samples/Win7Samples/netds/winsock/recvmsg/rmmc.cpp>
+    /// for an example (in C++).
+    #[doc = man_links!(recvmsg(2))]
+    #[cfg(all(unix, not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
+    pub fn recvmsg(&self, msg: &mut MsgHdrMut<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
+        sys::recvmsg(self.as_raw(), msg, flags)
     }
 
     /// Sends data on the socket to a connected peer.

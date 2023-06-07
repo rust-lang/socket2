@@ -1010,7 +1010,11 @@ pub(crate) fn recv_from_vectored(
 }
 
 #[cfg(not(target_os = "redox"))]
-fn recvmsg(fd: Socket, msg: &mut MsgHdrMut<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+pub(crate) fn recvmsg(
+    fd: Socket,
+    msg: &mut MsgHdrMut<'_, '_, '_>,
+    flags: c_int,
+) -> io::Result<usize> {
     syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
 }
 
