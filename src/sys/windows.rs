@@ -28,7 +28,7 @@ use windows_sys::Win32::Networking::WinSock::{
 };
 use windows_sys::Win32::System::Threading::INFINITE;
 
-use crate::{MsgHdr, MsgHdrMut, RecvFlags, SockAddr, TcpKeepalive, Type};
+use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
 pub(crate) type c_int = std::os::raw::c_int;
