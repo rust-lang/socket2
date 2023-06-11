@@ -105,6 +105,8 @@ pub(crate) use libc::IPPROTO_SCTP;
 pub(crate) use libc::IPPROTO_UDPLITE;
 pub(crate) use libc::{IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP};
 // Used in `SockAddr`.
+#[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "openbsd")))]
+pub(crate) use libc::IPPROTO_DIVERT;
 pub(crate) use libc::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
 };
@@ -520,6 +522,7 @@ impl_debug!(
         )
     ))]
     libc::IPPROTO_UDPLITE,
+    libc::IPPROTO_DIVERT,
 );
 
 /// Unix-only API.
