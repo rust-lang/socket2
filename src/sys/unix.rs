@@ -522,6 +522,7 @@ impl_debug!(
         )
     ))]
     libc::IPPROTO_UDPLITE,
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "openbsd")))]
     libc::IPPROTO_DIVERT,
 );
 
