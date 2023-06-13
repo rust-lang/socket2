@@ -339,6 +339,10 @@ impl Protocol {
         )
     ))]
     pub const UDPLITE: Protocol = Protocol(sys::IPPROTO_UDPLITE);
+
+    /// Protocol corresponding to `DIVERT`.
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "openbsd")))]
+    pub const DIVERT: Protocol = Protocol(sys::IPPROTO_DIVERT);
 }
 
 impl From<c_int> for Protocol {
