@@ -1110,7 +1110,10 @@ impl Socket {
     ///
     /// [`set_header_included`]: Socket::set_header_included
     #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
+    )]
     pub fn header_included(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_HDRINCL)
@@ -1134,7 +1137,10 @@ impl Socket {
         allow(rustdoc::broken_intra_doc_links)
     )]
     #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
+    )]
     pub fn set_header_included(&self, included: bool) -> io::Result<()> {
         unsafe {
             setsockopt(

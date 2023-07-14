@@ -115,10 +115,9 @@ pub(crate) use libc::{
 pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::SO_OOBINLINE;
+// TODO: Expose in libc for ESP-IDF/LwIP
 #[cfg(target_os = "espidf")]
-pub(crate) const MSG_TRUNC: libc::c_int = 4; // TODO: Expose in libc for ESP-IDF/LwIP
-                                             // Used in `Socket`.
-                                             // Used in `Socket`.
+pub(crate) const MSG_TRUNC: libc::c_int = 4;
 // Used in `Socket`.
 #[cfg(not(target_os = "nto"))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
