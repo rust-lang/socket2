@@ -270,13 +270,16 @@ impl Type {
     pub const DCCP: Type = Type(sys::SOCK_DCCP);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    #[cfg(all(feature = "all", not(target_os = "espidf")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "espidf")))))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
+    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
+    )]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
@@ -428,6 +431,7 @@ pub struct TcpKeepalive {
         target_os = "redox",
         target_os = "solaris",
         target_os = "nto",
+        target_os = "espidf",
     )))]
     interval: Option<Duration>,
     #[cfg(not(any(
@@ -436,6 +440,7 @@ pub struct TcpKeepalive {
         target_os = "solaris",
         target_os = "windows",
         target_os = "nto",
+        target_os = "espidf",
     )))]
     retries: Option<u32>,
 }
@@ -450,6 +455,7 @@ impl TcpKeepalive {
                 target_os = "redox",
                 target_os = "solaris",
                 target_os = "nto",
+                target_os = "espidf",
             )))]
             interval: None,
             #[cfg(not(any(
@@ -458,6 +464,7 @@ impl TcpKeepalive {
                 target_os = "solaris",
                 target_os = "windows",
                 target_os = "nto",
+                target_os = "espidf",
             )))]
             retries: None,
         }
