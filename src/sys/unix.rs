@@ -122,8 +122,6 @@ pub(crate) const MSG_TRUNC: libc::c_int = 4; // TODO: Expose in libc for ESP-IDF
 // Used in `Socket`.
 #[cfg(not(target_os = "nto"))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
-#[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
-pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "fuchsia",
