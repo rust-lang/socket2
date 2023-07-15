@@ -115,9 +115,6 @@ pub(crate) use libc::{
 pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::SO_OOBINLINE;
-// TODO: Expose in libc for ESP-IDF/LwIP
-#[cfg(target_os = "espidf")]
-pub(crate) const MSG_TRUNC: libc::c_int = 4;
 // Used in `Socket`.
 #[cfg(not(target_os = "nto"))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
@@ -548,15 +545,9 @@ impl RecvFlags {
     /// On Unix this corresponds to the `MSG_EOR` flag.
     ///
     /// [`SEQPACKET`]: Type::SEQPACKET
+    #[cfg(not(target_os = "espidf"))]
     pub const fn is_end_of_record(self) -> bool {
-        // TODO: Expose this constant in libc for the ESP-IDF/LwIP framework
-        #[cfg(target_os = "espidf")]
-        const MSG_EOR: libc::c_int = 8;
-
-        #[cfg(not(target_os = "espidf"))]
-        use libc::MSG_EOR;
-
-        self.0 & MSG_EOR != 0
+        self.0 & libc::MSG_EOR != 0
     }
 
     /// Check if the message contains out-of-band data.
@@ -573,11 +564,13 @@ impl RecvFlags {
 #[cfg(not(target_os = "redox"))]
 impl std::fmt::Debug for RecvFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RecvFlags")
-            .field("is_end_of_record", &self.is_end_of_record())
-            .field("is_out_of_band", &self.is_out_of_band())
-            .field("is_truncated", &self.is_truncated())
-            .finish()
+        let mut s = f.debug_struct("RecvFlags");
+        #[cfg(not(target_os = "espidf"))]
+        s.field("is_end_of_record", &self.is_end_of_record());
+        s.field("is_out_of_band", &self.is_out_of_band());
+        #[cfg(not(target_os = "espidf"))]
+        s.field("is_truncated", &self.is_truncated());
+        s.finish()
     }
 }
 
