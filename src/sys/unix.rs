@@ -60,9 +60,9 @@ pub(crate) use libc::c_int;
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6};
 // Used in `Type`.
-#[cfg(all(feature = "all", not(target_os = "redox")))]
+#[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
 pub(crate) use libc::SOCK_RAW;
-#[cfg(feature = "all")]
+#[cfg(all(feature = "all", not(target_os = "espidf")))]
 pub(crate) use libc::SOCK_SEQPACKET;
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
@@ -72,8 +72,10 @@ pub(crate) use libc::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
 };
 // Used in `RecvFlags`.
+#[cfg(not(any(target_os = "redox", target_os = "espidf")))]
+pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(target_os = "redox"))]
-pub(crate) use libc::{MSG_TRUNC, SO_OOBINLINE};
+pub(crate) use libc::SO_OOBINLINE;
 // Used in `Socket`.
 #[cfg(not(target_os = "nto"))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
@@ -89,6 +91,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "solaris",
     target_os = "haiku",
     target_os = "nto",
+    target_os = "espidf",
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
@@ -117,6 +120,7 @@ pub(crate) use libc::{
     target_os = "redox",
     target_os = "fuchsia",
     target_os = "nto",
+    target_os = "espidf",
 )))]
 pub(crate) use libc::{
     ip_mreq_source as IpMreqSource, IP_ADD_SOURCE_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP,
@@ -232,6 +236,7 @@ type IovLen = usize;
     target_os = "solaris",
     target_os = "nto",
     target_vendor = "apple",
+    target_os = "espidf",
 ))]
 type IovLen = c_int;
 
@@ -370,10 +375,11 @@ impl_debug!(
     Type,
     libc::SOCK_STREAM,
     libc::SOCK_DGRAM,
-    #[cfg(not(target_os = "redox"))]
+    #[cfg(not(any(target_os = "redox", target_os = "espidf")))]
     libc::SOCK_RAW,
-    #[cfg(not(any(target_os = "redox", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "redox", target_os = "haiku", target_os = "espidf")))]
     libc::SOCK_RDM,
+    #[cfg(not(target_os = "espidf"))]
     libc::SOCK_SEQPACKET,
     /* TODO: add these optional bit OR-ed flags:
     #[cfg(any(
@@ -417,6 +423,7 @@ impl RecvFlags {
     /// a record is terminated by sending a message with the end-of-record flag set.
     ///
     /// On Unix this corresponds to the MSG_EOR flag.
+    #[cfg(not(target_os = "espidf"))]
     pub const fn is_end_of_record(self) -> bool {
         self.0 & libc::MSG_EOR != 0
     }
@@ -435,11 +442,13 @@ impl RecvFlags {
 #[cfg(not(target_os = "redox"))]
 impl std::fmt::Debug for RecvFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RecvFlags")
-            .field("is_end_of_record", &self.is_end_of_record())
-            .field("is_out_of_band", &self.is_out_of_band())
-            .field("is_truncated", &self.is_truncated())
-            .finish()
+        let mut s = f.debug_struct("RecvFlags");
+        #[cfg(not(target_os = "espidf"))]
+        s.field("is_end_of_record", &self.is_end_of_record());
+        s.field("is_out_of_band", &self.is_out_of_band());
+        #[cfg(not(target_os = "espidf"))]
+        s.field("is_truncated", &self.is_truncated());
+        s.finish()
     }
 }
 
@@ -1056,6 +1065,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "redox",
     target_os = "solaris",
     target_os = "nto",
+    target_os = "espidf",
 )))]
 pub(crate) fn to_mreqn(
     multiaddr: &Ipv4Addr,
