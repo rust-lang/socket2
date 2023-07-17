@@ -62,7 +62,7 @@ jobs:
       matrix:
         # TODO: add the following targets, currently broken.
         # "x86_64-unknown-redox"
-        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd"]
+        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd"]
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
