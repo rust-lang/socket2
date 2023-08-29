@@ -35,7 +35,7 @@ targets = ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", 
 features = ["all"]
 
 [target."cfg(unix)".dependencies]
-libc = "0.2.149"
+libc = "0.2.150"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.48"

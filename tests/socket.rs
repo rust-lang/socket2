@@ -348,6 +348,7 @@ fn set_cloexec() {
         target_os = "dragonfly",
         target_os = "freebsd",
         target_os = "fuchsia",
+        target_os = "hurd",
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd"
@@ -1396,6 +1397,7 @@ test!(IPv4 tos, set_tos(96));
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "fuchsia",
+    target_os = "hurd",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
@@ -1442,6 +1444,7 @@ test!(IPv6 tclass_v6, set_tclass_v6(96));
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "fuchsia",
+    target_os = "hurd",
     target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
@@ -1495,6 +1498,7 @@ fn join_leave_multicast_v4_n() {
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "haiku",
+    target_os = "hurd",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "redox",
