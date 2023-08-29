@@ -760,6 +760,7 @@ const fn set_common_type(ty: Type) -> Type {
         target_os = "dragonfly",
         target_os = "freebsd",
         target_os = "fuchsia",
+        target_os = "hurd",
         target_os = "illumos",
         target_os = "linux",
         target_os = "netbsd",
@@ -786,6 +787,7 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
             target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
+            target_os = "hurd",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
@@ -1307,6 +1309,7 @@ impl Socket {
     #[cfg(not(any(
         target_os = "dragonfly",
         target_os = "haiku",
+        target_os = "hurd",
         target_os = "netbsd",
         target_os = "openbsd",
         target_os = "redox",
@@ -1344,6 +1347,7 @@ impl Socket {
     #[cfg(not(any(
         target_os = "dragonfly",
         target_os = "haiku",
+        target_os = "hurd",
         target_os = "netbsd",
         target_os = "openbsd",
         target_os = "redox",
@@ -1523,6 +1527,7 @@ impl Socket {
         target_os = "aix",
         target_os = "dragonfly",
         target_os = "fuchsia",
+        target_os = "hurd",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
@@ -1553,6 +1558,7 @@ impl Socket {
         target_os = "aix",
         target_os = "dragonfly",
         target_os = "fuchsia",
+        target_os = "hurd",
         target_os = "illumos",
         target_os = "netbsd",
         target_os = "openbsd",
@@ -1777,6 +1783,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "haiku",
+        target_os = "hurd",
         target_os = "espidf",
         target_os = "vita",
     )))]
@@ -1801,6 +1808,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "haiku",
+        target_os = "hurd",
         target_os = "espidf",
         target_os = "vita",
     )))]
