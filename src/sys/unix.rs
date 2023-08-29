@@ -2708,11 +2708,7 @@ impl crate::Socket {
             payload.as_mut_ptr().cast(),
             &mut len,
         ))
-        .map(|_| {
-            let buf = &payload[..len as usize];
-            // TODO: use `MaybeUninit::slice_assume_init_ref` once stable.
-            unsafe { &*(buf as *const [u8]) }.into()
-        })
+        .map(|_| payload[..len as usize].to_vec())
     }
 
     /// Set the value of the `TCP_CONGESTION` option for this socket.
