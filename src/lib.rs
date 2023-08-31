@@ -727,3 +727,151 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
         "MsgHdrMut".fmt(fmt)
     }
 }
+
+/// Configuration of a `sendmmsg(2)` system call.
+///
+/// This wraps `mmsghdr` on Unix. Also see [`MmsgHdrMut`] for the variant used
+/// by `recvmmsg(2)`.
+#[cfg(not(target_os = "redox"))]
+pub struct MmsgHdr<'addr, 'bufs, 'control> {
+    inner: Vec<sys::mmsghdr>,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'addr, 'bufs, 'control> MmsgHdr<'addr, 'bufs, 'control> {
+    /// Create a new `MmsgHdr` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new(len: usize) -> MmsgHdr<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `mmsghdr`
+        MmsgHdr {
+            inner: vec![unsafe { mem::zeroed() }; len],
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the addresses (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen`.
+    pub fn with_addrs(mut self, addrs: &'addr [SockAddr]) -> Self {
+        for (msg, addr) in self.inner.iter_mut().zip(addrs) {
+            sys::set_msghdr_name(&mut msg.msg_hdr, addr);
+        }
+        self
+    }
+
+    /// Set the buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix.
+    pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'_>]) -> Self {
+        for (msg, buf) in self.inner.iter_mut().zip(bufs) {
+            sys::set_msghdr_iov(&mut msg.msg_hdr, buf as *const _ as *mut libc::iovec, 1);
+        }
+        self
+    }
+
+    /// Set the control buffer of the messages.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix.
+    pub fn with_control(mut self, bufs: &'control [&'control [u8]]) -> Self {
+        for (msg, buf) in self.inner.iter_mut().zip(bufs) {
+            sys::set_msghdr_control(&mut msg.msg_hdr, buf.as_ptr() as *mut _, buf.len())
+        }
+        self
+    }
+
+    /// Set the flags on the messages
+    ///
+    /// Corresponds to setting `msg_flags` on Unix.
+    pub fn with_flags(mut self, flags: &[sys::c_int]) -> Self {
+        for (msg, flags) in self.inner.iter_mut().zip(flags) {
+            sys::set_msghdr_flags(&mut msg.msg_hdr, *flags);
+        }
+        self
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'name, 'bufs, 'control> fmt::Debug for MmsgHdr<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MmsgHdr".fmt(fmt)
+    }
+}
+
+/// Configuration of a `recvmmsg(2)` system call
+///
+/// This wraps `mmsghdr` on Unix. Also see [`MmsgHdr`] for the variant used by
+/// `sendmmsg(2)`.
+#[cfg(not(target_os = "redox"))]
+pub struct MmsgHdrMut<'addr, 'bufs, 'control> {
+    inner: Vec<sys::mmsghdr>,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(
+        &'addr mut SockAddr,
+        &'bufs mut MaybeUninitSlice<'bufs>,
+        &'control mut [u8],
+    )>,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'addr, 'bufs, 'control> MmsgHdrMut<'addr, 'bufs, 'control> {
+    /// Create a new `MmsgHdrMut` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new(len: usize) -> MmsgHdrMut<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `msghdr` and `WSAMSG`.
+        MmsgHdrMut {
+            inner: vec![unsafe { mem::zeroed() }; len],
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the mutable address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
+    /// and `namelen` on Windows.
+    pub fn with_addrs(mut self, addrs: &'addr mut [SockAddr]) -> Self {
+        for (msg, addr) in self.inner.iter_mut().zip(addrs) {
+            sys::set_msghdr_name(&mut msg.msg_hdr, addr);
+        }
+        self
+    }
+
+    /// Set the mutable buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
+    /// and `dwBufferCount` on Windows.
+    pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'_>]) -> Self {
+        for (msg, buf) in self.inner.iter_mut().zip(bufs) {
+            sys::set_msghdr_iov(&mut msg.msg_hdr, buf as *mut _ as *mut libc::iovec, 1);
+        }
+        self
+    }
+
+    /// Set the mutable control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
+    /// `Control` on Windows.
+    pub fn with_control(mut self, buf: &'control mut [&'control mut [MaybeUninit<u8>]]) -> Self {
+        for (msg, buf) in self.inner.iter_mut().zip(buf) {
+            sys::set_msghdr_control(&mut msg.msg_hdr, buf.as_mut_ptr().cast(), buf.len());
+        }
+        self
+    }
+
+    /// Returns the flags of the message.
+    pub fn flags(&self, n: usize) -> Vec<RecvFlags> {
+        self.inner
+            .iter()
+            .take(n)
+            .map(|msg| sys::msghdr_flags(&msg.msg_hdr))
+            .collect()
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'name, 'bufs, 'control> fmt::Debug for MmsgHdrMut<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MmsgHdrMut".fmt(fmt)
+    }
+}
