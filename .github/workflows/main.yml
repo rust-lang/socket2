@@ -65,6 +65,21 @@ jobs:
     - uses: taiki-e/install-action@cargo-hack
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
+  CheckTier3:
+    name: Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["armv7-sony-vita-newlibeabihf"]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: "rust-src"
+    - uses: taiki-e/install-action@cargo-hack
+    - name: Run check
+      run: cargo hack check -Z build-std=std,panic_abort --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
   Clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -87,3 +102,17 @@ jobs:
         targets: ${{ matrix.target }}
     - name: Check docs for docs.rs
       run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc --no-deps --all-features --target ${{ matrix.target }}
+  DocsTier3:
+    name: Docs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["armv7-sony-vita-newlibeabihf"]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@nightly # NOTE: need nightly for `doc_cfg` feature.
+      with:
+        components: "rust-src"
+    - name: Check docs for docs.rs
+      run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc -Z build-std=std,panic_abort --no-deps --all-features --target ${{ matrix.target }}

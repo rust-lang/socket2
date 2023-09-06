@@ -425,7 +425,7 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 /// See [`Socket::set_tcp_keepalive`].
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
-    #[cfg_attr(target_os = "openbsd", allow(dead_code))]
+    #[cfg_attr(any(target_os = "openbsd", target_os = "vita"), allow(dead_code))]
     time: Option<Duration>,
     #[cfg(not(any(
         target_os = "openbsd",
@@ -433,6 +433,7 @@ pub struct TcpKeepalive {
         target_os = "solaris",
         target_os = "nto",
         target_os = "espidf",
+        target_os = "vita",
     )))]
     interval: Option<Duration>,
     #[cfg(not(any(
@@ -442,6 +443,7 @@ pub struct TcpKeepalive {
         target_os = "windows",
         target_os = "nto",
         target_os = "espidf",
+        target_os = "vita",
     )))]
     retries: Option<u32>,
 }
@@ -457,6 +459,7 @@ impl TcpKeepalive {
                 target_os = "solaris",
                 target_os = "nto",
                 target_os = "espidf",
+                target_os = "vita",
             )))]
             interval: None,
             #[cfg(not(any(
@@ -466,6 +469,7 @@ impl TcpKeepalive {
                 target_os = "windows",
                 target_os = "nto",
                 target_os = "espidf",
+                target_os = "vita",
             )))]
             retries: None,
         }
@@ -680,7 +684,7 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     ///
     /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
     /// and `namelen` on Windows.
-    pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
+    pub fn with_addr(mut self, addr: &SockAddr) -> Self {
         sys::set_msghdr_name(&mut self.inner, addr);
         self
     }
