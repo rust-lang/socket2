@@ -48,8 +48,8 @@ use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
 /// # Notes
 ///
 /// Some methods that set options on `Socket` require two system calls to set
-/// there options without overwriting previously set options. We do this by
-/// first getting the current settings, applying the desired changes and than
+/// their options without overwriting previously set options. We do this by
+/// first getting the current settings, applying the desired changes, and then
 /// updating the settings. This means that the operation is **not** atomic. This
 /// can lead to a data race when two threads are changing options in parallel.
 ///
