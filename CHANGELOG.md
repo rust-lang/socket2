@@ -1,3 +1,29 @@
+# 0.5.4
+
+* Deprecated `Socket::(bind_)device_by_index`, replaced by
+  `Socket::(bind_)device_by_index_v4` for IPv4 sockets
+  (https://github.com/rust-lang/socket2/pull/432).
+* Added `Socket::(bind_)device_by_index_v6`
+  (https://github.com/rust-lang/socket2/pull/432).
+* Added experimental support for the ESP-IDF framework
+  (https://github.com/rust-lang/socket2/pull/452)
+* Added `Socket::{send,recv}msg` and `MsgHdr(Mut)` types, wrapping `sendmsg(2)`
+  and `recvmsg(2)`
+  (https://github.com/rust-lang/socket2/pull/447).
+* Added `Socket::(set_)reuse_port_lb` to retrieve or set `SO_REUSEPORT_LB` on
+  FreeBSD
+  (https://github.com/rust-lang/socket2/pull/442).
+* Added `Protocol::DIVERT` on FreeBSD and OpenBSD
+  (https://github.com/rust-lang/socket2/pull/448).
+* Add `Socket::protocol` for Windows (using `WSAPROTOCOL_INFOW`)
+  (https://github.com/rust-lang/socket2/pull/470).
+* `From<SocketAddrV{4,6}>` for `SockAddr ` nows sets `ss_len` on platforms that
+  have the fields (most BSDs)
+  (https://github.com/rust-lang/socket2/pull/469).
+* Change Windows to use `ADDRESS_FAMILY` for `sa_family_t`, this shouldn't
+  affect anything in practice
+  (https://github.com/rust-lang/socket2/pull/463).
+
 # 0.5.3
 
 * Added support for two new Android targets `armv7-linux-androideabi` and
