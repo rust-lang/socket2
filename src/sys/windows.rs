@@ -23,12 +23,12 @@ use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE, HANDLE_FLAG_I
 use windows_sys::Win32::Networking::WinSock::{
     self, tcp_keepalive, FIONBIO, IN6_ADDR, IN6_ADDR_0, INVALID_SOCKET, IN_ADDR, IN_ADDR_0,
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
-    SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
-    WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
+    SOCKET_ERROR, SO_PROTOCOL_INFOW, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD,
+    WSAPROTOCOL_INFOW, WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
 };
 use windows_sys::Win32::System::Threading::INFINITE;
 
-use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
+use crate::{MsgHdr, Protocol, RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
 pub(crate) type c_int = std::os::raw::c_int;
@@ -918,6 +918,19 @@ impl crate::Socket {
             Err(io::Error::last_os_error())
         } else {
             Ok(())
+        }
+    }
+
+    /// Returns the [`Protocol`] of this socket by checking the `SO_PROTOCOL_INFOW`
+    /// option on this socket.
+    #[cfg(feature = "all")]
+    pub fn protocol(&self) -> io::Result<Option<Protocol>> {
+        let info = unsafe {
+            getsockopt::<WSAPROTOCOL_INFOW>(self.as_raw(), SOL_SOCKET, SO_PROTOCOL_INFOW)?
+        };
+        match info.iProtocol {
+            0 => Ok(None),
+            p => Ok(Some(Protocol::from(p))),
         }
     }
 }

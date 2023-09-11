@@ -1143,6 +1143,7 @@ fn domain() {
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
+        target_os = "windows",
     )
 ))]
 #[test]
