@@ -925,6 +925,8 @@ impl crate::Socket {
 
     /// Returns the [`Protocol`] of this socket by checking the `SO_PROTOCOL_INFOW`
     /// option on this socket.
+    ///
+    /// [`Protocol`]: crate::Protocol
     #[cfg(feature = "all")]
     pub fn protocol(&self) -> io::Result<Option<crate::Protocol>> {
         let info = unsafe {
