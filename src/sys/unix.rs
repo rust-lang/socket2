@@ -1876,7 +1876,7 @@ impl crate::Socket {
             )
         )))
     )]
-    #[deprecated = "Use `Socket::device_index_v4` instead"]
+    #[deprecated = "Use `Socket::bind_device_by_index_v4` instead"]
     pub fn bind_device_by_index(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         self.bind_device_by_index_v4(interface)
     }
