@@ -20,6 +20,8 @@ use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
 
 use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE, HANDLE_FLAG_INHERIT};
+#[cfg(feature = "all")]
+use windows_sys::Win32::Networking::WinSock::SO_PROTOCOL_INFOW;
 use windows_sys::Win32::Networking::WinSock::{
     self, tcp_keepalive, FIONBIO, IN6_ADDR, IN6_ADDR_0, INVALID_SOCKET, IN_ADDR, IN_ADDR_0,
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
@@ -925,8 +927,6 @@ impl crate::Socket {
     /// option on this socket.
     #[cfg(feature = "all")]
     pub fn protocol(&self) -> io::Result<Option<crate::Protocol>> {
-        use windows_sys::Win32::Networking::WinSock::SO_PROTOCOL_INFOW;
-
         let info = unsafe {
             getsockopt::<WSAPROTOCOL_INFOW>(self.as_raw(), SOL_SOCKET, SO_PROTOCOL_INFOW)?
         };
