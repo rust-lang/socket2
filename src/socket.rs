@@ -368,7 +368,7 @@ impl Socket {
     /// `O_NONBLOCK`.
     ///
     /// On Windows it is not possible retrieve the nonblocking mode status.
-    #[cfg(any(target_os = "vita", all(feature = "all", unix)))]
+    #[cfg(all(feature = "all", unix))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "all", unix))))]
     pub fn nonblocking(&self) -> io::Result<bool> {
         sys::nonblocking(self.as_raw())

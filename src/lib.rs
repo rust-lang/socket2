@@ -684,7 +684,8 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     ///
     /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
     /// and `namelen` on Windows.
-    pub fn with_addr(mut self, addr: &SockAddr) -> Self {
+    #[allow(clippy::needless_pass_by_ref_mut)]
+    pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
         sys::set_msghdr_name(&mut self.inner, addr);
         self
     }

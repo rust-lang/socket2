@@ -939,7 +939,7 @@ pub(crate) fn nonblocking(fd: Socket) -> io::Result<bool> {
     Ok((file_status_flags & libc::O_NONBLOCK) != 0)
 }
 
-#[cfg(target_os = "vita")]
+#[cfg(all(feature = "all", target_os = "vita"))]
 pub(crate) fn nonblocking(fd: Socket) -> io::Result<bool> {
     unsafe {
         getsockopt::<Bool>(fd, libc::SOL_SOCKET, libc::SO_NONBLOCK).map(|non_block| non_block != 0)

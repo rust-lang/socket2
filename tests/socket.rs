@@ -233,6 +233,7 @@ fn assert_common_flags(socket: &Socket, expected: bool) {
     #[cfg(windows)]
     assert_flag_no_inherit(socket, expected);
 
+    // Vita does not have process API, so neither SO_NOSIGPIPE nor FD_CLOEXEC are supported on this platform
     #[cfg(target_os = "vita")]
     {
         let _ = socket;
@@ -293,13 +294,31 @@ fn type_nonblocking() {
 #[cfg(unix)]
 #[track_caller]
 pub fn assert_nonblocking(socket: &Socket, want: bool) {
-    #[cfg(any(target_os = "vita", all(feature = "all", unix)))]
+    #[cfg(all(feature = "all", unix))]
     assert_eq!(socket.nonblocking().unwrap(), want, "non-blocking option");
 
     #[cfg(all(not(target_os = "vita"), not(all(feature = "all", unix))))]
     {
         let flags = unsafe { libc::fcntl(socket.as_raw_fd(), libc::F_GETFL) };
         assert_eq!(flags & libc::O_NONBLOCK != 0, want, "non-blocking option");
+    }
+
+    #[cfg(all(target_os = "vita", not(feature = "all")))]
+    {
+        let mut optval: libc::c_int = 0;
+        let mut optlen = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+
+        let res = unsafe {
+            libc::getsockopt(
+                socket.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_NONBLOCK,
+                &mut optval as *mut libc::c_int as _,
+                &mut optlen,
+            )
+        };
+        assert_eq!(res, 0, "unable to get non-blocing option");
+        assert_eq!(optval > 0, want, "non-blocking option");
     }
 }
 
@@ -871,7 +890,7 @@ fn tcp_keepalive() {
 
     #[cfg(all(
         feature = "all",
-        not(any(windows, target_os = "haiku", target_os = "openbsd",))
+        not(any(windows, target_os = "haiku", target_os = "openbsd"))
     ))]
     assert_eq!(socket.keepalive_time().unwrap(), Duration::from_secs(200));
 
