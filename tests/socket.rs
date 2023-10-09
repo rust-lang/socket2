@@ -297,7 +297,7 @@ pub fn assert_nonblocking(socket: &Socket, want: bool) {
     #[cfg(all(feature = "all", unix))]
     assert_eq!(socket.nonblocking().unwrap(), want, "non-blocking option");
 
-    #[cfg(all(not(target_os = "vita"), not(all(feature = "all", unix))))]
+    #[cfg(not(any(all(feature = "all", unix), target_os = "vita")))]
     {
         let flags = unsafe { libc::fcntl(socket.as_raw_fd(), libc::F_GETFL) };
         assert_eq!(flags & libc::O_NONBLOCK != 0, want, "non-blocking option");
