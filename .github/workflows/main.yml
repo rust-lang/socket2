@@ -60,9 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO: add the following targets, currently broken.
-        # "x86_64-unknown-redox"
-        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd"]
+        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-netbsd", "x86_64-unknown-redox"]
     steps:
     - uses: actions/checkout@master
     - name: Install Rust
@@ -72,21 +70,18 @@ jobs:
       run: rustup target add ${{ matrix.target }}
     - name: Run check
       run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
-
-  # Redox needs a nightly compiler for libc:
-  # https://github.com/rust-lang/libc/issues/2012
-  Check_Redox:
+  CheckTier3:
     name: Check
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        target: ["x86_64-unknown-redox"]
+        target: ["armv7-sony-vita-newlibeabihf"]
     steps:
-    - uses: actions/checkout@master
-    - name: Install Rust nightly
-      run: rustup update nightly && rustup default nightly
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: "rust-src"
     - uses: taiki-e/install-action@cargo-hack
-    - name: Install Target
-      run: rustup target add ${{ matrix.target }}
     - name: Run check
-      run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
+      run: cargo hack check -Z build-std=std,panic_abort --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
