@@ -1,3 +1,8 @@
+# 0.5.5
+
+* Add support for Vita
+  (https://github.com/rust-lang/socket2/pull/465).
+
 # 0.5.4
 
 * Deprecated `Socket::(bind_)device_by_index`, replaced by
