@@ -1,3 +1,12 @@
+# 0.4.10
+
+* Fixed compilation with the `all` on QNX Neutrino
+  (https://github.com/rust-lang/socket2/pull/419).
+* Add support for ESP-IDF
+  (https://github.com/rust-lang/socket2/pull/455).
+* Add support for Vita
+  (https://github.com/rust-lang/socket2/pull/475).
+
 # 0.4.9
 
 * Fixed compilation on Windows
