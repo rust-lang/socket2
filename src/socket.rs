@@ -1415,6 +1415,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "illumos",
+        target_os = "haiku",
     )))]
     pub fn set_tos(&self, tos: u32) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TOS, tos as c_int) }
@@ -1433,6 +1434,7 @@ impl Socket {
         target_os = "redox",
         target_os = "solaris",
         target_os = "illumos",
+        target_os = "haiku",
     )))]
     pub fn tos(&self) -> io::Result<u32> {
         unsafe {
@@ -1457,6 +1459,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "haiku",
     )))]
     pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
         let recv_tos = if recv_tos { 1 } else { 0 };
@@ -1488,6 +1491,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "haiku",
     )))]
     pub fn recv_tos(&self) -> io::Result<bool> {
         unsafe {

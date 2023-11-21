@@ -99,6 +99,7 @@ pub(crate) use libc::IP_RECVTOS;
     target_os = "fuchsia",
     target_os = "redox",
     target_os = "solaris",
+    target_os = "haiku",
     target_os = "illumos",
 )))]
 pub(crate) use libc::IP_TOS;
