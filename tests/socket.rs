@@ -1391,6 +1391,7 @@ test!(IPv4 ttl, set_ttl(40));
     target_os = "redox",
     target_os = "solaris",
     target_os = "illumos",
+    target_os = "haiku",
 )))]
 test!(IPv4 tos, set_tos(96));
 
@@ -1405,6 +1406,7 @@ test!(IPv4 tos, set_tos(96));
     target_os = "solaris",
     target_os = "windows",
     target_os = "vita",
+    target_os = "haiku",
 )))]
 test!(IPv4 recv_tos, set_recv_tos(true));
 
@@ -1452,6 +1454,7 @@ test!(IPv6 tclass_v6, set_tclass_v6(96));
     target_os = "solaris",
     target_os = "windows",
     target_os = "vita",
+    target_os = "haiku",
 )))]
 test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
 
