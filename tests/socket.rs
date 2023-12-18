@@ -1467,6 +1467,11 @@ test!(
     set_tcp_user_timeout(Some(Duration::from_secs(10)))
 );
 
+#[cfg(all(feature = "all", target_os = "linux"))]
+test!(IPv4 multicast_all_v4, set_multicast_all_v4(false));
+#[cfg(all(feature = "all", target_os = "linux"))]
+test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
+
 #[test]
 #[cfg(not(any(
     target_os = "haiku",
