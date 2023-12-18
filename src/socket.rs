@@ -1408,7 +1408,7 @@ impl Socket {
             setsockopt(
                 self.as_raw(),
                 sys::IPPROTO_IP,
-                libc::IPV6_MULTICAST_ALL,
+                libc::IP_MULTICAST_ALL,
                 all as c_int,
             )
         }
