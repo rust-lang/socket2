@@ -35,7 +35,7 @@ jobs:
             os: windows-latest
             rust: stable
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
@@ -46,7 +46,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
     - name: Check formatting
       run: cargo fmt --all -- --check
@@ -58,7 +58,7 @@ jobs:
       matrix:
         target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-unknown-netbsd", "x86_64-unknown-redox", "armv7-linux-androideabi", "i686-linux-android"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
@@ -73,7 +73,7 @@ jobs:
       matrix:
         target: ["armv7-sony-vita-newlibeabihf", "i686-unknown-hurd-gnu"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@nightly
       with:
         components: "rust-src"
@@ -84,7 +84,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
@@ -96,7 +96,7 @@ jobs:
       matrix:
         target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-unknown-netbsd", "x86_64-unknown-redox", "armv7-linux-androideabi", "i686-linux-android"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@nightly # NOTE: need nightly for `doc_cfg` feature.
       with:
         targets: ${{ matrix.target }}
@@ -110,7 +110,7 @@ jobs:
       matrix:
         target: ["armv7-sony-vita-newlibeabihf", "i686-unknown-hurd-gnu"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@nightly # NOTE: need nightly for `doc_cfg` feature.
       with:
         components: "rust-src"
