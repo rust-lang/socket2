@@ -325,6 +325,7 @@ type IovLen = usize;
         target_os = "linux",
         any(
             target_env = "musl",
+            target_env = "ohos",
             all(target_env = "uclibc", target_pointer_width = "32")
         )
     ),
