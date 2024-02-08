@@ -1099,7 +1099,21 @@ pub(crate) fn recv_multiple_from(
     flags: c_int,
 ) -> io::Result<Vec<(usize, RecvFlags, SockAddr)>> {
     let mut addrs = (0..msgs.len())
-        .map(|_| unsafe { SockAddr::new(mem::zeroed(), mem::size_of::<sockaddr_storage>() as u32) })
+        .map(|_| unsafe {
+            SockAddr::new(mem::zeroed(), {
+                #[cfg(all(target_os = "android", any(target_arch = "arm", target_arch = "x86")))]
+                {
+                    mem::size_of::<sockaddr_storage>() as i32
+                }
+                #[cfg(not(all(
+                    target_os = "android",
+                    any(target_arch = "arm", target_arch = "x86")
+                )))]
+                {
+                    mem::size_of::<sockaddr_storage>() as u32
+                }
+            })
+        })
         .collect::<Vec<_>>();
     let mut msgs = MmsgHdrMut::new(msgs.len())
         .with_buffers(msgs)
