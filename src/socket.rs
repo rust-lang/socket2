@@ -587,8 +587,8 @@ impl Socket {
     }
 
     /// Receive multiple messages in a single call.
-    #[cfg(not(target_os = "redox"))]
-    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
+    #[cfg(all(unix, not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
     pub fn recv_multiple_from(
         &self,
         msgs: &mut [MaybeUninitSlice<'_>],
@@ -766,8 +766,8 @@ impl Socket {
 
     /// Send multiple data to multiple peers listening on `addrs`. Return the amount of bytes
     /// written for each message.
-    #[cfg(not(target_os = "redox"))]
-    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
+    #[cfg(all(unix, not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
     pub fn send_multiple_to(
         &self,
         msgs: &[IoSlice<'_>],
