@@ -732,14 +732,34 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
 ///
 /// This wraps `mmsghdr` on Unix. Also see [`MmsgHdrMut`] for the variant used
 /// by `recvmmsg(2)`.
-#[cfg(not(target_os = "redox"))]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
 pub struct MmsgHdr<'addr, 'bufs, 'control> {
     inner: Vec<sys::mmsghdr>,
     #[allow(clippy::type_complexity)]
     _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
 impl<'addr, 'bufs, 'control> MmsgHdr<'addr, 'bufs, 'control> {
     /// Create a new `MmsgHdr` with all empty/zero fields.
     #[allow(clippy::new_without_default)]
@@ -792,7 +812,17 @@ impl<'addr, 'bufs, 'control> MmsgHdr<'addr, 'bufs, 'control> {
     }
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
 impl<'name, 'bufs, 'control> fmt::Debug for MmsgHdr<'name, 'bufs, 'control> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MmsgHdr".fmt(fmt)
@@ -803,7 +833,17 @@ impl<'name, 'bufs, 'control> fmt::Debug for MmsgHdr<'name, 'bufs, 'control> {
 ///
 /// This wraps `mmsghdr` on Unix. Also see [`MmsgHdr`] for the variant used by
 /// `sendmmsg(2)`.
-#[cfg(not(target_os = "redox"))]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
 pub struct MmsgHdrMut<'addr, 'bufs, 'control> {
     inner: Vec<sys::mmsghdr>,
     #[allow(clippy::type_complexity)]
@@ -814,7 +854,17 @@ pub struct MmsgHdrMut<'addr, 'bufs, 'control> {
     )>,
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
 impl<'addr, 'bufs, 'control> MmsgHdrMut<'addr, 'bufs, 'control> {
     /// Create a new `MmsgHdrMut` with all empty/zero fields.
     #[allow(clippy::new_without_default)]
@@ -869,7 +919,17 @@ impl<'addr, 'bufs, 'control> MmsgHdrMut<'addr, 'bufs, 'control> {
     }
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
 impl<'name, 'bufs, 'control> fmt::Debug for MmsgHdrMut<'name, 'bufs, 'control> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MmsgHdrMut".fmt(fmt)

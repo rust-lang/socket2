@@ -21,11 +21,23 @@ use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
+#[cfg(all(unix, not(target_os = "redox")))]
+use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
-#[cfg(all(unix, not(target_os = "redox")))]
-use crate::{MmsgHdr, MmsgHdrMut, MsgHdrMut};
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
+use crate::{MmsgHdr, MmsgHdrMut};
 
 /// Owned wrapper around a system socket.
 ///
@@ -587,8 +599,31 @@ impl Socket {
     }
 
     /// Receive multiple messages in a single call.
-    #[cfg(all(unix, not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
     pub fn recv_multiple_from(
         &self,
         msgs: &mut [MaybeUninitSlice<'_>],
@@ -655,8 +690,31 @@ impl Socket {
 
     /// Receive multiple messages from a socket using a message structure.
     #[doc = man_links!(recvmmsg(2))]
-    #[cfg(all(unix, not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
     pub fn recvmmsg(
         &self,
         msgs: &mut MmsgHdrMut<'_, '_, '_>,
@@ -766,8 +824,31 @@ impl Socket {
 
     /// Send multiple data to multiple peers listening on `addrs`. Return the amount of bytes
     /// written for each message.
-    #[cfg(all(unix, not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
     pub fn send_multiple_to(
         &self,
         msgs: &[IoSlice<'_>],
@@ -787,8 +868,31 @@ impl Socket {
 
     /// Send multiple messages on a socket using a multiple message structure.
     #[doc = man_links!(sendmmsg(2))]
-    #[cfg(not(target_os = "redox"))]
-    #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
     pub fn sendmmsg(&self, msgs: &MmsgHdr<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
         sys::sendmmsg(self.as_raw(), msgs, flags)
     }

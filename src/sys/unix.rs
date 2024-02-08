@@ -71,8 +71,17 @@ use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+use crate::{MmsgHdr, MmsgHdrMut};
 #[cfg(not(target_os = "redox"))]
-use crate::{MmsgHdr, MmsgHdrMut, MsgHdr, MsgHdrMut, RecvFlags};
+use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
 pub(crate) use libc::c_int;
 
@@ -671,8 +680,17 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
 }
 
 // Used in `MsgHdr`.
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+pub(crate) use libc::mmsghdr;
 #[cfg(not(target_os = "redox"))]
-pub(crate) use libc::{mmsghdr, msghdr};
+pub(crate) use libc::msghdr;
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
@@ -1067,7 +1085,14 @@ pub(crate) fn recvmsg(
     syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
 pub(crate) fn recv_multiple_from(
     fd: Socket,
     msgs: &mut [crate::MaybeUninitSlice<'_>],
@@ -1096,7 +1121,14 @@ pub(crate) fn recv_multiple_from(
     Ok(rets)
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
 pub(crate) fn recvmmsg(
     fd: Socket,
     msgs: &mut MmsgHdrMut<'_, '_, '_>,
@@ -1174,7 +1206,14 @@ pub(crate) fn sendmsg(fd: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io:
     syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
 pub(crate) fn send_multiple_to(
     fd: Socket,
     msgs: &[IoSlice<'_>],
@@ -1189,7 +1228,14 @@ pub(crate) fn send_multiple_to(
         .collect())
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
 pub(crate) fn sendmmsg(fd: Socket, msgs: &MmsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
     syscall!(sendmmsg(
         fd,
