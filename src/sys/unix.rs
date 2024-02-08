@@ -1115,7 +1115,16 @@ pub(crate) fn recvmmsg(
                 msgs.inner.len() as u32
             }
         },
-        flags,
+        {
+            #[cfg(target_env = "musl")]
+            {
+                flags as u32
+            }
+            #[cfg(not(target_env = "musl"))]
+            {
+                flags
+            }
+        },
         ptr::null_mut()
     ))
     .map(|n| n as usize)
@@ -1195,7 +1204,16 @@ pub(crate) fn sendmmsg(fd: Socket, msgs: &MmsgHdr<'_, '_, '_>, flags: c_int) -> 
                 msgs.inner.len() as u32
             }
         },
-        flags
+        {
+            #[cfg(target_env = "musl")]
+            {
+                flags as u32
+            }
+            #[cfg(not(target_env = "musl"))]
+            {
+                flags
+            }
+        },
     ))
     .map(|n| n as usize)
 }
