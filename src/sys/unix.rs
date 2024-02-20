@@ -1151,16 +1151,7 @@ pub(crate) fn recvmmsg(
     syscall!(recvmmsg(
         fd,
         msgs.inner.as_mut_ptr(),
-        {
-            #[cfg(target_os = "freebsd")]
-            {
-                msgs.inner.len()
-            }
-            #[cfg(not(target_os = "freebsd"))]
-            {
-                msgs.inner.len() as u32
-            }
-        },
+        msgs.inner.len() as _,
         {
             #[cfg(target_env = "musl")]
             {
@@ -1254,16 +1245,7 @@ pub(crate) fn sendmmsg(fd: Socket, msgs: &MmsgHdr<'_, '_, '_>, flags: c_int) -> 
     syscall!(sendmmsg(
         fd,
         msgs.inner.as_ptr() as *mut _,
-        {
-            #[cfg(target_os = "freebsd")]
-            {
-                msgs.inner.len()
-            }
-            #[cfg(not(target_os = "freebsd"))]
-            {
-                msgs.inner.len() as u32
-            }
-        },
+        msgs.inner.len() as _,
         {
             #[cfg(target_env = "musl")]
             {
