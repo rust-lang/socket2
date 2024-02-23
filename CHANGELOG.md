@@ -1,3 +1,18 @@
+# 0.5.6
+
+* Add `Socket::(set_)multicast_all_v{4,6}`
+  (https://github.com/rust-lang/socket2/pull/485 and
+  (https://github.com/rust-lang/socket2/pull/486).
+* Add support for GNU/Hurd
+  (https://github.com/rust-lang/socket2/pull/474).
+* Fix compilation on Haiku
+  (https://github.com/rust-lang/socket2/pull/479 and
+  (https://github.com/rust-lang/socket2/pull/482).
+* Fix compilation on OpenHarmony
+  (https://github.com/rust-lang/socket2/pull/491).
+* Update to window-sys v0.52
+  (https://github.com/rust-lang/socket2/pull/480).
+
 # 0.5.5
 
 * Add support for Vita
