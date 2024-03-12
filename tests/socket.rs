@@ -731,6 +731,10 @@ fn send_from_recv_to_vectored() {
     #[cfg(all(unix, not(target_os = "redox")))]
     assert_eq!(flags.is_out_of_band(), false);
     assert_eq!(flags.is_truncated(), false);
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    assert_eq!(flags.is_confirm(), false);
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    assert_eq!(flags.is_dontroute(), false);
     assert_eq!(
         addr.as_socket_ipv6().unwrap(),
         addr_a.as_socket_ipv6().unwrap()
