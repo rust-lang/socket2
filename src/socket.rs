@@ -26,6 +26,18 @@ use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
+#[cfg(all(
+    unix,
+    not(any(
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "hurd",
+        target_os = "vita",
+        target_os = "illumos",
+        target_vendor = "apple"
+    ))
+))]
+use crate::{MmsgHdr, MmsgHdrMut};
 
 /// Owned wrapper around a system socket.
 ///
@@ -586,6 +598,40 @@ impl Socket {
         sys::recv_from_vectored(self.as_raw(), bufs, flags)
     }
 
+    /// Receive multiple messages in a single call.
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
+    pub fn recv_multiple_from(
+        &self,
+        msgs: &mut [MaybeUninitSlice<'_>],
+        flags: c_int,
+    ) -> io::Result<Vec<(usize, RecvFlags, SockAddr)>> {
+        sys::recv_multiple_from(self.as_raw(), msgs, flags)
+    }
+
     /// Receives data from the socket, without removing it from the queue.
     ///
     /// Successive calls return the same data. This is accomplished by passing
@@ -640,6 +686,41 @@ impl Socket {
     #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
     pub fn recvmsg(&self, msg: &mut MsgHdrMut<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
         sys::recvmsg(self.as_raw(), msg, flags)
+    }
+
+    /// Receive multiple messages from a socket using a message structure.
+    #[doc = man_links!(recvmmsg(2))]
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
+    pub fn recvmmsg(
+        &self,
+        msgs: &mut MmsgHdrMut<'_, '_, '_>,
+        flags: sys::c_int,
+    ) -> io::Result<usize> {
+        sys::recvmmsg(self.as_raw(), msgs, flags)
     }
 
     /// Sends data on the socket to a connected peer.
@@ -741,12 +822,79 @@ impl Socket {
         sys::send_to_vectored(self.as_raw(), bufs, addr, flags)
     }
 
+    /// Send multiple data to multiple peers listening on `addrs`. Return the amount of bytes
+    /// written for each message.
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
+    pub fn send_multiple_to(
+        &self,
+        msgs: &[IoSlice<'_>],
+        to: &[SockAddr],
+        flags: c_int,
+    ) -> io::Result<Vec<usize>> {
+        sys::send_multiple_to(self.as_raw(), msgs, to, flags)
+    }
+
     /// Send a message on a socket using a message structure.
     #[doc = man_links!(sendmsg(2))]
     #[cfg(not(target_os = "redox"))]
     #[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
     pub fn sendmsg(&self, msg: &MsgHdr<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
         sys::sendmsg(self.as_raw(), msg, flags)
+    }
+
+    /// Send multiple messages on a socket using a multiple message structure.
+    #[doc = man_links!(sendmmsg(2))]
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "hurd",
+            target_os = "vita",
+            target_os = "illumos",
+            target_vendor = "apple"
+        ))
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            unix,
+            not(any(
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "hurd",
+                target_os = "vita",
+                target_os = "illumos",
+                target_vendor = "apple"
+            ))
+        )))
+    )]
+    pub fn sendmmsg(&self, msgs: &MmsgHdr<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
+        sys::sendmmsg(self.as_raw(), msgs, flags)
     }
 }
 

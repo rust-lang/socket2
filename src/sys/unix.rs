@@ -71,6 +71,15 @@ use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+use crate::{MmsgHdr, MmsgHdrMut};
 #[cfg(not(target_os = "redox"))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
@@ -706,6 +715,15 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
 }
 
 // Used in `MsgHdr`.
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+pub(crate) use libc::mmsghdr;
 #[cfg(not(target_os = "redox"))]
 pub(crate) use libc::msghdr;
 
@@ -1102,6 +1120,79 @@ pub(crate) fn recvmsg(
     syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
 }
 
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+pub(crate) fn recv_multiple_from(
+    fd: Socket,
+    msgs: &mut [crate::MaybeUninitSlice<'_>],
+    flags: c_int,
+) -> io::Result<Vec<(usize, RecvFlags, SockAddr)>> {
+    let mut addrs = (0..msgs.len())
+        .map(|_| unsafe {
+            SockAddr::new(mem::zeroed(), {
+                #[cfg(all(target_os = "android", any(target_arch = "arm", target_arch = "x86")))]
+                {
+                    mem::size_of::<sockaddr_storage>() as i32
+                }
+                #[cfg(not(all(
+                    target_os = "android",
+                    any(target_arch = "arm", target_arch = "x86")
+                )))]
+                {
+                    mem::size_of::<sockaddr_storage>() as u32
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    let mut msgs = MmsgHdrMut::new(msgs.len())
+        .with_buffers(msgs)
+        .with_addrs(&mut addrs);
+
+    let n_msg = recvmmsg(fd, &mut msgs, flags)?;
+    let flags = msgs.flags(n_msg);
+
+    let rets = msgs.inner[..n_msg]
+        .iter()
+        .zip(addrs)
+        .zip(flags)
+        .map(|((msg, mut addr), flags)| {
+            unsafe { addr.set_length(msg.msg_hdr.msg_namelen) };
+            (msg.msg_len as usize, flags, addr)
+        })
+        .collect();
+
+    Ok(rets)
+}
+
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+pub(crate) fn recvmmsg(
+    fd: Socket,
+    msgs: &mut MmsgHdrMut<'_, '_, '_>,
+    flags: c_int,
+) -> io::Result<usize> {
+    syscall!(recvmmsg(
+        fd,
+        msgs.inner.as_mut_ptr(),
+        msgs.inner.len() as _,
+        flags as _,
+        ptr::null_mut()
+    ))
+    .map(|n| n as usize)
+}
+
 pub(crate) fn send(fd: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {
     syscall!(send(
         fd,
@@ -1144,6 +1235,46 @@ pub(crate) fn send_to_vectored(
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn sendmsg(fd: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
     syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
+}
+
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+pub(crate) fn send_multiple_to(
+    fd: Socket,
+    msgs: &[IoSlice<'_>],
+    to: &[SockAddr],
+    flags: c_int,
+) -> io::Result<Vec<usize>> {
+    let msgs = MmsgHdr::new(msgs.len()).with_addrs(to).with_buffers(msgs);
+    let n_msg = sendmmsg(fd, &msgs, flags)?;
+    Ok(msgs.inner[..n_msg]
+        .iter()
+        .map(|msg| msg.msg_len as usize)
+        .collect())
+}
+
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "hurd",
+    target_os = "vita",
+    target_os = "illumos",
+    target_vendor = "apple"
+)))]
+pub(crate) fn sendmmsg(fd: Socket, msgs: &MmsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+    syscall!(sendmmsg(
+        fd,
+        msgs.inner.as_ptr() as *mut _,
+        msgs.inner.len() as _,
+        flags as _,
+    ))
+    .map(|n| n as usize)
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
