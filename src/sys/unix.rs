@@ -70,11 +70,49 @@ use std::{io, slice};
 use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "nto",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "windows",
+    target_os = "redox",
+    target_os = "fuchsia",
+    target_os = "vita",
+    target_os = "hurd",
+)))]
+use crate::TimestampingFlags;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
 pub(crate) use libc::c_int;
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "nto",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "watchos",
+    target_os = "redox",
+    target_os = "fuchsia",
+    target_os = "vita",
+    target_os = "hurd",
+)))]
+pub(crate) use libc::c_uint;
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
@@ -174,6 +212,8 @@ pub(crate) use libc::SO_LINGER;
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
 #[cfg(target_os = "linux")]
 pub(crate) use libc::SO_PASSCRED;
+#[cfg(not(any(target_os = "redox", target_os = "hurd")))]
+pub(crate) use libc::SO_TIMESTAMP;
 pub(crate) use libc::{
     ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
     IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
@@ -226,6 +266,31 @@ pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
 ))]
 pub(crate) use libc::{
     IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP, IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP,
+};
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "nto",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "watchos",
+    target_os = "redox",
+    target_os = "fuchsia",
+    target_os = "vita",
+    target_os = "hurd",
+)))]
+pub(crate) use libc::{
+    SOF_TIMESTAMPING_OPT_CMSG, SOF_TIMESTAMPING_OPT_ID, SOF_TIMESTAMPING_OPT_PKTINFO,
+    SOF_TIMESTAMPING_OPT_STATS, SOF_TIMESTAMPING_OPT_TSONLY, SOF_TIMESTAMPING_OPT_TX_SWHW,
+    SOF_TIMESTAMPING_RAW_HARDWARE, SOF_TIMESTAMPING_RX_HARDWARE, SOF_TIMESTAMPING_RX_SOFTWARE,
+    SOF_TIMESTAMPING_SOFTWARE, SOF_TIMESTAMPING_TX_ACK, SOF_TIMESTAMPING_TX_HARDWARE,
+    SOF_TIMESTAMPING_TX_SCHED, SOF_TIMESTAMPING_TX_SOFTWARE, SO_TIMESTAMPING, SO_TIMESTAMPNS,
 };
 #[cfg(all(
     feature = "all",
@@ -1192,6 +1257,29 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
             tv_usec: 0,
         },
     }
+}
+
+/// Wrapper around `setsockopt` to deal with platfrom specific timestamping option
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "haiku",
+    target_os = "illumos",
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "nto",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "watchos",
+    target_os = "redox",
+    target_os = "fuchsia",
+    target_os = "vita",
+    target_os = "hurd",
+)))]
+pub(crate) fn set_timestamping_opt(fd: Socket, flags: TimestampingFlags) -> io::Result<()> {
+    unsafe { setsockopt(fd, SOL_SOCKET, SO_TIMESTAMPING, flags.0) }
 }
 
 #[cfg(all(
