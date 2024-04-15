@@ -719,6 +719,15 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     pub fn flags(&self) -> RecvFlags {
         sys::msghdr_flags(&self.inner)
     }
+
+    /// Gets the length of the control buffer.
+    ///
+    /// Can be used to determine how much, if any, of the control buffer was filled by `recvmsg`.
+    ///
+    /// Corresponds to `msg_controllen` on Unix and `Control.len` on Windows.
+    pub fn control_len(&self) -> usize {
+        sys::msghdr_control_len(&self.inner)
+    }
 }
 
 #[cfg(not(target_os = "redox"))]

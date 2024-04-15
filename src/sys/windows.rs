@@ -215,6 +215,10 @@ pub(crate) fn msghdr_flags(msg: &msghdr) -> RecvFlags {
     RecvFlags(msg.dwFlags as c_int)
 }
 
+pub(crate) fn msghdr_control_len(msg: &msghdr) -> usize {
+    msg.Control.len as _
+}
+
 fn init() {
     static INIT: Once = Once::new();
 
