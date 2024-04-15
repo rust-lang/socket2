@@ -179,6 +179,8 @@ pub(crate) use libc::{
     SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
     SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
+#[cfg(target_os = "linux")]
+pub(crate) use libc::SO_PASSCRED;
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "haiku",

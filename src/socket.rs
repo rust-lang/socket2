@@ -965,6 +965,37 @@ impl Socket {
         }
     }
 
+    /// Get value for the `SO_PASSCRED` option on this socket.
+    ///
+    /// For more information about this option, see [`set_passcred`].
+    ///
+    /// [`set_passcred`]: Socket::set_passcred
+    #[cfg(all(unix, target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, target_os = "linux"))))]
+    pub fn passcred(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_PASSCRED)
+                .map(|passcred| passcred != 0)
+        }
+    }
+
+    /// Set value for the `SO_PASSCRED` option on this socket.
+    ///
+    /// If this option is enabled, enables the receiving of the `SCM_CREDENTIALS`
+    /// control messages.
+    #[cfg(all(unix, target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, target_os = "linux"))))]
+    pub fn set_passcred(&self, passcred: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::SOL_SOCKET,
+                sys::SO_PASSCRED,
+                passcred as c_int,
+            )
+        }
+    }
+
     /// Get value for the `SO_RCVBUF` option on this socket.
     ///
     /// For more information about this option, see [`set_recv_buffer_size`].
