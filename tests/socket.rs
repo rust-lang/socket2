@@ -1680,3 +1680,19 @@ fn cookie() {
         Err(err) => panic!("Could not get socket cookie a second time, err: {err}"),
     }
 }
+
+#[cfg(all(unix, target_os = "linux"))]
+#[test]
+fn set_passcred() {
+    let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
+    assert!(!socket.passcred().unwrap());
+
+    socket.set_passcred(true).unwrap();
+    assert!(socket.passcred().unwrap());
+
+    let socket = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
+    assert!(!socket.passcred().unwrap());
+
+    socket.set_passcred(true).unwrap();
+    assert!(socket.passcred().unwrap());
+}

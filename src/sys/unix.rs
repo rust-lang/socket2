@@ -172,6 +172,8 @@ pub(crate) use libc::SO_LINGER;
     target_os = "watchos",
 ))]
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
+#[cfg(target_os = "linux")]
+pub(crate) use libc::SO_PASSCRED;
 pub(crate) use libc::{
     ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
     IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
@@ -179,8 +181,6 @@ pub(crate) use libc::{
     SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
     SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
-#[cfg(target_os = "linux")]
-pub(crate) use libc::SO_PASSCRED;
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "haiku",
