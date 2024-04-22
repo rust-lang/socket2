@@ -639,8 +639,11 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
     /// `Control` on Windows.
     pub fn with_control(mut self, buf: &'control [u8]) -> Self {
-        let ptr = buf.as_ptr() as *mut _;
-        sys::set_msghdr_control(&mut self.inner, ptr, buf.len());
+        debug_assert!(
+            !buf.is_empty(),
+            "Empty control buffer might be a programming error"
+        );
+        sys::set_msghdr_control(&mut self.inner, buf.as_ptr() as *mut _, buf.len());
         self
     }
 
