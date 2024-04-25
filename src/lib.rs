@@ -388,66 +388,24 @@ impl RecvFlags {
 /// On Unix flags are set at the `SOL_SOCKET` level and the `SO_TIMESTAMPING`
 /// option
 /// On Windows flags are set using `WSAIoctl` and the `SOI_TIMESTAMPING` option
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "haiku",
-    target_os = "illumos",
-    target_os = "ios",
-    target_os = "macos",
-    target_os = "netbsd",
-    target_os = "nto",
-    target_os = "openbsd",
-    target_os = "solaris",
-    target_os = "tvos",
-    target_os = "watchos",
-    target_os = "redox",
-    target_os = "fuchsia",
-    target_os = "vita",
-    target_os = "hurd",
-)))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
 #[cfg_attr(
     docsrs,
-    doc(cfg(not(any(
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "haiku",
-        target_os = "illumos",
-        target_os = "ios",
-        target_os = "macos",
-        target_os = "netbsd",
-        target_os = "nto",
-        target_os = "openbsd",
-        target_os = "solaris",
-        target_os = "tvos",
-        target_os = "watchos",
-        target_os = "redox",
-        target_os = "fuchsia",
-        target_os = "vita",
-        target_os = "hurd",
-    ))))
+    doc(cfg(all(
+        feature = "all",
+        any(target_os = "linux", target_os = "android", target_os = "windows")
+    )))
 )]
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct TimestampingFlags(sys::c_uint);
 
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "haiku",
-    target_os = "illumos",
-    target_os = "ios",
-    target_os = "macos",
-    target_os = "netbsd",
-    target_os = "nto",
-    target_os = "openbsd",
-    target_os = "solaris",
-    target_os = "tvos",
-    target_os = "watchos",
-    target_os = "redox",
-    target_os = "fuchsia",
-    target_os = "vita",
-    target_os = "hurd",
-)))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
 impl TimestampingFlags {
     /// Creates a new instance of `TimestampingFlags` with no flags set
     pub fn new() -> Self {

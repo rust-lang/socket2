@@ -20,21 +20,30 @@ use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
 
 use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE, HANDLE_FLAG_INHERIT};
-#[cfg(feature = "all")]
-use windows_sys::Win32::Networking::WinSock::SO_PROTOCOL_INFOW;
 use windows_sys::Win32::Networking::WinSock::{
     self, tcp_keepalive, FIONBIO, IN6_ADDR, IN6_ADDR_0, INVALID_SOCKET, IN_ADDR, IN_ADDR_0,
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
-    SIO_TIMESTAMPING, SOCKET_ERROR, TIMESTAMPING_CONFIG, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN,
-    WSAPOLLFD, WSAPROTOCOL_INFOW, WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
+    SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
+    WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
+};
+#[cfg(feature = "all")]
+use windows_sys::Win32::Networking::WinSock::{
+    SIO_TIMESTAMPING, SO_PROTOCOL_INFOW, TIMESTAMPING_CONFIG,
+};
+#[cfg(feature = "all")]
+pub(crate) use windows_sys::Win32::Networking::WinSock::{
+    TIMESTAMPING_FLAG_RX, TIMESTAMPING_FLAG_TX,
 };
 use windows_sys::Win32::System::Threading::INFINITE;
 
-use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, TimestampingFlags, Type};
+#[cfg(feature = "all")]
+use crate::TimestampingFlags;
+use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
 pub(crate) type c_int = std::os::raw::c_int;
 #[allow(non_camel_case_types)]
+#[cfg(feature = "all")]
 pub(crate) type c_uint = std::os::raw::c_uint;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
@@ -79,7 +88,7 @@ pub(crate) use windows_sys::Win32::Networking::WinSock::{
     IP_MREQ_SOURCE as IpMreqSource, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IP_MULTICAST_TTL,
     IP_RECVTOS, IP_TOS, IP_TTL, LINGER as linger, MSG_OOB, MSG_PEEK, SO_BROADCAST, SO_ERROR,
     SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
-    SO_SNDTIMEO, SO_TYPE, TCP_NODELAY, TIMESTAMPING_FLAG_RX, TIMESTAMPING_FLAG_TX,
+    SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
 pub(crate) const IPPROTO_IP: c_int = windows_sys::Win32::Networking::WinSock::IPPROTO_IP as c_int;
 pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SOL_SOCKET as c_int;
@@ -715,6 +724,8 @@ pub(crate) fn set_timeout_opt(
 }
 
 /// Wrapper around `WSAIoctl` to deal with platfrom specific timestamping option
+#[cfg(feature = "all")]
+#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
 pub(crate) fn set_timestamping_opt(socket: Socket, flags: TimestampingFlags) -> io::Result<()> {
     let mut out = 0;
     let mut config = TIMESTAMPING_CONFIG {

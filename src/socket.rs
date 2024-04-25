@@ -23,24 +23,10 @@ use std::time::Duration;
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
 #[cfg(all(unix, not(target_os = "redox")))]
 use crate::MsgHdrMut;
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "haiku",
-    target_os = "illumos",
-    target_os = "ios",
-    target_os = "macos",
-    target_os = "netbsd",
-    target_os = "nto",
-    target_os = "openbsd",
-    target_os = "solaris",
-    target_os = "tvos",
-    target_os = "watchos",
-    target_os = "redox",
-    target_os = "fuchsia",
-    target_os = "vita",
-    target_os = "hurd",
-)))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
 use crate::TimestampingFlags;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
@@ -1154,10 +1140,16 @@ impl Socket {
     ///
     /// Additional documentation can be found in documentation of the OS.
     /// * Linux: <https://docs.kernel.org/networking/timestamping.html>
-    #[cfg(not(any(target_os = "redox", target_os = "hurd", target_os = "windows")))]
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "redox", target_os = "hurd", target_os = "windows"))
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(not(any(target_os = "redox", target_os = "hurd", target_os = "windows"))))
+        doc(cfg(all(
+            feature = "all",
+            not(any(target_os = "redox", target_os = "hurd", target_os = "windows"))
+        )))
     )]
     pub fn set_timestamp(&self, active: bool) -> io::Result<()> {
         unsafe {
@@ -1175,46 +1167,10 @@ impl Socket {
     /// For more information about this option, see [`set_timestamp_ns`].
     ///
     /// [`set_timestamp_ns`]: Socket::set_timestamp_ns
-    #[cfg(not(any(
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "haiku",
-        target_os = "illumos",
-        target_os = "ios",
-        target_os = "macos",
-        target_os = "netbsd",
-        target_os = "nto",
-        target_os = "openbsd",
-        target_os = "solaris",
-        target_os = "tvos",
-        target_os = "watchos",
-        target_os = "redox",
-        target_os = "fuchsia",
-        target_os = "vita",
-        target_os = "hurd",
-        target_os = "windows",
-    )))]
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(not(any(
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "haiku",
-            target_os = "illumos",
-            target_os = "ios",
-            target_os = "macos",
-            target_os = "netbsd",
-            target_os = "nto",
-            target_os = "openbsd",
-            target_os = "solaris",
-            target_os = "tvos",
-            target_os = "watchos",
-            target_os = "redox",
-            target_os = "fuchsia",
-            target_os = "vita",
-            target_os = "hurd",
-            target_os = "windows",
-        ))))
+        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
     )]
     pub fn timestamp_ns(&self) -> io::Result<bool> {
         unsafe {
@@ -1231,46 +1187,10 @@ impl Socket {
     ///
     /// Additional documentation can be found in documentation of the OS.
     /// * Linux: <https://docs.kernel.org/networking/timestamping.html>
-    #[cfg(not(any(
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "haiku",
-        target_os = "illumos",
-        target_os = "ios",
-        target_os = "macos",
-        target_os = "netbsd",
-        target_os = "nto",
-        target_os = "openbsd",
-        target_os = "solaris",
-        target_os = "tvos",
-        target_os = "watchos",
-        target_os = "redox",
-        target_os = "fuchsia",
-        target_os = "vita",
-        target_os = "hurd",
-        target_os = "windows",
-    )))]
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(not(any(
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "haiku",
-            target_os = "illumos",
-            target_os = "ios",
-            target_os = "macos",
-            target_os = "netbsd",
-            target_os = "nto",
-            target_os = "openbsd",
-            target_os = "solaris",
-            target_os = "tvos",
-            target_os = "watchos",
-            target_os = "redox",
-            target_os = "fuchsia",
-            target_os = "vita",
-            target_os = "hurd",
-            target_os = "windows",
-        ))))
+        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
     )]
     pub fn set_timestamp_ns(&self, active: bool) -> io::Result<()> {
         unsafe {
@@ -1290,46 +1210,10 @@ impl Socket {
     /// For more information about this option, see [`set_timestamping`].
     ///
     /// [`set_timestamping`]: Socket::set_timestamping
-    #[cfg(not(any(
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "haiku",
-        target_os = "illumos",
-        target_os = "ios",
-        target_os = "macos",
-        target_os = "netbsd",
-        target_os = "nto",
-        target_os = "openbsd",
-        target_os = "solaris",
-        target_os = "tvos",
-        target_os = "watchos",
-        target_os = "redox",
-        target_os = "fuchsia",
-        target_os = "vita",
-        target_os = "hurd",
-        target_os = "windows"
-    )))]
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(not(any(
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "haiku",
-            target_os = "illumos",
-            target_os = "ios",
-            target_os = "macos",
-            target_os = "netbsd",
-            target_os = "nto",
-            target_os = "openbsd",
-            target_os = "solaris",
-            target_os = "tvos",
-            target_os = "watchos",
-            target_os = "redox",
-            target_os = "fuchsia",
-            target_os = "vita",
-            target_os = "hurd",
-            target_os = "windows",
-        ))))
+        doc(cfg(all(feature = "all", any(target_os = "linux", target_os = "android"))))
     )]
     pub fn timestamping(&self) -> io::Result<TimestampingFlags> {
         unsafe {
@@ -1351,44 +1235,16 @@ impl Socket {
     /// Additional documentation can be found in documentation of the OS.
     /// * Linux: <https://docs.kernel.org/networking/timestamping.html>
     /// * Windows: <https://learn.microsoft.com/en-us/windows/win32/winsock/winsock-timestamping>
-    #[cfg(not(any(
-        target_os = "dragonfly",
-        target_os = "freebsd",
-        target_os = "haiku",
-        target_os = "illumos",
-        target_os = "ios",
-        target_os = "macos",
-        target_os = "netbsd",
-        target_os = "nto",
-        target_os = "openbsd",
-        target_os = "solaris",
-        target_os = "tvos",
-        target_os = "watchos",
-        target_os = "redox",
-        target_os = "fuchsia",
-        target_os = "vita",
-        target_os = "hurd",
-    )))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "linux", target_os = "android", target_os = "windows")
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(not(any(
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "haiku",
-            target_os = "illumos",
-            target_os = "ios",
-            target_os = "macos",
-            target_os = "netbsd",
-            target_os = "nto",
-            target_os = "openbsd",
-            target_os = "solaris",
-            target_os = "tvos",
-            target_os = "watchos",
-            target_os = "redox",
-            target_os = "fuchsia",
-            target_os = "vita",
-            target_os = "hurd",
-        ))))
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "linux", target_os = "android", target_os = "windows")
+        )))
     )]
     pub fn set_timestamping(&self, flags: TimestampingFlags) -> io::Result<()> {
         sys::set_timestamping_opt(self.as_raw(), flags)

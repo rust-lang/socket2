@@ -55,24 +55,10 @@ use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
 use socket2::MaybeUninitSlice;
 #[cfg(not(target_os = "vita"))]
 use socket2::TcpKeepalive;
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "haiku",
-    target_os = "illumos",
-    target_os = "ios",
-    target_os = "macos",
-    target_os = "netbsd",
-    target_os = "nto",
-    target_os = "openbsd",
-    target_os = "solaris",
-    target_os = "tvos",
-    target_os = "watchos",
-    target_os = "redox",
-    target_os = "fuchsia",
-    target_os = "vita",
-    target_os = "hurd",
-)))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
 use socket2::TimestampingFlags;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 
@@ -1495,49 +1481,18 @@ test!(IPv4 multicast_all_v4, set_multicast_all_v4(false));
 #[cfg(all(feature = "all", target_os = "linux"))]
 test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
 
-#[cfg(not(any(target_os = "redox", target_os = "hurd", target_os = "windows")))]
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "redox", target_os = "hurd", target_os = "windows"))
+))]
 test!(timestamp, set_timestamp(true));
-
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "haiku",
-    target_os = "illumos",
-    target_os = "ios",
-    target_os = "macos",
-    target_os = "netbsd",
-    target_os = "nto",
-    target_os = "openbsd",
-    target_os = "solaris",
-    target_os = "tvos",
-    target_os = "watchos",
-    target_os = "redox",
-    target_os = "fuchsia",
-    target_os = "vita",
-    target_os = "hurd",
-    target_os = "windows",
-)))]
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 test!(timestamp_ns, set_timestamp_ns(true));
-
 #[test]
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "haiku",
-    target_os = "illumos",
-    target_os = "ios",
-    target_os = "macos",
-    target_os = "netbsd",
-    target_os = "nto",
-    target_os = "openbsd",
-    target_os = "solaris",
-    target_os = "tvos",
-    target_os = "watchos",
-    target_os = "redox",
-    target_os = "fuchsia",
-    target_os = "vita",
-    target_os = "hurd",
-)))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
 fn timestamping() {
     let mut t_flags = TimestampingFlags::default();
     #[cfg(target_os = "windows")]
