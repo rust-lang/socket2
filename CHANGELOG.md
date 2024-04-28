@@ -1,13 +1,22 @@
+# 0.5.7
+
+* Added `Socket::(set_)passcred`
+  (https://github.com/rust-lang/socket2/pull/506).
+* Added `RecvFlags::is_confirm` and `RecvFlags::is_dontroute`
+  (https://github.com/rust-lang/socket2/pull/499).
+* Added `MsgHdrMut::control_len`
+  (https://github.com/rust-lang/socket2/pull/505).
+
 # 0.5.6
 
 * Added `Socket::(set_)multicast_all_v{4,6}`
   (https://github.com/rust-lang/socket2/pull/485 and
-  (https://github.com/rust-lang/socket2/pull/486).
+   https://github.com/rust-lang/socket2/pull/486).
 * Added support for GNU/Hurd
   (https://github.com/rust-lang/socket2/pull/474).
 * Fixes compilation on Haiku
   (https://github.com/rust-lang/socket2/pull/479 and
-  (https://github.com/rust-lang/socket2/pull/482).
+   https://github.com/rust-lang/socket2/pull/482).
 * Fixes compilation on OpenHarmony
   (https://github.com/rust-lang/socket2/pull/491).
 * Update to window-sys v0.52
