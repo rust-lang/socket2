@@ -1350,11 +1350,38 @@ test!(
     mss,
     set_mss(256)
 );
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+))]
 test!(
     #[ignore = "setting `IP_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
     ip_transparent,
     set_ip_transparent(true)
+);
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+test!(
+    #[ignore = "setting `IPV6_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
+    ip_transparent_v6,
+    set_ip_transparent_v6(true)
+);
+#[cfg(all(feature = "all", target_os = "openbsd"))]
+test!(
+    #[ignore = "setting `SO_BINDANY` is limited to the superuser"]
+    so_bindany,
+    set_so_bindany(true)
+);
+#[cfg(all(feature = "all", target_os = "freebsd"))]
+test!(
+    #[ignore = "setting `IP_BINDANY` requires the `PRIV_NETINET_BINDANY` privilege (works when running as root)"]
+    ip_bindany,
+    set_ip_bindany(true)
+);
+#[cfg(all(feature = "all", target_os = "freebsd"))]
+test!(
+    #[ignore = "setting `IPV6_BINDANY` requires the `PRIV_NETINET_BINDANY` privilege (works when running as root)"]
+    ip_bindany_v6,
+    set_ip_bindany_v6(true)
 );
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(
