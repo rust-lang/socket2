@@ -1053,7 +1053,7 @@ impl Socket {
 
     /// Set value for the `SO_REUSEADDR` option on this socket.
     ///
-    /// This indicates that futher calls to `bind` may allow reuse of local
+    /// This indicates that further calls to `bind` may allow reuse of local
     /// addresses. For IPv4 sockets this means that a socket may bind even when
     /// there's a socket already listening on this port.
     pub fn set_reuse_address(&self, reuse: bool) -> io::Result<()> {
@@ -2143,7 +2143,7 @@ impl Read for Socket {
     #[cfg(not(target_os = "redox"))]
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         // Safety: both `IoSliceMut` and `MaybeUninitSlice` promise to have the
-        // same layout, that of `iovec`/`WSABUF`. Furthermore `recv_vectored`
+        // same layout, that of `iovec`/`WSABUF`. Furthermore, `recv_vectored`
         // promises to not write unitialised bytes to the `bufs` and pass it
         // directly to the `recvmsg` system call, so this is safe.
         let bufs = unsafe { &mut *(bufs as *mut [IoSliceMut<'_>] as *mut [MaybeUninitSlice<'_>]) };

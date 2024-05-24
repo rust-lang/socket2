@@ -258,7 +258,7 @@ impl SockAddr {
     /// Returns the initialised storage bytes.
     fn as_bytes(&self) -> &[u8] {
         // SAFETY: `self.storage` is a C struct which can always be treated a
-        // slice of bytes. Futhermore we ensure we don't read any unitialised
+        // slice of bytes. Furthermore, we ensure we don't read any unitialised
         // bytes by using `self.len`.
         unsafe { std::slice::from_raw_parts(self.as_ptr().cast(), self.len as usize) }
     }
