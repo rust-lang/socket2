@@ -455,6 +455,7 @@ pub struct TcpKeepalive {
 
 impl TcpKeepalive {
     /// Returns a new, empty set of TCP keepalive parameters.
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> TcpKeepalive {
         TcpKeepalive {
             time: None,
