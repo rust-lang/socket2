@@ -5,6 +5,7 @@
         target_os = "android",
         target_os = "freebsd",
         target_os = "ios",
+        target_os = "visionos",
         target_os = "linux",
         target_os = "macos",
         target_os = "tvos",
@@ -29,6 +30,7 @@ use std::net::{Ipv6Addr, SocketAddrV6};
         target_os = "android",
         target_os = "freebsd",
         target_os = "ios",
+        target_os = "visionos",
         target_os = "linux",
         target_os = "macos",
         target_os = "tvos",
@@ -225,6 +227,7 @@ fn assert_common_flags(socket: &Socket, expected: bool) {
     assert_close_on_exec(socket, expected);
     #[cfg(any(
         target_os = "ios",
+        target_os = "visionos",
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
@@ -416,6 +419,7 @@ where
     feature = "all",
     any(
         target_os = "ios",
+        target_os = "visionos",
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
@@ -436,6 +440,7 @@ fn set_nosigpipe() {
 /// Assert that `SO_NOSIGPIPE` is set on `socket`.
 #[cfg(any(
     target_os = "ios",
+    target_os = "visionos",
     target_os = "macos",
     target_os = "tvos",
     target_os = "watchos",
@@ -864,6 +869,7 @@ fn tcp_keepalive() {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "ios",
+            target_os = "visionos",
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
@@ -881,6 +887,7 @@ fn tcp_keepalive() {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "ios",
+            target_os = "visionos",
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
@@ -908,6 +915,7 @@ fn tcp_keepalive() {
             target_os = "fuchsia",
             target_os = "illumos",
             target_os = "ios",
+            target_os = "visionos",
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
@@ -929,6 +937,7 @@ fn tcp_keepalive() {
             target_os = "fuchsia",
             target_os = "illumos",
             target_os = "ios",
+            target_os = "visionos",
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
@@ -977,6 +986,7 @@ fn device() {
     feature = "all",
     any(
         target_os = "ios",
+        target_os = "visionos",
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
@@ -1022,6 +1032,7 @@ fn device() {
     feature = "all",
     any(
         target_os = "ios",
+        target_os = "visionos",
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
@@ -1069,6 +1080,7 @@ fn device_v6() {
         target_os = "android",
         target_os = "freebsd",
         target_os = "ios",
+        target_os = "visionos",
         target_os = "linux",
         target_os = "macos",
         target_os = "tvos",
@@ -1226,6 +1238,7 @@ fn r#type() {
         unix,
         not(any(
             target_os = "ios",
+            target_os = "visionos",
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
