@@ -1539,14 +1539,38 @@ fn header_included() {
     };
 
     let initial = socket
-        .header_included()
+        .header_included_v4()
         .expect("failed to get initial value");
     assert_eq!(initial, false, "initial value and argument are the same");
 
     socket
-        .set_header_included(true)
+        .set_header_included_v4(true)
         .expect("failed to set option");
-    let got = socket.header_included().expect("failed to get value");
+    let got = socket.header_included_v4().expect("failed to get value");
+    assert_eq!(got, true, "set and get values differ");
+}
+
+#[test]
+#[cfg(all(feature = "all", not(target_os = "redox")))]
+fn header_included_ipv6() {
+    let socket = match Socket::new(Domain::IPV6, Type::RAW, None) {
+        Ok(socket) => socket,
+        // Need certain permissions to create a raw sockets.
+        Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => return,
+        #[cfg(unix)]
+        Err(ref err) if err.raw_os_error() == Some(libc::EPROTONOSUPPORT) => return,
+        Err(err) => panic!("unexpected error creating socket: {}", err),
+    };
+
+    let initial = socket
+        .header_included_v6()
+        .expect("failed to get initial value");
+    assert_eq!(initial, false, "initial value and argument are the same");
+
+    socket
+        .set_header_included_v6(true)
+        .expect("failed to set option");
+    let got = socket.header_included_v6().expect("failed to get value");
     assert_eq!(got, true, "set and get values differ");
 }
 
