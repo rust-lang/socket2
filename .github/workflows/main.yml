@@ -60,15 +60,12 @@ jobs:
           - aarch64-apple-darwin
           - aarch64-apple-ios
           - aarch64-apple-tvos
-          - aarch64-apple-visionos
           - aarch64-apple-watchos
           - aarch64-linux-android
           - aarch64-unknown-freebsd
-          - aarch64-unknown-hermit
           - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
           - aarch64-unknown-netbsd
-          - aarch64-unknown-nto-qnx710
           - aarch64-unknown-openbsd
           - aarch64-unknown-redox
           - arm-linux-androideabi
@@ -78,20 +75,19 @@ jobs:
           - i686-linux-android
           - i686-unknown-hurd-gnu
           - i686-unknown-linux-gnu
-          - riscv32imc-esp-espidf
           - sparcv9-sun-solaris
-          - wasm32-wasi
           - x86_64-apple-darwin
           - x86_64-apple-ios
-          - x86_64-pc-nto-qnx710
           - x86_64-pc-solaris
-          - x86_64-pc-windows-gnu
+          # Fails with:
+          # `rror calling dlltool 'x86_64-w64-mingw32-dlltool': No such file or
+          # directory (os error 2)`, build log:
+          # <https://github.com/rust-lang/socket2/actions/runs/9577808331/job/26406752150>.
+          #- x86_64-pc-windows-gnu
           - x86_64-pc-windows-msvc
           - x86_64-unknown-dragonfly
           - x86_64-unknown-freebsd
           - x86_64-unknown-fuchsia
-          - x86_64-unknown-haiku
-          - x86_64-unknown-hermit
           - x86_64-unknown-illumos
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
