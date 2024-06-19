@@ -1421,7 +1421,7 @@ impl PathMtuDiscoveringModeV4 {
     /// Incomming ICMP frag_needed notifications on this socket will be ignored in
     /// order to prevent accepting spoofed ones.
     pub const INTERFACE: Self = Self(libc::IP_PMTUDISC_INTERFACE);
-    /// Almost like [MtuDiscoveringModeV4::Interface] but authorize fragmented packet
+    /// Almost like `MtuDiscoveringModeV4::Interface` but authorize fragmented packet
     /// if they do not saturate the interface MTU.
     pub const OMIT: Self = Self(libc::IP_PMTUDISC_OMIT);
 }
@@ -1486,7 +1486,7 @@ impl PathMtuDiscoveringModeV6 {
     /// Incomming ICMP frag_needed notifications on this socket will be ignored in
     /// order to prevent accepting spoofed ones.
     pub const INTERFACE: Self = Self(libc::IPV6_PMTUDISC_INTERFACE);
-    /// Almost like [MtuDiscoveringModeV6::Interface] but authorize fragmented packet
+    /// Almost like `MtuDiscoveringModeV6::Interface` but authorize fragmented packet
     /// if they do not saturate the interface MTU.
     pub const OMIT: Self = Self(libc::IPV6_PMTUDISC_OMIT);
 }
