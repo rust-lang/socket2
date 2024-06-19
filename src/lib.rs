@@ -196,6 +196,9 @@ pub use sockref::SockRef;
 )))]
 pub use socket::InterfaceIndexOrAddress;
 
+#[cfg(all(feature = "all", target_os = "linux"))]
+pub use sys::{PathMtuDiscoveringModeV4, PathMtuDiscoveringModeV6};
+
 /// Specification of the communication domain for a socket.
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
