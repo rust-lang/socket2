@@ -1397,10 +1397,6 @@ pub(crate) const fn to_mreqn(
 ///
 /// For UDP it's particullary important to note that during Path MTU discovery is done by the OS,
 /// incomming datagram may be dropped.
-///
-/// ## Portability
-///
-/// It's Linux only way of managing the Path MTU.
 #[cfg(all(feature = "all", target_os = "linux"))]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
 #[repr(C)]
