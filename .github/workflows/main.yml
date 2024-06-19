@@ -51,35 +51,63 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
   Check:
-    name: Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-unknown-netbsd", "x86_64-unknown-redox", "armv7-linux-androideabi", "i686-linux-android"]
-    steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.target }}
-    - uses: taiki-e/install-action@cargo-hack
-    - name: Run check
-      run: cargo hack check --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
-  CheckTier3:
-    name: Check
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ["armv7-sony-vita-newlibeabihf", "i686-unknown-hurd-gnu"]
+        target:
+          - aarch64-apple-darwin
+          - aarch64-apple-ios
+          - aarch64-apple-tvos
+          - aarch64-apple-visionos
+          - aarch64-apple-watchos
+          - aarch64-linux-android
+          - aarch64-unknown-freebsd
+          - aarch64-unknown-hermit
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
+          - aarch64-unknown-netbsd
+          - aarch64-unknown-nto-qnx710
+          - aarch64-unknown-openbsd
+          - aarch64-unknown-redox
+          - arm-linux-androideabi
+          - arm64_32-apple-watchos
+          - armv7-linux-androideabi
+          - armv7-sony-vita-newlibeabihf
+          - i686-linux-android
+          - i686-unknown-hurd-gnu
+          - i686-unknown-linux-gnu
+          - riscv32imc-esp-espidf
+          - sparcv9-sun-solaris
+          - wasm32-wasi
+          - x86_64-apple-darwin
+          - x86_64-apple-ios
+          - x86_64-pc-nto-qnx710
+          - x86_64-pc-solaris
+          - x86_64-pc-windows-gnu
+          - x86_64-pc-windows-msvc
+          - x86_64-unknown-dragonfly
+          - x86_64-unknown-freebsd
+          - x86_64-unknown-fuchsia
+          - x86_64-unknown-haiku
+          - x86_64-unknown-hermit
+          - x86_64-unknown-illumos
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - x86_64-unknown-netbsd
+          - x86_64-unknown-openbsd
+          - x86_64-unknown-redox
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@nightly
       with:
-        components: "rust-src"
+        components: rust-src
     - uses: taiki-e/install-action@cargo-hack
-    - name: Run check
-      run: cargo hack check -Z build-std=std,panic_abort --feature-powerset --all-targets --examples --bins --tests --target ${{ matrix.target }}
+    - name: Check build
+      run: cargo hack check -Z build-std=std,panic_abort --feature-powerset --target ${{ matrix.target }}
+    - name: Check docs
+      run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc -Z build-std=std,panic_abort --no-deps --all-features --target ${{ matrix.target }}
   Clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -88,31 +116,3 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
-  Docs:
-    name: Docs
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ["aarch64-apple-ios", "aarch64-linux-android", "x86_64-apple-darwin", "x86_64-unknown-fuchsia", "x86_64-pc-windows-msvc", "x86_64-pc-solaris", "x86_64-unknown-freebsd", "x86_64-unknown-illumos", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-unknown-netbsd", "x86_64-unknown-redox", "armv7-linux-androideabi", "i686-linux-android"]
-    steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@nightly # NOTE: need nightly for `doc_cfg` feature.
-      with:
-        targets: ${{ matrix.target }}
-    - name: Check docs for docs.rs
-      run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc --no-deps --all-features --target ${{ matrix.target }}
-  DocsTier3:
-    name: Docs
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ["armv7-sony-vita-newlibeabihf", "i686-unknown-hurd-gnu"]
-    steps:
-    - uses: actions/checkout@v4
-    - uses: dtolnay/rust-toolchain@nightly # NOTE: need nightly for `doc_cfg` feature.
-      with:
-        components: "rust-src"
-    - name: Check docs for docs.rs
-      run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc -Z build-std=std,panic_abort --no-deps --all-features --target ${{ matrix.target }}
