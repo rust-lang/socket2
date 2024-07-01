@@ -20,20 +20,31 @@ use std::time::{Duration, Instant};
 use std::{process, ptr, slice};
 
 use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE, HANDLE_FLAG_INHERIT};
-#[cfg(feature = "all")]
-use windows_sys::Win32::Networking::WinSock::SO_PROTOCOL_INFOW;
 use windows_sys::Win32::Networking::WinSock::{
     self, tcp_keepalive, FIONBIO, IN6_ADDR, IN6_ADDR_0, INVALID_SOCKET, IN_ADDR, IN_ADDR_0,
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
     SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
     WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
 };
+#[cfg(feature = "all")]
+use windows_sys::Win32::Networking::WinSock::{
+    SIO_TIMESTAMPING, SO_PROTOCOL_INFOW, TIMESTAMPING_CONFIG,
+};
+#[cfg(feature = "all")]
+pub(crate) use windows_sys::Win32::Networking::WinSock::{
+    TIMESTAMPING_FLAG_RX, TIMESTAMPING_FLAG_TX,
+};
 use windows_sys::Win32::System::Threading::INFINITE;
 
+#[cfg(feature = "all")]
+use crate::TimestampingFlags;
 use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
 pub(crate) type c_int = std::os::raw::c_int;
+#[allow(non_camel_case_types)]
+#[cfg(feature = "all")]
+pub(crate) type c_uint = std::os::raw::c_uint;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
 ///
@@ -710,6 +721,34 @@ pub(crate) fn set_timeout_opt(
 ) -> io::Result<()> {
     let duration = into_ms(duration);
     unsafe { setsockopt(socket, level, optname, duration) }
+}
+
+/// Wrapper around `WSAIoctl` to deal with platfrom specific timestamping option
+#[cfg(feature = "all")]
+#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
+pub(crate) fn set_timestamping_opt(socket: Socket, flags: TimestampingFlags) -> io::Result<()> {
+    let mut out = 0;
+    let mut config = TIMESTAMPING_CONFIG {
+        Flags: flags.0 as u32,
+        TxTimestampsBuffered: 0,
+    };
+
+    syscall!(
+        WSAIoctl(
+            socket,
+            SIO_TIMESTAMPING,
+            &mut config as *mut _ as *mut _,
+            size_of::<TIMESTAMPING_CONFIG>() as _,
+            ptr::null_mut(),
+            0,
+            &mut out,
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        SOCKET_ERROR
+    )
+    .map(|_| ())
 }
 
 fn into_ms(duration: Option<Duration>) -> u32 {
