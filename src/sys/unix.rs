@@ -3097,6 +3097,218 @@ impl crate::Socket {
             )
         }
     }
+
+    /// Get the value of the `IP_TRANSPARENT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_transparent`].
+    ///
+    /// [`set_ip_transparent`]: crate::Socket::set_ip_transparent
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    pub fn ip_transparent(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IP, libc::IP_TRANSPARENT)
+                .map(|transparent| transparent != 0)
+        }
+    }
+
+    /// Set the value of the `IP_TRANSPARENT` option on this socket.
+    ///
+    /// Setting this boolean option enables transparent proxying
+    /// on this socket.  This socket option allows the calling
+    /// application to bind to a nonlocal IP address and operate
+    /// both as a client and a server with the foreign address as
+    /// the local endpoint.  NOTE: this requires that routing be
+    /// set up in a way that packets going to the foreign address
+    /// are routed through the TProxy box (i.e., the system
+    /// hosting the application that employs the IP_TRANSPARENT
+    /// socket option).  Enabling this socket option requires
+    /// superuser privileges (the `CAP_NET_ADMIN` capability).
+    ///
+    /// TProxy redirection with the iptables TPROXY target also
+    /// requires that this option be set on the redirected socket.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IP,
+                libc::IP_TRANSPARENT,
+                transparent as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_TRANSPARENT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_transparent_v6`].
+    ///
+    /// [`set_ip_transparent_v6`]: crate::Socket::set_ip_transparent_v6
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn ip_transparent_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IPV6, libc::IPV6_TRANSPARENT)
+                .map(|transparent| transparent != 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_TRANSPARENT` option on this socket.
+    ///
+    /// Setting this boolean option enables transparent proxying
+    /// on this socket.  This socket option allows the calling
+    /// application to bind to a nonlocal IP address and operate
+    /// both as a client and a server with the foreign address as
+    /// the local endpoint.  NOTE: this requires that routing be
+    /// set up in a way that packets going to the foreign address
+    /// are routed through the TProxy box (i.e., the system
+    /// hosting the application that employs the IPV6_TRANSPARENT
+    /// socket option).  Enabling this socket option requires
+    /// superuser privileges (the `CAP_NET_ADMIN` capability).
+    ///
+    /// TProxy redirection with the iptables TPROXY target also
+    /// requires that this option be set on the redirected socket.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn set_ip_transparent_v6(&self, transparent: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IPV6,
+                libc::IPV6_TRANSPARENT,
+                transparent as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `SO_BINDANY` option on this socket.
+    ///
+    /// For more information about this option, see [`set_so_bindany`].
+    ///
+    /// [`set_so_bindany`]: crate::Socket::set_so_bindany
+    #[cfg(all(feature = "all", target_os = "openbsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "openbsd"))))]
+    pub fn so_bindany(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_BINDANY)
+                .map(|bindany| bindany != 0)
+        }
+    }
+
+    /// Set the value of the `SO_BINDANY` option on this socket.
+    ///
+    /// SO_BINDANY allows the socket to be bound to addresses which are not
+    /// local to the machine, so it can be used to make a transparent proxy.
+    /// Note that this option is limited to the superuser. In order to
+    /// receive packets for these addresses, SO_BINDANY needs to be combined
+    /// with matching outgoing pf(4) rules with the divert-reply parameter.
+    #[cfg(all(feature = "all", target_os = "openbsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "openbsd"))))]
+    pub fn set_so_bindany(&self, bindany: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IP,
+                libc::SO_BINDANY,
+                bindany as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_BINDANY` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_bindany`].
+    ///
+    /// [`set_ip_bindany`]: crate::Socket::set_ip_bindany
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "freebsd"))))]
+    pub fn ip_bindany(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IP, libc::IP_BINDANY)
+                .map(|bindany| bindany != 0)
+        }
+    }
+
+    /// Set the value of the `IP_BINDANY` option on this socket.
+    ///
+    /// If the IP_BINDANY option is enabled on a SOCK_STREAM, SOCK_DGRAM or a
+    /// SOCK_RAW socket, one can bind(2) to any	address, even one not bound to
+    /// any available network interface in the system. This functionality (in
+    /// conjunction with special firewall rules) can be used for implementing a
+    /// transparent proxy. The PRIV_NETINET_BINDANY privilege is needed	to set
+    /// this option.
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "freebsd"))))]
+    pub fn set_ip_bindany(&self, bindany: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IP,
+                libc::IP_BINDANY,
+                bindany as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_BINDANY` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_bindany_v6`].
+    ///
+    /// [`set_ip_bindany_v6`]: crate::Socket::set_ip_bindany_v6
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "freebsd"))))]
+    pub fn ip_bindany_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IPV6, libc::IPV6_BINDANY)
+                .map(|bindany| bindany != 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_BINDANY` option on this socket.
+    ///
+    /// If the IPV6_BINDANY option is enabled on a SOCK_STREAM, SOCK_DGRAM or a
+    /// SOCK_RAW socket, one can bind(2) to any	address, even one not bound to
+    /// any available network interface in the system. This functionality (in
+    /// conjunction with special firewall rules) can be used for implementing a
+    /// transparent proxy. The PRIV_NETINET_BINDANY privilege is needed	to set
+    /// this option.
+    #[cfg(all(feature = "all", target_os = "freebsd"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "freebsd"))))]
+    pub fn set_ip_bindany_v6(&self, bindany: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IPV6,
+                libc::IPV6_BINDANY,
+                bindany as c_int,
+            )
+        }
+    }
 }
 
 /// See [`Socket::dccp_available_ccids`].
