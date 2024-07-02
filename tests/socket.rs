@@ -1733,3 +1733,52 @@ fn set_passcred() {
     socket.set_passcred(true).unwrap();
     assert!(socket.passcred().unwrap());
 }
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[test]
+fn pmtu_discovery_v4() {
+    use socket2::PathMtuDiscoveringModeV4;
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    // The current mtu discovery is system wide so let's assume it's not an err.
+    assert!(socket.mtu_discover().is_ok());
+
+    socket
+        .set_mtu_discover(PathMtuDiscoveringModeV4::DO)
+        .unwrap();
+    assert_eq!(socket.mtu_discover().unwrap(), PathMtuDiscoveringModeV4::DO);
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    assert!(socket.mtu_discover().is_ok());
+
+    socket
+        .set_mtu_discover(PathMtuDiscoveringModeV4::DO)
+        .unwrap();
+    assert_eq!(socket.mtu_discover().unwrap(), PathMtuDiscoveringModeV4::DO);
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[test]
+fn pmtu_discovery_v6() {
+    use socket2::PathMtuDiscoveringModeV6;
+    let socket = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
+    assert!(socket.mtu_discover_ipv6().is_ok());
+
+    socket
+        .set_mtu_discover_ipv6(PathMtuDiscoveringModeV6::DO)
+        .unwrap();
+    assert_eq!(
+        socket.mtu_discover_ipv6().unwrap(),
+        PathMtuDiscoveringModeV6::DO
+    );
+
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    assert!(socket.mtu_discover_ipv6().is_ok());
+
+    socket
+        .set_mtu_discover_ipv6(PathMtuDiscoveringModeV6::DO)
+        .unwrap();
+    assert_eq!(
+        socket.mtu_discover_ipv6().unwrap(),
+        PathMtuDiscoveringModeV6::DO
+    );
+}

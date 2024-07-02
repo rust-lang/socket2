@@ -1406,6 +1406,134 @@ pub(crate) const fn to_mreqn(
     }
 }
 
+/// Possibles state for Path Maximum Transmission Unit (PMTU) Discovering of packets received on an Ipv4 socket.
+///
+/// In the IP packet Header it set the flag DF also known as "do not fragment".
+///
+/// For UDP it's particullary important to note that during Path MTU discovery is done by the OS,
+/// incomming datagram may be dropped.
+///
+/// This type is freely interconvertible with C's `int` type, however, if a raw
+/// value needs to be provided.
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct PathMtuDiscoveringModeV4(libc::c_int);
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl PathMtuDiscoveringModeV4 {
+    /// Path MTU discovery is not done.
+    pub const DONT: Self = Self(libc::IP_PMTUDISC_DONT);
+    /// Path MTU discovery is done according to route setting.
+    pub const WANT: Self = Self(libc::IP_PMTUDISC_WANT);
+    /// Path MTU discovery
+    pub const DO: Self = Self(libc::IP_PMTUDISC_DO);
+    /// Set DF bit but ignore Path MTDU
+    pub const PROBE: Self = Self(libc::IP_PMTUDISC_PROBE);
+    /// Use interface MTU.
+    /// It ignore destination PMTU and does not set DF flag.
+    /// Incomming ICMP frag_needed notifications on this socket will be ignored in
+    /// order to prevent accepting spoofed ones.
+    pub const INTERFACE: Self = Self(libc::IP_PMTUDISC_INTERFACE);
+    /// Almost like `MtuDiscoveringModeV4::Interface` but authorize fragmented packet
+    /// if they do not saturate the interface MTU.
+    pub const OMIT: Self = Self(libc::IP_PMTUDISC_OMIT);
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl From<c_int> for PathMtuDiscoveringModeV4 {
+    fn from(t: c_int) -> PathMtuDiscoveringModeV4 {
+        Self(t)
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[cfg_attr(docsrs, doc(cfg(target_os = "linux")))]
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl From<PathMtuDiscoveringModeV4> for c_int {
+    fn from(t: PathMtuDiscoveringModeV4) -> c_int {
+        t.0
+    }
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl_debug!(
+    PathMtuDiscoveringModeV4,
+    libc::IP_PMTUDISC_DONT,
+    libc::IP_PMTUDISC_WANT,
+    libc::IP_PMTUDISC_DO,
+    libc::IP_PMTUDISC_PROBE,
+    libc::IP_PMTUDISC_INTERFACE,
+    libc::IP_PMTUDISC_OMIT
+);
+
+/// Possibles state for Path Maximum Transmission Unit (PMTU) Discovering of packets received on an IPV6 socket.
+///
+/// It set in the IP packet Header the flag DF also known as "do not fragment".
+///
+/// For UDP it's particullary important to note that during Path MTU discovery is done by the OS,
+/// incomming datagram may be dropped.
+///
+/// This type is freely interconvertible with C's `int` type, however, if a raw
+/// value needs to be provided.
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct PathMtuDiscoveringModeV6(libc::c_int);
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl PathMtuDiscoveringModeV6 {
+    /// Path MTU discovery is not done.
+    pub const DONT: Self = Self(libc::IPV6_PMTUDISC_DONT);
+    /// Path MTU discovery is done according to route setting.
+    pub const WANT: Self = Self(libc::IPV6_PMTUDISC_WANT);
+    /// Path MTU discovery
+    pub const DO: Self = Self(libc::IPV6_PMTUDISC_DO);
+    /// Set DF bit but ignore Path MTDU
+    pub const PROBE: Self = Self(libc::IPV6_PMTUDISC_PROBE);
+    /// Use interface MTU.
+    /// It ignore destination PMTU and does not set DF flag.
+    /// Incomming ICMP frag_needed notifications on this socket will be ignored in
+    /// order to prevent accepting spoofed ones.
+    pub const INTERFACE: Self = Self(libc::IPV6_PMTUDISC_INTERFACE);
+    /// Almost like `MtuDiscoveringModeV6::Interface` but authorize fragmented packet
+    /// if they do not saturate the interface MTU.
+    pub const OMIT: Self = Self(libc::IPV6_PMTUDISC_OMIT);
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl From<c_int> for PathMtuDiscoveringModeV6 {
+    fn from(t: c_int) -> PathMtuDiscoveringModeV6 {
+        Self(t)
+    }
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl From<PathMtuDiscoveringModeV6> for c_int {
+    fn from(t: PathMtuDiscoveringModeV6) -> c_int {
+        t.0
+    }
+}
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+impl_debug!(
+    PathMtuDiscoveringModeV6,
+    libc::IPV6_PMTUDISC_DONT,
+    libc::IPV6_PMTUDISC_WANT,
+    libc::IPV6_PMTUDISC_DO,
+    libc::IPV6_PMTUDISC_PROBE,
+    libc::IPV6_PMTUDISC_INTERFACE,
+    libc::IPV6_PMTUDISC_OMIT
+);
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -3094,6 +3222,62 @@ impl crate::Socket {
                 self.as_raw(),
                 libc::SOL_DCCP,
                 libc::DCCP_SOCKOPT_GET_CUR_MPS,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_MTU_DISCOVER` of this socket for IPv4.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    pub fn mtu_discover(&self) -> io::Result<PathMtuDiscoveringModeV4> {
+        unsafe {
+            let mtu_discovering =
+                getsockopt::<c_int>(self.as_raw(), libc::SOL_IP, libc::IP_MTU_DISCOVER)?;
+
+            Ok(PathMtuDiscoveringModeV4(mtu_discovering))
+        }
+    }
+
+    /// Set value for the `IP_MTU_DISCOVER` of this socket for IPv4.
+    /// Used to configure Dont fragment DF bit and OS behaviour related to Path MTU discovery.
+    /// See [PathMtuDiscoveringModeV4] for details.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    pub fn set_mtu_discover(&self, mtu_discovery: PathMtuDiscoveringModeV4) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_IP,
+                libc::IP_MTU_DISCOVER,
+                mtu_discovery.0,
+            )
+        }
+    }
+
+    /// Get the value of the `IP_MTU_DISCOVER` of this socket for IPv6.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    pub fn mtu_discover_ipv6(&self) -> io::Result<PathMtuDiscoveringModeV6> {
+        unsafe {
+            let mtu_discovering =
+                getsockopt::<c_int>(self.as_raw(), libc::SOL_IPV6, libc::IPV6_MTU_DISCOVER)?;
+
+            Ok(PathMtuDiscoveringModeV6(mtu_discovering))
+        }
+    }
+
+    /// Set value for the `IP_MTU_DISCOVER` of this socket for IPv6.
+    /// Used to configure Dont fragment DF bit and OS behaviour related to Path MTU discovery.
+    /// See [PathMtuDiscoveringMode] for details.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    pub fn set_mtu_discover_ipv6(&self, mtu_discovery: PathMtuDiscoveringModeV6) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_IPV6,
+                libc::IPV6_MTU_DISCOVER,
+                mtu_discovery.0,
             )
         }
     }
