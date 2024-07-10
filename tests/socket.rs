@@ -57,6 +57,11 @@ use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
 use socket2::MaybeUninitSlice;
 #[cfg(not(target_os = "vita"))]
 use socket2::TcpKeepalive;
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
+use socket2::TimestampingFlags;
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 
 #[test]
@@ -1488,6 +1493,37 @@ test!(
 test!(IPv4 multicast_all_v4, set_multicast_all_v4(false));
 #[cfg(all(feature = "all", target_os = "linux"))]
 test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
+
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "redox", target_os = "hurd", target_os = "windows"))
+))]
+test!(timestamp, set_timestamp(true));
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+test!(timestamp_ns, set_timestamp_ns(true));
+#[test]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "windows")
+))]
+fn timestamping() {
+    let mut t_flags = TimestampingFlags::default();
+    #[cfg(target_os = "windows")]
+    t_flags.set_rx(true);
+    #[cfg(not(target_os = "windows"))]
+    t_flags.set_rx_software_gen(true);
+
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    socket.set_timestamping(t_flags).unwrap();
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Windows socket api does not support getting the currently set flags
+        // for timestamping so we only query this on supported unix systems
+        let queried_t_flags = socket.timestamping().unwrap();
+        assert_eq!(t_flags, queried_t_flags);
+    }
+}
 
 #[test]
 #[cfg(not(any(
