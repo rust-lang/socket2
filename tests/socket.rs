@@ -1372,6 +1372,12 @@ test!(
     ip_transparent_v4,
     set_ip_transparent_v4(true)
 );
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+test!(
+    #[ignore = "setting `IPV6_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
+    ip_transparent_v6,
+    set_ip_transparent_v6(true)
+);
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(
     #[ignore = "setting `SO_MARK` requires the `CAP_NET_ADMIN` capability (works when running as root)"]

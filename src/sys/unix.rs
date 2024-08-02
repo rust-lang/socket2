@@ -3191,6 +3191,54 @@ impl crate::Socket {
             )
         }
     }
+
+    /// Get the value of the `IPV6_TRANSPARENT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_transparent_v6`].
+    ///
+    /// [`set_ip_transparent_v6`]: crate::Socket::set_ip_transparent_v6
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn ip_transparent_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IPV6, libc::IPV6_TRANSPARENT)
+                .map(|transparent| transparent != 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_TRANSPARENT` option on this socket.
+    ///
+    /// Setting this boolean option enables transparent proxying
+    /// on this socket.  This socket option allows the calling
+    /// application to bind to a nonlocal IP address and operate
+    /// both as a client and a server with the foreign address as
+    /// the local endpoint.  NOTE: this requires that routing be
+    /// set up in a way that packets going to the foreign address
+    /// are routed through the TProxy box (i.e., the system
+    /// hosting the application that employs the IPV6_TRANSPARENT
+    /// socket option).  Enabling this socket option requires
+    /// superuser privileges (the `CAP_NET_ADMIN` capability).
+    ///
+    /// TProxy redirection with the iptables TPROXY target also
+    /// requires that this option be set on the redirected socket.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn set_ip_transparent_v6(&self, transparent: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IPV6,
+                libc::IPV6_TRANSPARENT,
+                transparent as c_int,
+            )
+        }
+    }
 }
 
 /// See [`Socket::dccp_available_ccids`].
