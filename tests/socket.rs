@@ -1369,8 +1369,8 @@ test!(
 ))]
 test!(
     #[ignore = "setting `IP_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
-    ip_transparent,
-    set_ip_transparent(true)
+    ip_transparent_v4,
+    set_ip_transparent_v4(true)
 );
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(

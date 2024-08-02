@@ -3098,11 +3098,7 @@ impl crate::Socket {
         }
     }
 
-    /// Get the value of the `IP_TRANSPARENT` option on this socket.
-    ///
-    /// For more information about this option, see [`set_ip_transparent`].
-    ///
-    /// [`set_ip_transparent`]: Socket::set_ip_transparent
+    /// This method is deprecated, use [`crate::Socket::ip_transparent_v4`].
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "linux", target_os = "fuchsia")
@@ -3114,11 +3110,49 @@ impl crate::Socket {
             any(target_os = "android", target_os = "linux", target_os = "fuchsia")
         )))
     )]
+    #[deprecated = "Use `Socket::ip_transparent_v4` instead"]
     pub fn ip_transparent(&self) -> io::Result<bool> {
+        self.ip_transparent_v4()
+    }
+
+    /// Get the value of the `IP_TRANSPARENT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_transparent_v4`].
+    ///
+    /// [`set_ip_transparent_v4`]: crate::Socket::set_ip_transparent_v4
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    pub fn ip_transparent_v4(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IP, libc::IP_TRANSPARENT)
                 .map(|transparent| transparent != 0)
         }
+    }
+
+    /// This method is deprecated, use [`crate::Socket::set_ip_transparent_v4`].
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    #[deprecated = "Use `Socket::set_ip_transparent_v4` instead"]
+    pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
+        self.set_ip_transparent_v4(transparent)
     }
 
     /// Set the value of the `IP_TRANSPARENT` option on this socket.
@@ -3147,7 +3181,7 @@ impl crate::Socket {
             any(target_os = "android", target_os = "linux", target_os = "fuchsia")
         )))
     )]
-    pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
+    pub fn set_ip_transparent_v4(&self, transparent: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
