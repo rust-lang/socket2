@@ -3103,8 +3103,17 @@ impl crate::Socket {
     /// For more information about this option, see [`set_ip_transparent`].
     ///
     /// [`set_ip_transparent`]: Socket::set_ip_transparent
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
     pub fn ip_transparent(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IP, libc::IP_TRANSPARENT)
@@ -3127,8 +3136,17 @@ impl crate::Socket {
     ///
     /// TProxy redirection with the iptables TPROXY target also
     /// requires that this option be set on the redirected socket.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
     pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
