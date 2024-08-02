@@ -1212,48 +1212,6 @@ impl Socket {
         }
     }
 
-    /// Get the value of the `IP_TRANSPARENT` option on this socket.
-    ///
-    /// For more information about this option, see [`set_ip_transparent`].
-    ///
-    /// [`set_ip_transparent`]: Socket::set_ip_transparent
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
-    pub fn ip_transparent(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, libc::IP_TRANSPARENT)
-                .map(|transparent| transparent != 0)
-        }
-    }
-
-    /// Set the value of the `IP_TRANSPARENT` option on this socket.
-    ///
-    /// Setting this boolean option enables transparent proxying
-    /// on this socket.  This socket option allows the calling
-    /// application to bind to a nonlocal IP address and operate
-    /// both as a client and a server with the foreign address as
-    /// the local endpoint.  NOTE: this requires that routing be
-    /// set up in a way that packets going to the foreign address
-    /// are routed through the TProxy box (i.e., the system
-    /// hosting the application that employs the IP_TRANSPARENT
-    /// socket option).  Enabling this socket option requires
-    /// superuser privileges (the `CAP_NET_ADMIN` capability).
-    ///
-    /// TProxy redirection with the iptables TPROXY target also
-    /// requires that this option be set on the redirected socket.
-    #[cfg(all(feature = "all", target_os = "linux"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "linux"))))]
-    pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.as_raw(),
-                sys::IPPROTO_IP,
-                libc::IP_TRANSPARENT,
-                transparent as c_int,
-            )
-        }
-    }
-
     /// Join a multicast group using `IP_ADD_MEMBERSHIP` option on this socket.
     ///
     /// This function specifies a new multicast group for this socket to join.
