@@ -1410,7 +1410,9 @@ test!(keepalive, set_keepalive(true));
     any(
         target_os = "android",
         target_os = "fuchsia",
-        target_os = "linux"
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "openbsd"
     )
 ))]
 test!(ip_bindany_v4, set_ip_bindany_v4(true));
@@ -1418,7 +1420,9 @@ test!(ip_bindany_v4, set_ip_bindany_v4(true));
     feature = "all",
     any(
         target_os = "android",
-        target_os = "linux"
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "openbsd"
     )
 ))]
 test!(IPv6 ip_bindany_v6, set_ip_bindany_v6(true));

@@ -3188,18 +3188,34 @@ impl crate::Socket {
     /// [`set_ip_bindany_v4`]: crate::Socket::set_ip_bindany_v4
     #[cfg(all(
         feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
     ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(
             feature = "all",
-            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+            any(
+                target_os = "android",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
         )))
     )]
     pub fn ip_bindany_v4(&self) -> io::Result<bool> {
         #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
         let (level, opt) = (libc::SOL_IP, libc::IP_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IP, libc::IP_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
 
         unsafe { getsockopt::<c_int>(self.as_raw(), level, opt).map(|bindany| bindany != 0) }
     }
@@ -3214,18 +3230,34 @@ impl crate::Socket {
     /// be up at the time that the application is trying to bind to it.
     #[cfg(all(
         feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
     ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(
             feature = "all",
-            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+            any(
+                target_os = "android",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
         )))
     )]
     pub fn set_ip_bindany_v4(&self, bindany: bool) -> io::Result<()> {
         #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
         let (level, opt) = (libc::SOL_IP, libc::IP_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IP, libc::IP_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
 
         unsafe { setsockopt(self.as_raw(), level, opt, bindany as c_int) }
     }
@@ -3237,14 +3269,34 @@ impl crate::Socket {
     /// For more information about this option, see [`set_ip_bindany_v6`].
     ///
     /// [`set_ip_bindany_v6`]: crate::Socket::set_ip_bindany_v6
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
+        )))
     )]
     pub fn ip_bindany_v6(&self) -> io::Result<bool> {
         #[cfg(any(target_os = "android", target_os = "linux"))]
         let (level, opt) = (libc::SOL_IPV6, libc::IPV6_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IPV6, libc::IPV6_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
 
         unsafe { getsockopt::<c_int>(self.as_raw(), level, opt).map(|bindany| bindany != 0) }
     }
@@ -3257,14 +3309,34 @@ impl crate::Socket {
     /// For more information about this option, see [`set_ip_bindany_v4`].
     ///
     /// [`set_ip_bindany_v4`]: crate::Socket::set_ip_bindany_v4
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
+    ))]
     #[cfg_attr(
         docsrs,
-        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
+        )))
     )]
     pub fn set_ip_bindany_v6(&self, bindany: bool) -> io::Result<()> {
         #[cfg(any(target_os = "android", target_os = "linux"))]
         let (level, opt) = (libc::SOL_IPV6, libc::IPV6_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IPV6, libc::IPV6_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
 
         unsafe { setsockopt(self.as_raw(), level, opt, bindany as c_int) }
     }
