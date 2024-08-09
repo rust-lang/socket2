@@ -1555,6 +1555,37 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `SO_DONTROUTE` option on this socket.
+    ///
+    /// For more information about this option, see [`set_dont_route`].
+    ///
+    /// [`set_dont_route`]: crate::Socket::set_dont_route
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    pub fn dont_route(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_DONTROUTE)
+                .map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set the value of the `SO_DONTROUTE` option on this socket.
+    ///
+    /// If set, it instructs the operating system's network stack to bypass the normal
+    /// routing table for outgoing packets on that socket. Instead of using the routing
+    /// table to determine the path to the destination, packets are sent directly to
+    /// the network interface that is connected to the destination network.
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    pub fn set_dont_route(&self, dont_route: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt::<c_int>(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_DONTROUTE,
+                dont_route as c_int,
+            )
+        }
+    }
+
     /// Gets the value of the `TCP_MAXSEG` option on this socket.
     ///
     /// For more information about this option, see [`set_mss`].
