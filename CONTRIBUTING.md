@@ -46,7 +46,7 @@ a collection of system calls for creating and using the socket, e.g.
 for getting and setting socket options on various levels, e.g. `SOL_SOCKET`,
 where each block contains a single level. The methods in these block are sorted
 based on the option name, e.g. `IP_ADD_MEMBERSHIP` rather than
-`join_multicast_v4`. Finally the last block contains platforms specific methods
+`join_multicast_v4`. Finally, the last block contains platforms specific methods
 such as `Socket::freebind` which is (at the time of writing) only available on
 Android, Linux and Fuchsia, which is defined in the `src/sys/*.rs` files.
 
@@ -59,7 +59,7 @@ Other types are mostly defined in `src/lib.rs`, except for `SockAddr` and
 
 Testing Socket2 is as simple as running `cargo test --all-features`.
 
-However Socket2 supports a good number of OSs and features. If you want to
+However, Socket2 supports a good number of OSs and features. If you want to
 test/check all those combinations it's easier to use the [Makefile]. Using `make
 test_all` it will check all supported OS targets and all combinations of
 supported features. Note that this requires [cargo-hack] and various rustup

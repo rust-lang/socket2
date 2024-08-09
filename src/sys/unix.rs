@@ -819,7 +819,7 @@ impl SockAddr {
             .unwrap_or_default()
     }
 
-    /// Returns the underlying `sockaddr_un` object if this addres is from the `AF_UNIX` family,
+    /// Returns the underlying `sockaddr_un` object if this address is from the `AF_UNIX` family,
     /// otherwise returns `None`.
     pub(crate) fn as_sockaddr_un(&self) -> Option<&libc::sockaddr_un> {
         self.is_unix().then(|| {
@@ -838,7 +838,7 @@ impl SockAddr {
         self.len() as usize - offset_of_path(storage) - 1
     }
 
-    /// Get a u8 slice for the bytes of the pathname or abstract name.
+    /// Get an u8 slice for the bytes of the pathname or abstract name.
     ///
     /// Should not be called on unnamed addresses.
     fn path_bytes(&self, storage: &libc::sockaddr_un, abstract_name: bool) -> &[u8] {
@@ -954,10 +954,10 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
             Ok(_) => {
                 // Error or hang up indicates an error (or failure to connect).
                 if (pollfd.revents & libc::POLLHUP) != 0 || (pollfd.revents & libc::POLLERR) != 0 {
-                    match socket.take_error() {
-                        Ok(Some(err)) | Err(err) => return Err(err),
+                    return match socket.take_error() {
+                        Ok(Some(err)) | Err(err) => Err(err),
                         Ok(None) => {
-                            return Err(io::Error::new(
+                            Err(io::Error::new(
                                 io::ErrorKind::Other,
                                 "no error set after POLLHUP",
                             ))
@@ -1099,7 +1099,7 @@ pub(crate) fn recv_from_vectored(
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
     let mut msg = MsgHdrMut::new().with_buffers(bufs);
-    // SAFETY: `recvmsg` initialises the address storage and we set the length
+    // SAFETY: `recvmsg` initialises the address storage, and we set the length
     // manually.
     let (n, addr) = unsafe {
         SockAddr::try_init(|storage, len| {
@@ -1635,7 +1635,7 @@ impl crate::Socket {
     /// Set the value of the `SO_RCVLOWAT` option on this socket.
     ///
     /// This option sets the minimum number of bytes that must be available in the
-    /// receive buffer before a recv() or read() call will return.
+    /// receive buffer before a `recv()` or `read()` call will return.
     // TODO: add Redox support, but I'm not sure if Redox supports SO_RCVLOWAT
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_rcv_lowat(&self, rcv_lowat: u32) -> io::Result<()> {
@@ -1666,7 +1666,7 @@ impl crate::Socket {
     /// Set the value of the `SO_SNDLOWAT` option on this socket.
     ///
     /// This option sets the minimum number of bytes that must be available in the send buffer
-    /// before a send() or write() call will return.
+    /// before a `send()` or `write()` call will return.
     // TODO: add Redox support, but I'm not sure if Redox supports SO_SNDLOWAT
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_snd_lowat(&self, snd_lowat: u32) -> io::Result<()> {
@@ -2903,7 +2903,7 @@ impl crate::Socket {
 
     /// Set the value of the `IPV6_TCLASS` option for this socket.
     ///
-    /// Specifies the traffic class field that is used in every packets
+    /// Specifies the traffic class field that is used in every packet
     /// sent from this socket.
     #[cfg(all(
         feature = "all",
@@ -2973,7 +2973,7 @@ impl crate::Socket {
     /// Specifies the TCP congestion control algorithm to use for this socket.
     ///
     /// The value must be a valid TCP congestion control algorithm name of the
-    /// platform. For example, Linux may supports "reno", "cubic".
+    /// platform. For example, Linux may support "reno", "cubic".
     #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
     #[cfg_attr(
         docsrs,
@@ -3305,7 +3305,7 @@ from!(crate::Socket, UnixDatagram);
 fn in_addr_convertion() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let raw = to_in_addr(&ip);
-    // NOTE: `in_addr` is packed on NetBSD and it's unsafe to borrow.
+    // NOTE: `in_addr` is packed on NetBSD, and it's unsafe to borrow.
     let a = raw.s_addr;
     assert_eq!(a, u32::from_ne_bytes([127, 0, 0, 1]));
     assert_eq!(from_in_addr(raw), ip);

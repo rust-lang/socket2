@@ -472,7 +472,7 @@ where
 const DATA: &[u8] = b"hello world";
 
 #[test]
-fn connect_timeout_unrouteable() {
+fn connect_timeout_unroutable() {
     // This IP is unroutable, so connections should always time out.
     let addr = "10.255.255.1:80".parse::<SocketAddr>().unwrap().into();
 
@@ -1634,7 +1634,7 @@ fn tcp_congestion() {
     socket
         .set_tcp_congestion(&origin_tcp_ca)
         .expect("failed to set tcp congestion algorithm");
-    // Return a Err when set a non-exist tcp_ca
+    // Return an Err when set a non-exist tcp_ca
     socket
         .set_tcp_congestion(b"tcp_congestion_does_not_exist")
         .unwrap_err();
@@ -1676,16 +1676,13 @@ fn dccp() {
     let listener = Socket::new(Domain::IPV4, Type::DCCP, Some(Protocol::DCCP)).unwrap();
     let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap().into();
     listener.set_dccp_service(45).unwrap();
-    assert!(listener.dccp_service().unwrap() == 45);
+    assert_eq!(listener.dccp_service().unwrap(), 45);
     assert!(listener.dccp_cur_mps().unwrap() > 0);
     assert!(listener.dccp_available_ccids::<4>().unwrap().len() >= 3);
-    assert!(
-        listener.dccp_send_cscov().unwrap() == 0,
-        "sender cscov should be zero by default"
-    );
+    assert_eq!(listener.dccp_send_cscov().unwrap(), 0, "sender cscov should be zero by default");
     listener.set_dccp_ccid(2).unwrap();
     listener.set_dccp_qpolicy_txqlen(6).unwrap();
-    assert!(listener.dccp_qpolicy_txqlen().unwrap() == 6);
+    assert_eq!(listener.dccp_qpolicy_txqlen().unwrap(), 6);
     listener.bind(&addr).unwrap();
     listener.listen(10).unwrap();
 
@@ -1695,9 +1692,9 @@ fn dccp() {
 
     let (mut accepted, _) = listener.accept().unwrap();
     let msg = "Hello World!";
-    assert!(client.write(msg.as_bytes()).unwrap() == msg.len());
+    assert_eq!(client.write(msg.as_bytes()).unwrap(), msg.len());
     let mut recv_buf = [0_u8; 64];
-    assert!(accepted.read(&mut recv_buf).unwrap() == msg.len());
+    assert_eq!(accepted.read(&mut recv_buf).unwrap(), msg.len());
 }
 
 #[test]

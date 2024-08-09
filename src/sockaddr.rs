@@ -51,7 +51,7 @@ impl SockAddr {
     /// let mut addr_storage: libc::sockaddr_storage = unsafe { mem::zeroed() };
     /// let mut len = mem::size_of_val(&addr_storage) as libc::socklen_t;
     ///
-    /// // The `getsockname(2)` system call will intiliase `storage` for
+    /// // The `getsockname(2)` system call will initialise `storage` for
     /// // us, setting `len` to the correct length.
     /// let res = unsafe {
     ///     libc::getsockname(
@@ -105,7 +105,7 @@ impl SockAddr {
     /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
     /// let (_, address) = unsafe {
     ///     SockAddr::try_init(|addr_storage, len| {
-    ///         // The `getsockname(2)` system call will intiliase `storage` for
+    ///         // The `getsockname(2)` system call will initialise `storage` for
     ///         // us, setting `len` to the correct length.
     ///         if libc::getsockname(socket.as_raw_fd(), addr_storage.cast(), len) == -1 {
     ///             Err(io::Error::last_os_error())
@@ -183,7 +183,7 @@ impl SockAddr {
         ptr::addr_of!(self.storage).cast()
     }
 
-    /// Retuns the address as the storage.
+    /// Returns the address as the storage.
     pub const fn as_storage(self) -> sockaddr_storage {
         self.storage
     }
@@ -258,7 +258,7 @@ impl SockAddr {
     /// Returns the initialised storage bytes.
     fn as_bytes(&self) -> &[u8] {
         // SAFETY: `self.storage` is a C struct which can always be treated a
-        // slice of bytes. Furthermore, we ensure we don't read any unitialised
+        // slice of bytes. Furthermore, we ensure we don't read any uninitialized
         // bytes by using `self.len`.
         unsafe { std::slice::from_raw_parts(self.as_ptr().cast(), self.len as usize) }
     }
@@ -550,18 +550,18 @@ mod tests {
 
     #[allow(clippy::eq_op)] // allow a0 == a0 check
     fn test_eq(a0: SockAddr, a1: SockAddr, b: SockAddr) {
-        assert!(a0 == a0);
-        assert!(a0 == a1);
-        assert!(a1 == a0);
-        assert!(a0 != b);
-        assert!(b != a0);
+        assert_eq!(a0, a0);
+        assert_eq!(a0, a1);
+        assert_eq!(a1, a0);
+        assert_ne!(a0, b);
+        assert_ne!(b, a0);
     }
 
     fn test_hash(a0: SockAddr, a1: SockAddr, b: SockAddr) {
-        assert!(calculate_hash(&a0) == calculate_hash(&a0));
-        assert!(calculate_hash(&a0) == calculate_hash(&a1));
+        assert_eq!(calculate_hash(&a0), calculate_hash(&a0));
+        assert_eq!(calculate_hash(&a0), calculate_hash(&a1));
         // technically unequal values can have the same hash, in this case x != z and both have different hashes
-        assert!(calculate_hash(&a0) != calculate_hash(&b));
+        assert_ne!(calculate_hash(&a0), calculate_hash(&b));
     }
 
     fn calculate_hash(x: &SockAddr) -> u64 {

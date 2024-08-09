@@ -95,7 +95,7 @@ impl Socket {
                 // memory unsafe, so it's not desired but never memory unsafe or
                 // causes UB.
                 //
-                // However there is one exception. We use `TcpStream` to
+                // However, there is one exception. We use `TcpStream` to
                 // represent the `Socket` internally (see `Inner` type),
                 // `TcpStream` has a layout optimisation that doesn't allow for
                 // negative file descriptors (as those are always invalid).
@@ -206,7 +206,7 @@ impl Socket {
         sys::connect(self.as_raw(), address)
     }
 
-    /// Initiate a connection on this socket to the specified address, only
+    /// Initiate a connection on this socket to the specified address,
     /// only waiting for a certain period of time for the connection to be
     /// established.
     ///
@@ -408,7 +408,7 @@ impl Socket {
     ///
     /// Normally casting a `&mut [u8]` to `&mut [MaybeUninit<u8>]` would be
     /// unsound, as that allows us to write uninitialised bytes to the buffer.
-    /// However this implementation promises to not write uninitialised bytes to
+    /// However, this implementation promises to not write uninitialised bytes to
     /// the `buf`fer and passes it directly to `recv(2)` system call. This
     /// promise ensures that this function can be called using a `buf`fer of
     /// type `&mut [u8]`.
@@ -461,7 +461,7 @@ impl Socket {
     /// # Safety
     ///
     /// Normally casting a `IoSliceMut` to `MaybeUninitSlice` would be unsound,
-    /// as that allows us to write uninitialised bytes to the buffer. However
+    /// as that allows us to write uninitialised bytes to the buffer. However,
     /// this implementation promises to not write uninitialised bytes to the
     /// `bufs` and passes it directly to `recvmsg(2)` system call. This promise
     /// ensures that this function can be called using `bufs` of type `&mut
@@ -500,7 +500,7 @@ impl Socket {
         sys::recv_vectored(self.as_raw(), bufs, flags)
     }
 
-    /// Receives data on the socket from the remote adress to which it is
+    /// Receives data on the socket from the remote address to which it is
     /// connected, without removing that data from the queue. On success,
     /// returns the number of bytes peeked.
     ///
@@ -602,7 +602,7 @@ impl Socket {
     /// # Note: Datagram Sockets
     /// For datagram sockets, the behavior of this method when `buf` is smaller than
     /// the datagram at the head of the receive queue differs between Windows and
-    /// Unix-like platforms (Linux, macOS, BSDs, etc: colloquially termed "*nix").
+    /// Unix-like platforms (Linux, macOS, BSDs, etc.: colloquially termed "*nix").
     ///
     /// On *nix platforms, the datagram is truncated to the length of `buf`.
     ///
@@ -927,7 +927,7 @@ impl Socket {
     /// On most OSs the duration only has a precision of seconds and will be
     /// silently truncated.
     ///
-    /// On Apple platforms (e.g. macOS, iOS, etc) this uses `SO_LINGER_SEC`.
+    /// On Apple platforms (e.g. macOS, iOS, etc.) this uses `SO_LINGER_SEC`.
     pub fn set_linger(&self, linger: Option<Duration>) -> io::Result<()> {
         let linger = into_linger(linger);
         unsafe { setsockopt(self.as_raw(), sys::SOL_SOCKET, sys::SO_LINGER, linger) }
@@ -1512,7 +1512,7 @@ impl Socket {
     /// Set the value of the `IP_MULTICAST_LOOP` option for this socket.
     ///
     /// If enabled, multicast packets will be looped back to the local socket.
-    /// Note that this may not have any affect on IPv6 sockets.
+    /// Note that this may not have any effect on IPv6 sockets.
     pub fn set_multicast_loop_v4(&self, loop_v4: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1542,7 +1542,7 @@ impl Socket {
     /// this socket. The default value is 1 which means that multicast packets
     /// don't leave the local network unless explicitly requested.
     ///
-    /// Note that this may not have any affect on IPv6 sockets.
+    /// Note that this may not have any effect on IPv6 sockets.
     pub fn set_multicast_ttl_v4(&self, ttl: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1878,7 +1878,7 @@ impl Socket {
     /// Set the value of the `IPV6_MULTICAST_LOOP` option for this socket.
     ///
     /// Controls whether this socket sees the multicast packets it sends itself.
-    /// Note that this may not have any affect on IPv4 sockets.
+    /// Note that this may not have any effect on IPv4 sockets.
     pub fn set_multicast_loop_v6(&self, loop_v6: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2219,7 +2219,7 @@ impl Read for Socket {
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
         // Safety: both `IoSliceMut` and `MaybeUninitSlice` promise to have the
         // same layout, that of `iovec`/`WSABUF`. Furthermore, `recv_vectored`
-        // promises to not write unitialised bytes to the `bufs` and pass it
+        // promises to not write uninitialized bytes to the `bufs` and pass it
         // directly to the `recvmsg` system call, so this is safe.
         let bufs = unsafe { &mut *(bufs as *mut [IoSliceMut<'_>] as *mut [MaybeUninitSlice<'_>]) };
         self.recv_vectored(bufs).map(|(n, _)| n)
