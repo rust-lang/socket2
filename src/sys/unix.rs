@@ -1586,6 +1586,38 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `SO_DEBUG` option on this socket.
+    ///
+    /// For more information about this option, see [`set_debug`].
+    ///
+    /// [`set_debug`]: crate::Socket::set_debug
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    pub fn debug(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_DEBUG)
+                .map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set the value of the `SO_DEBUG` option on this socket.
+    ///
+    /// If set, the operating system may generate additional diagnostic or debugging
+    /// information related to the socket's operations.
+    /// However, the actual behavior and utility of `SO_DEBUG` vary significantly
+    /// between different operating systems, and in many cases,
+    /// it is either minimally implemented or largely deprecated.
+    #[cfg(all(feature = "all", not(target_os = "redox")))]
+    pub fn set_debug(&self, debug: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt::<c_int>(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_DEBUG,
+                debug as c_int,
+            )
+        }
+    }
+
     /// Gets the value of the `TCP_MAXSEG` option on this socket.
     ///
     /// For more information about this option, see [`set_mss`].
