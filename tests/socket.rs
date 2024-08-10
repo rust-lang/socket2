@@ -1347,6 +1347,26 @@ test!(
     set_send_buffer_size(SET_BUF_SIZE),
     GET_BUF_SIZE
 );
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "redox", target_os = "windows"))
+))]
+test!(dont_route, set_dont_route(true));
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "redox", target_os = "windows"))
+))]
+test!(debug, set_debug(true));
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "redox", target_os = "windows"))
+))]
+test!(snd_lowat, set_snd_lowat(1024));
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "redox", target_os = "windows"))
+))]
+test!(rcv_lowat, set_rcv_lowat(1024));
 #[cfg(not(target_os = "redox"))]
 test!(out_of_band_inline, set_out_of_band_inline(true));
 test!(reuse_address, set_reuse_address(true));
