@@ -1623,7 +1623,6 @@ impl crate::Socket {
     /// For more information about this option, see [`set_rcv_lowat`].
     ///
     /// [`set_rcv_lowat`]: crate::Socket::set_rcv_lowat
-    // TODO: add Redox support, but I'm not sure if Redox supports SO_RCVLOWAT
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn rcv_lowat(&self) -> io::Result<u32> {
         unsafe {
@@ -1636,7 +1635,6 @@ impl crate::Socket {
     ///
     /// This option sets the minimum number of bytes that must be available in the
     /// receive buffer before a `recv()` or `read()` call will return.
-    // TODO: add Redox support, but I'm not sure if Redox supports SO_RCVLOWAT
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_rcv_lowat(&self, rcv_lowat: u32) -> io::Result<()> {
         unsafe {
@@ -1654,11 +1652,10 @@ impl crate::Socket {
     /// For more information about this option, see [`set_snd_lowat`].
     ///
     /// [`set_snd_lowat`]: crate::Socket::set_snd_lowat
-    // TODO: add Redox support, but I'm not sure if Redox supports SO_SNDLOWAT
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn snd_lowat(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_RCVLOWAT)
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_SOCKET, libc::SO_SNDLOWAT)
                 .map(|snd_lowat| { snd_lowat as u32})
         }
     }
@@ -1667,14 +1664,13 @@ impl crate::Socket {
     ///
     /// This option sets the minimum number of bytes that must be available in the send buffer
     /// before a `send()` or `write()` call will return.
-    // TODO: add Redox support, but I'm not sure if Redox supports SO_SNDLOWAT
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn set_snd_lowat(&self, snd_lowat: u32) -> io::Result<()> {
         unsafe {
             setsockopt::<c_int>(
                 self.as_raw(),
                 libc::SOL_SOCKET,
-                libc::SO_RCVLOWAT,
+                libc::SO_SNDLOWAT,
                 snd_lowat as c_int,
             )
         }
