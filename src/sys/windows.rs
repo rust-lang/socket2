@@ -890,7 +890,8 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         storage.sun_family = crate::sys::AF_UNIX as sa_family_t;
         // `storage` was initialized to zero above, so the path is
         // already null terminated.
-        storage.sun_path[..bytes.len()].copy_from_slice(bytes);
+        storage.sun_path[..bytes.len()]
+            .copy_from_slice(unsafe { mem::transmute::<&[u8], &[i8]>(bytes) });
 
         let base = storage as *const _ as usize;
         let path = &storage.sun_path as *const _ as usize;
