@@ -245,6 +245,11 @@ pub(crate) use libc::{
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+pub(crate) use libc::{
+    in6_pktinfo as In6PktInfo, in_pktinfo as InPktInfo, IPV6_PKTINFO, IPV6_RECVPKTINFO, IP_PKTINFO,
+};
+
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
@@ -712,6 +717,9 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
 pub(crate) use libc::msghdr;
 
 #[cfg(not(target_os = "redox"))]
+pub(crate) use libc::cmsghdr;
+
+#[cfg(not(target_os = "redox"))]
 pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
     msg.msg_name = name.as_ptr() as *mut _;
     msg.msg_namelen = name.len();
@@ -1107,6 +1115,36 @@ pub(crate) fn recvmsg(
     flags: c_int,
 ) -> io::Result<usize> {
     syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
+}
+
+use crate::{CMsgHdrOps, MsgHdrInit, MsgHdrOps};
+use libc::{CMSG_DATA, CMSG_FIRSTHDR, CMSG_NXTHDR, CMSG_SPACE};
+
+#[cfg(not(target_os = "redox"))]
+pub(crate) fn recvmsg_init(fd: Socket, msg: &mut MsgHdrInit, flags: c_int) -> io::Result<usize> {
+    syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
+}
+
+impl MsgHdrOps for msghdr {
+    fn cmsg_first_hdr(&self) -> *mut cmsghdr {
+        unsafe { CMSG_FIRSTHDR(self) }
+    }
+
+    fn cmsg_next_hdr(&self, cmsg: &cmsghdr) -> *mut cmsghdr {
+        unsafe { CMSG_NXTHDR(self, cmsg) }
+    }
+}
+
+impl CMsgHdrOps for cmsghdr {
+    fn cmsg_data(&self) -> *mut u8 {
+        unsafe { CMSG_DATA(self) }
+    }
+}
+
+/// Given a payload of `data_len`, returns the number of bytes a control message occupies.
+/// i.e. it includes the header, the data and the alignments.
+pub(crate) fn _cmsg_space(data_len: usize) -> usize {
+    unsafe { CMSG_SPACE(data_len as _) as usize }
 }
 
 pub(crate) fn send(fd: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {

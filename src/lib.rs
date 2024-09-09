@@ -58,17 +58,17 @@
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
-use std::fmt;
 #[cfg(not(target_os = "redox"))]
-use std::io::IoSlice;
+use std::io::{IoSlice, IoSliceMut};
 #[cfg(not(target_os = "redox"))]
 use std::marker::PhantomData;
 #[cfg(not(target_os = "redox"))]
 use std::mem;
 use std::mem::MaybeUninit;
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
+use std::{fmt, ptr};
 
 /// Macro to implement `fmt::Debug` for a type, printing the constant names
 /// rather than a number.
@@ -736,3 +736,242 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
         "MsgHdrMut".fmt(fmt)
     }
 }
+
+/// Configuration of a `recvmsg(2)` system call with initialized buffers.
+///
+/// This wraps `msghdr` on Unix and `WSAMSG` on Windows and supports
+/// fully initialized buffers.
+#[cfg(not(target_os = "redox"))]
+pub struct MsgHdrInit {
+    inner: sys::msghdr,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl MsgHdrInit {
+    /// Create a new `MsgHdrInit` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MsgHdrInit {
+        // SAFETY: all zero is valid for `msghdr` and `WSAMSG`.
+        MsgHdrInit {
+            inner: unsafe { mem::zeroed() },
+        }
+    }
+
+    /// Set the mutable address buffer to store the source address.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
+    /// and `namelen` on Windows.
+    #[allow(clippy::needless_pass_by_ref_mut)]
+    pub fn with_addr(mut self, addr: &mut SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner, addr);
+        self
+    }
+
+    /// Set the mutable array of buffers for receiving the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
+    /// and `dwBufferCount` on Windows.
+    ///
+    /// For example: using only a single buffer of 1k bytes:
+    /// ```ignore
+    ///     let mut buffer = vec![0; 1024];
+    ///     let mut buf_list = [IoSliceMut::new(&mut buffer)];
+    /// ```
+    pub fn with_buffers(mut self, buf_list: &mut [IoSliceMut<'_>]) -> Self {
+        sys::set_msghdr_iov(
+            &mut self.inner,
+            buf_list.as_mut_ptr().cast(),
+            buf_list.len(),
+        );
+        self
+    }
+
+    /// Set the mutable control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
+    /// `Control` on Windows.
+    pub fn with_control(mut self, buf: &mut [u8]) -> Self {
+        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), buf.len());
+        self
+    }
+
+    /// Returns the list of control message headers in the message.
+    ///
+    /// This decodes the control messages inside the ancillary data buffer.
+    pub fn cmsg_hdr_vec(&self) -> Vec<CMsgHdr<'_>> {
+        let mut cmsg_vec = Vec::new();
+
+        let mut cmsg = self.inner.cmsg_first_hdr();
+        if !cmsg.is_null() {
+            let cmsg_hdr = unsafe { CMsgHdr { inner: &*cmsg } };
+            cmsg_vec.push(cmsg_hdr);
+
+            cmsg = self.inner.cmsg_next_hdr(unsafe { &*cmsg });
+            while !cmsg.is_null() {
+                let cmsg_hdr = unsafe { CMsgHdr { inner: &*cmsg } };
+                cmsg_vec.push(cmsg_hdr);
+            }
+        }
+
+        cmsg_vec
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl fmt::Debug for MsgHdrInit {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MsgHdrInit".fmt(fmt)
+    }
+}
+
+/// Common operations supported on `msghdr`
+pub(crate) trait MsgHdrOps {
+    fn cmsg_first_hdr(&self) -> *mut sys::cmsghdr;
+
+    fn cmsg_next_hdr(&self, cmsg: &sys::cmsghdr) -> *mut sys::cmsghdr;
+}
+
+/// Reference of a control message header in the control buffer in `MsgHdrInit`
+#[cfg(not(target_os = "redox"))]
+pub struct CMsgHdr<'a> {
+    inner: &'a sys::cmsghdr,
+}
+
+impl CMsgHdr<'_> {
+    /// Get the cmsg level
+    pub fn get_level(&self) -> CMsgLevel {
+        self.inner.cmsg_level
+    }
+
+    /// Get the cmsg type
+    pub fn get_type(&self) -> CMsgType {
+        self.inner.cmsg_type
+    }
+
+    /// Decode this header as IN_PKTINFO
+    pub fn as_pktinfo_v4(&self) -> Option<PktInfoV4> {
+        if self.inner.cmsg_level != sys::IPPROTO_IP {
+            return None;
+        }
+
+        if self.inner.cmsg_type != sys::IP_PKTINFO {
+            return None;
+        }
+
+        let data_ptr = self.inner.cmsg_data();
+        let pktinfo = unsafe { ptr::read_unaligned(data_ptr as *const sys::InPktInfo) };
+
+        #[cfg(not(windows))]
+        let addr_dst = Ipv4Addr::from(u32::from_be(pktinfo.ipi_addr.s_addr));
+
+        #[cfg(windows)]
+        let addr_dst = Ipv4Addr::from(u32::from_be(unsafe { pktinfo.ipi_addr.S_un.S_addr }));
+
+        Some(PktInfoV4 {
+            if_index: pktinfo.ipi_ifindex as _,
+            addr_dst,
+        })
+    }
+
+    /// Decode this header as IN6_PKTINFO
+    pub fn as_recvpktinfo_v6(&self) -> Option<PktInfoV6> {
+        if self.inner.cmsg_level != sys::IPPROTO_IPV6 {
+            return None;
+        }
+
+        if self.inner.cmsg_type != sys::IPV6_PKTINFO {
+            return None;
+        }
+
+        let data_ptr = self.inner.cmsg_data();
+        let pktinfo = unsafe { ptr::read_unaligned(data_ptr as *const sys::In6PktInfo) };
+
+        #[cfg(windows)]
+        let addr_dst = Ipv6Addr::from(unsafe { pktinfo.ipi6_addr.u.Byte });
+
+        #[cfg(not(windows))]
+        let addr_dst = Ipv6Addr::from(pktinfo.ipi6_addr.s6_addr);
+
+        Some(PktInfoV6 {
+            if_index: pktinfo.ipi6_ifindex as _,
+            addr_dst,
+        })
+    }
+}
+
+pub(crate) trait CMsgHdrOps {
+    /// Returns a pointer to the data portion of a cmsghdr.
+    fn cmsg_data(&self) -> *mut u8;
+}
+
+/// Given a payload of `data_len`, returns the number of bytes a control message occupies.
+/// i.e. it includes the header, the data and the alignments.
+pub fn cmsg_space(data_len: usize) -> usize {
+    sys::_cmsg_space(data_len)
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'a> fmt::Debug for CMsgHdr<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "(len: {} level: {} type: {})",
+            self.inner.cmsg_len, self.inner.cmsg_level, self.inner.cmsg_type
+        )
+    }
+}
+
+const IN_PKTINFO_SIZE: usize = mem::size_of::<sys::InPktInfo>();
+const IN6_PKTINFO_SIZE: usize = mem::size_of::<sys::In6PktInfo>();
+
+/// Represents IN_PKTINFO structure.
+#[derive(Debug)]
+pub struct PktInfoV4 {
+    /// Interface index
+    pub if_index: u64,
+
+    /// Header destination address
+    pub addr_dst: Ipv4Addr,
+}
+
+impl PktInfoV4 {
+    /// The size in bytes for IPv4 pktinfo
+    pub const fn size() -> usize {
+        IN_PKTINFO_SIZE
+    }
+}
+
+/// Represents IN6_PKTINFO structure.
+#[derive(Debug)]
+pub struct PktInfoV6 {
+    /// Interface index
+    pub if_index: u64,
+
+    /// Header destination address
+    pub addr_dst: Ipv6Addr,
+}
+
+impl PktInfoV6 {
+    /// The size in bytes for IPv6 pktinfo
+    pub const fn size() -> usize {
+        IN6_PKTINFO_SIZE
+    }
+}
+
+/// Represents available protocols
+pub type CMsgLevel = i32;
+
+/// constant for cmsg_level of IPPROTO_IP
+pub const CMSG_LEVEL_IPPROTO_IP: CMsgLevel = sys::IPPROTO_IP;
+
+/// constant for cmsg_level of IPPROTO_IPV6
+pub const CMSG_LEVEL_IPPROTO_IPV6: CMsgLevel = sys::IPPROTO_IPV6;
+
+/// Represents available types of control messages.
+pub type CMsgType = i32;
+
+/// constant for cmsghdr type
+pub const CMSG_TYPE_IP_PKTINFO: CMsgType = sys::IP_PKTINFO;
+
+/// constant for cmsghdr type in IPv6
+pub const CMSG_TYPE_IPV6_PKTINFO: CMsgType = sys::IPV6_PKTINFO;

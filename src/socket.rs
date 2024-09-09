@@ -23,7 +23,7 @@ use std::time::Duration;
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
 #[cfg(all(unix, not(target_os = "redox")))]
 use crate::MsgHdrMut;
-use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+use crate::{Domain, MsgHdrInit, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
 
@@ -74,6 +74,9 @@ use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
 /// ```
 pub struct Socket {
     inner: Inner,
+
+    #[cfg(windows)]
+    wsarecvmsg: Option<sys::WSARecvMsgExtension>,
 }
 
 /// Store a `TcpStream` internally to take advantage of its niche optimizations on Unix platforms.
@@ -87,25 +90,36 @@ impl Socket {
     /// function, often passed as mapping function, it's makes it very
     /// inconvenient to mark it as `unsafe`.
     pub(crate) fn from_raw(raw: sys::Socket) -> Socket {
+        let inner = unsafe {
+            // SAFETY: the caller must ensure that `raw` is a valid file
+            // descriptor, but when it isn't it could return I/O errors, or
+            // potentially close a fd it doesn't own. All of that isn't
+            // memory unsafe, so it's not desired but never memory unsafe or
+            // causes UB.
+            //
+            // However there is one exception. We use `TcpStream` to
+            // represent the `Socket` internally (see `Inner` type),
+            // `TcpStream` has a layout optimisation that doesn't allow for
+            // negative file descriptors (as those are always invalid).
+            // Violating this assumption (fd never negative) causes UB,
+            // something we don't want. So check for that we have this
+            // `assert!`.
+            #[cfg(unix)]
+            assert!(raw >= 0, "tried to create a `Socket` with an invalid fd");
+            sys::socket_from_raw(raw)
+        };
+
+        #[cfg(windows)]
+        let wsarecvmsg = match sys::locate_wsarecvmsg(raw) {
+            Ok(fp) => Some(fp),
+            Err(_) => None,
+        };
+
         Socket {
-            inner: unsafe {
-                // SAFETY: the caller must ensure that `raw` is a valid file
-                // descriptor, but when it isn't it could return I/O errors, or
-                // potentially close a fd it doesn't own. All of that isn't
-                // memory unsafe, so it's not desired but never memory unsafe or
-                // causes UB.
-                //
-                // However there is one exception. We use `TcpStream` to
-                // represent the `Socket` internally (see `Inner` type),
-                // `TcpStream` has a layout optimisation that doesn't allow for
-                // negative file descriptors (as those are always invalid).
-                // Violating this assumption (fd never negative) causes UB,
-                // something we don't want. So check for that we have this
-                // `assert!`.
-                #[cfg(unix)]
-                assert!(raw >= 0, "tried to create a `Socket` with an invalid fd");
-                sys::socket_from_raw(raw)
-            },
+            inner,
+
+            #[cfg(windows)]
+            wsarecvmsg,
         }
     }
 
@@ -543,6 +557,16 @@ impl Socket {
         sys::recv_from(self.as_raw(), buf, flags)
     }
 
+    /// Receives data from the socket with `buf` that is fully initialized.
+    /// On success, returns the number of bytes read and the address from where the data came.
+    pub fn recv_from_initialized(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddr)> {
+        // Safety: the `recv_from` implementation promises not to write uninitialised
+        // bytes to the buffer, so this casting is safe.
+        let buf_uninit = unsafe { &mut *(buf as *mut [u8] as *mut [MaybeUninit<u8>]) };
+
+        sys::recv_from(self.as_raw(), buf_uninit, 0)
+    }
+
     /// Receives data from the socket. Returns the amount of bytes read, the
     /// [`RecvFlags`] and the remote address from the data is coming. Unlike
     /// [`recv_from`] this allows passing multiple buffers.
@@ -640,6 +664,46 @@ impl Socket {
     #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
     pub fn recvmsg(&self, msg: &mut MsgHdrMut<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
         sys::recvmsg(self.as_raw(), msg, flags)
+    }
+
+    /// Receive a message from a socket using a message structure that is fully initialized.
+    #[cfg(all(unix, not(target_os = "redox")))]
+    #[cfg_attr(docsrs, doc(cfg(all(unix, not(target_os = "redox")))))]
+    pub fn recvmsg_initialized(
+        &self,
+        msg: &mut MsgHdrInit,
+        flags: sys::c_int,
+    ) -> io::Result<usize> {
+        sys::recvmsg_init(self.as_raw(), msg, flags)
+    }
+
+    /// Recvmsg with initialized buffers
+    #[cfg(windows)]
+    pub fn recvmsg_initialized(
+        &self,
+        msg: &mut MsgHdrInit,
+        _flags: sys::c_int,
+    ) -> io::Result<usize> {
+        let wsarecvmsg = self.wsarecvmsg.ok_or(io::Error::new(
+            io::ErrorKind::NotFound,
+            "missing WSARECVMSG function",
+        ))?;
+        let mut read_bytes = 0;
+        let error_code = unsafe {
+            (wsarecvmsg)(
+                self.as_raw() as _,
+                &mut msg.inner,
+                &mut read_bytes,
+                std::ptr::null_mut(),
+                None,
+            )
+        };
+
+        if error_code != 0 {
+            return Err(io::Error::last_os_error());
+        }
+
+        Ok(read_bytes as usize)
     }
 
     /// Sends data on the socket to a connected peer.
@@ -1642,6 +1706,25 @@ impl Socket {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_RECVTOS)
                 .map(|recv_tos| recv_tos > 0)
         }
+    }
+
+    /// Set IPv4 PKTINFO for this socket.
+    /// This should be called before the socket binds.
+    pub fn set_pktinfo_v4(&self) -> io::Result<()> {
+        let enable: i32 = 1;
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_PKTINFO, enable) }
+    }
+
+    /// Set IPv6 PKTINFO for this socket.
+    /// This should be called before the socket binds.
+    pub fn set_recv_pktinfo_v6(&self) -> io::Result<()> {
+        #[cfg(not(windows))]
+        let optname = sys::IPV6_RECVPKTINFO;
+
+        #[cfg(windows)]
+        let optname = sys::IPV6_PKTINFO;
+
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IPV6, optname, 1) }
     }
 }
 

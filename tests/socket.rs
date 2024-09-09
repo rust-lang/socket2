@@ -15,6 +15,7 @@ use std::fs::File;
 use std::io;
 #[cfg(not(any(target_os = "redox", target_os = "vita")))]
 use std::io::IoSlice;
+use std::io::IoSliceMut;
 use std::io::Read;
 use std::io::Write;
 #[cfg(not(target_os = "vita"))]
@@ -48,6 +49,12 @@ use std::thread;
 use std::time::Duration;
 use std::{env, fs};
 
+use socket2::cmsg_space;
+use socket2::CMSG_LEVEL_IPPROTO_IP;
+use socket2::CMSG_LEVEL_IPPROTO_IPV6;
+use socket2::CMSG_TYPE_IPV6_PKTINFO;
+use socket2::CMSG_TYPE_IP_PKTINFO;
+use socket2::{MsgHdrInit, PktInfoV4, PktInfoV6};
 #[cfg(windows)]
 use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
 
@@ -747,6 +754,131 @@ fn send_from_recv_to_vectored() {
 }
 
 #[test]
+fn send_to_recv_from_init() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+    let addr_a = socket_a.local_addr().unwrap();
+    let addr_b = socket_b.local_addr().unwrap();
+
+    let data = b"buf_init";
+    let sent = socket_a.send_to(data, &addr_b).unwrap();
+    assert_eq!(sent, data.len());
+
+    let mut buffer = vec![0; data.len()];
+    let received = socket_b.recv_from_initialized(&mut buffer).unwrap();
+    assert_eq!(received.0, data.len());
+    assert_eq!(received.1, addr_a);
+    assert_eq!(&buffer, data);
+}
+
+#[test]
+fn sent_to_recvmsg_init_v6() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+    let addr_a = socket_a.local_addr().unwrap();
+    let addr_b = socket_b.local_addr().unwrap();
+
+    let data = b"sent_to_recvmsg_init";
+    let sent = socket_a.send_to(data, &addr_b).unwrap();
+    assert_eq!(sent, data.len());
+
+    let ipv4addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0);
+    let ipv6addr = SocketAddrV6::new(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1), 8080, 0, 0);
+    let mut sockaddr = if addr_b.is_ipv4() {
+        SockAddr::from(ipv4addr)
+    } else {
+        SockAddr::from(ipv6addr)
+    };
+
+    let mut buffer = vec![0; data.len()];
+    let mut bufs = [IoSliceMut::new(&mut buffer)];
+    let mut msg_control = vec![0; cmsg_space(PktInfoV6::size())];
+    let mut msg = MsgHdrInit::new()
+        .with_addr(&mut sockaddr)
+        .with_buffers(&mut bufs)
+        .with_control(&mut msg_control);
+
+    socket_b.set_recv_pktinfo_v6().unwrap();
+    let received = socket_b.recvmsg_initialized(&mut msg, 0).unwrap();
+
+    assert_eq!(received, data.len());
+    assert_eq!(sockaddr, addr_a);
+    assert_eq!(buffer, data);
+
+    let cmsg_vec = msg.cmsg_hdr_vec();
+    assert!(!cmsg_vec.is_empty());
+    println!("cmsg vec: {:?}", cmsg_vec);
+
+    let mut pktinfo_found = false;
+    for cmsg_hdr in cmsg_vec {
+        if cmsg_hdr.get_level() == CMSG_LEVEL_IPPROTO_IPV6
+            && cmsg_hdr.get_type() == CMSG_TYPE_IPV6_PKTINFO
+        {
+            if let Some(ipv6_pktinfo) = cmsg_hdr.as_recvpktinfo_v6() {
+                pktinfo_found = true;
+                println!("control message: v6 pktinfo: {:?}", ipv6_pktinfo);
+            }
+        }
+    }
+    assert!(pktinfo_found);
+}
+
+#[test]
+fn sent_to_recvmsg_init_v4() {
+    let (socket_a, socket_b) = udp_pair_unconnected_v4();
+    let addr_a = socket_a.local_addr().unwrap();
+    let addr_b = socket_b.local_addr().unwrap();
+
+    // Send a message.
+    let data = b"sent_to_recvmsg_init_v4";
+    let sent = socket_a.send_to(data, &addr_b).unwrap();
+
+    assert_eq!(sent, data.len());
+
+    let ipv4addr = SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0);
+    let ipv6addr = SocketAddrV6::new(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1), 8080, 0, 0);
+    let mut sockaddr = if addr_b.is_ipv4() {
+        SockAddr::from(ipv4addr)
+    } else {
+        SockAddr::from(ipv6addr)
+    };
+
+    let mut buffer = vec![0; data.len()];
+    let mut bufs = [IoSliceMut::new(&mut buffer)];
+    let mut msg_control = vec![0; cmsg_space(PktInfoV4::size())];
+    let mut msg = MsgHdrInit::new()
+        .with_addr(&mut sockaddr)
+        .with_buffers(&mut bufs)
+        .with_control(&mut msg_control);
+
+    // Receive a mesage.
+    let received = socket_b.recvmsg_initialized(&mut msg, 0).unwrap();
+
+    // Verify the data received.
+    assert_eq!(received, data.len());
+    assert_eq!(buffer, data);
+
+    // Verify the source address.
+    assert_eq!(sockaddr, addr_a);
+
+    // Verify the control message and the address that received the packet.
+    let cmsg_vec = msg.cmsg_hdr_vec();
+    assert!(!cmsg_vec.is_empty());
+    println!("cmsg vec: {:?}", cmsg_vec);
+
+    let mut pktinfo_found = false;
+    for cmsg_hdr in cmsg_vec {
+        if cmsg_hdr.get_level() == CMSG_LEVEL_IPPROTO_IP
+            && cmsg_hdr.get_type() == CMSG_TYPE_IP_PKTINFO
+        {
+            if let Some(ip_pktinfo) = cmsg_hdr.as_pktinfo_v4() {
+                println!("control message: pktinfo: {:?}", ip_pktinfo);
+                pktinfo_found = true;
+            }
+        }
+    }
+    assert!(pktinfo_found);
+}
+
+#[test]
 #[cfg(not(any(target_os = "redox", target_os = "vita")))]
 fn sendmsg() {
     let (socket_a, socket_b) = udp_pair_unconnected();
@@ -817,6 +949,40 @@ fn udp_pair_unconnected() -> (Socket, Socket) {
     let unspecified_addr = SocketAddrV6::new(Ipv6Addr::LOCALHOST, 0, 0, 0);
     let socket_a = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
     let socket_b = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
+
+    // Set the socket option before bind.
+    socket_b.set_recv_pktinfo_v6().unwrap();
+
+    socket_a.bind(&unspecified_addr.into()).unwrap();
+    socket_b.bind(&unspecified_addr.into()).unwrap();
+
+    // Set low timeouts to prevent the tests from blocking.
+    socket_a
+        .set_read_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+    socket_b
+        .set_read_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+    socket_a
+        .set_write_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+    socket_b
+        .set_write_timeout(Some(std::time::Duration::from_millis(10)))
+        .unwrap();
+
+    (socket_a, socket_b)
+}
+
+/// Create a pair of non-connected UDP sockets suitable for unit tests.
+#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+fn udp_pair_unconnected_v4() -> (Socket, Socket) {
+    // Use ephemeral ports assigned by the OS.
+    let unspecified_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0);
+    let socket_a = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    let socket_b = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+
+    // Set the socket option before bind.
+    socket_b.set_pktinfo_v4().unwrap();
 
     socket_a.bind(&unspecified_addr.into()).unwrap();
     socket_b.bind(&unspecified_addr.into()).unwrap();

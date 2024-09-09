@@ -24,11 +24,13 @@ use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE, HANDLE_FLAG_I
 use windows_sys::Win32::Networking::WinSock::SO_PROTOCOL_INFOW;
 use windows_sys::Win32::Networking::WinSock::{
     self, tcp_keepalive, FIONBIO, IN6_ADDR, IN6_ADDR_0, INVALID_SOCKET, IN_ADDR, IN_ADDR_0,
-    POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
-    SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
+    LPFN_WSARECVMSG, LPWSAOVERLAPPED_COMPLETION_ROUTINE, POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM,
+    SD_BOTH, SD_RECEIVE, SD_SEND, SIO_GET_EXTENSION_FUNCTION_POINTER, SIO_KEEPALIVE_VALS,
+    SOCKET_ERROR, WSAEMSGSIZE, WSAESHUTDOWN, WSAID_WSARECVMSG, WSAPOLLFD, WSAPROTOCOL_INFOW,
     WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
 };
 use windows_sys::Win32::System::Threading::INFINITE;
+use windows_sys::Win32::System::IO::OVERLAPPED;
 
 use crate::{MsgHdr, RecvFlags, SockAddr, TcpKeepalive, Type};
 
@@ -55,7 +57,8 @@ pub(crate) const SOCK_SEQPACKET: c_int =
     windows_sys::Win32::Networking::WinSock::SOCK_SEQPACKET as c_int;
 // Used in `Protocol`.
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
-    IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP,
+    CMSGHDR as cmsghdr, IN6_PKTINFO as In6PktInfo, IN_PKTINFO as InPktInfo, IPPROTO_ICMP,
+    IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP, IPV6_PKTINFO, IP_PKTINFO, WSABUF,
 };
 // Used in `SockAddr`.
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
@@ -191,6 +194,52 @@ impl<'a> MaybeUninitSlice<'a> {
 
 // Used in `MsgHdr`.
 pub(crate) use windows_sys::Win32::Networking::WinSock::WSAMSG as msghdr;
+
+use crate::CMsgHdrOps;
+
+impl CMsgHdrOps for cmsghdr {
+    fn cmsg_data(&self) -> *mut u8 {
+        (self as *const _ as usize + cmsgdata_align(mem::size_of::<Self>())) as *mut u8
+    }
+}
+
+pub(crate) fn _cmsg_space(length: usize) -> usize {
+    cmsgdata_align(mem::size_of::<cmsghdr>() + cmsghdr_align(length))
+}
+
+// Helpers functions for `WinSock::WSAMSG` and `WinSock::CMSGHDR` are based on C macros from
+// https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/shared/ws2def.h#L741
+fn cmsghdr_align(length: usize) -> usize {
+    (length + mem::align_of::<cmsghdr>() - 1) & !(mem::align_of::<cmsghdr>() - 1)
+}
+
+fn cmsgdata_align(length: usize) -> usize {
+    (length + mem::align_of::<usize>() - 1) & !(mem::align_of::<usize>() - 1)
+}
+
+use crate::MsgHdrOps;
+
+impl MsgHdrOps for msghdr {
+    fn cmsg_first_hdr(&self) -> *mut cmsghdr {
+        if self.Control.len as usize >= mem::size_of::<cmsghdr>() {
+            self.Control.buf as *mut cmsghdr
+        } else {
+            ptr::null_mut::<cmsghdr>()
+        }
+    }
+
+    fn cmsg_next_hdr(&self, cmsg: &cmsghdr) -> *mut cmsghdr {
+        let next = (cmsg as *const _ as usize + cmsghdr_align(cmsg.cmsg_len)) as *mut cmsghdr;
+
+        // check if the end of the next cmsg overshoots the buf.
+        let max = self.Control.buf as usize + self.Control.len as usize;
+        if unsafe { next.offset(1) } as usize > max {
+            ptr::null_mut()
+        } else {
+            next
+        }
+    }
+}
 
 pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
     msg.name = name.as_ptr() as *mut _;
@@ -684,6 +733,57 @@ pub(crate) fn sendmsg(socket: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) ->
         SOCKET_ERROR
     )
     .map(|_| nsent as usize)
+}
+
+pub(crate) type WSARecvMsgExtension = unsafe extern "system" fn(
+    s: Socket,
+    lpMsg: *mut msghdr,
+    lpdwNumberOfBytesRecvd: *mut u32,
+    lpOverlapped: *mut OVERLAPPED,
+    lpCompletionRoutine: LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+) -> i32;
+
+/// Find the WSARECVMSG function pointer
+//
+// This implementation is copied from:
+// https://github.com/pixsper/socket-pktinfo/blob/3845f44eef707eaa3d34f9d4bc4ebcb6dc9c5959/src/win.rs#L44
+pub(crate) fn locate_wsarecvmsg(socket: Socket) -> io::Result<WSARecvMsgExtension> {
+    let mut fn_pointer: usize = 0;
+    let mut byte_len: u32 = 0;
+
+    let r = unsafe {
+        WinSock::WSAIoctl(
+            socket as _,
+            SIO_GET_EXTENSION_FUNCTION_POINTER,
+            &WSAID_WSARECVMSG as *const _ as *mut _,
+            mem::size_of_val(&WSAID_WSARECVMSG) as u32,
+            &mut fn_pointer as *const _ as *mut _,
+            mem::size_of_val(&fn_pointer) as u32,
+            &mut byte_len,
+            ptr::null_mut(),
+            None,
+        )
+    };
+
+    if r != 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    if mem::size_of::<LPFN_WSARECVMSG>() != byte_len as _ {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Locating fn pointer to WSARecvMsg returned different expected bytes",
+        ));
+    }
+    let cast_to_fn: LPFN_WSARECVMSG = unsafe { mem::transmute(fn_pointer) };
+
+    match cast_to_fn {
+        None => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "WSARecvMsg extension not found",
+        )),
+        Some(extension) => Ok(extension),
+    }
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
