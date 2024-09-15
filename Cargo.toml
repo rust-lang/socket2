@@ -1,18 +1,16 @@
 [package]
-name          = "socket2"
-version       = "0.5.7"
+name          = "socket2-plus"
+version       = "0.1.0"
 authors       = [
   "Alex Crichton <alex@alexcrichton.com>",
-  "Thomas de Zeeuw <thomasdezeeuw@gmail.com>"
+  "Thomas de Zeeuw <thomasdezeeuw@gmail.com>",
+  "keepsimple1 <keepsimple@gmail.com>"
 ]
 license       = "MIT OR Apache-2.0"
 readme        = "README.md"
-repository    = "https://github.com/rust-lang/socket2"
-homepage      = "https://github.com/rust-lang/socket2"
-documentation = "https://docs.rs/socket2"
+repository    = "https://github.com/keepsimple1/socket2"
 description = """
-Utilities for handling networking sockets with a maximal amount of configuration
-possible intended.
+A superset of socket2 that focuses on safe APIs
 """
 keywords      = ["io", "socket", "network"]
 categories    = ["api-bindings", "network-programming"]
