@@ -1,3 +1,15 @@
+# Socket2-plus
+
+This is a superset of socket2 that aims to provide some additional APIs currently missing from socket2. This library can be used by a dropped-in replacement for socket2.
+
+The added APIs for the first version:
+
+- `recv_from_initialized` to support `recv_from` with a regular initialized buffer.
+- `recvmsg_initialized` to support `recvmsg` with `MsgHdrInit` that has initialized buffers.
+- Also support Windows for `recvmsg_initialized`.
+
+This first version is forked from socket2 v0.5.7. We plan to rebase to the latest socket2 stable release regularly.
+
 # Socket2
 
 Socket2 is a crate that provides utilities for creating and using sockets.
