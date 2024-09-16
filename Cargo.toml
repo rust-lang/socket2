@@ -1,6 +1,6 @@
 [package]
 name          = "socket2-plus"
-version       = "0.1.0"
+version       = "0.1.1"
 authors       = [
   "Alex Crichton <alex@alexcrichton.com>",
   "Thomas de Zeeuw <thomasdezeeuw@gmail.com>",
@@ -8,7 +8,7 @@ authors       = [
 ]
 license       = "MIT OR Apache-2.0"
 readme        = "README.md"
-repository    = "https://github.com/keepsimple1/socket2"
+repository    = "https://github.com/keepsimple1/socket2-plus"
 description = """
 A superset of socket2 that focuses on safe APIs
 """

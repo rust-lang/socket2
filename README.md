@@ -1,79 +1,14 @@
 # Socket2-plus
 
-This is a superset of socket2 that aims to provide some additional APIs currently missing from socket2. This library can be used by a dropped-in replacement for socket2.
+This is a superset of [`socket2`](https://crates.io/crates/socket2) that aims to provide some additional APIs currently missing from `socket2`. This library can be used by a dropped-in replacement for socket2.
 
-The added APIs for the first version:
+The following APIs are added in the first version:
 
 - `recv_from_initialized` to support `recv_from` with a regular initialized buffer.
 - `recvmsg_initialized` to support `recvmsg` with `MsgHdrInit` that has initialized buffers.
 - Also support Windows for `recvmsg_initialized`.
 
-This first version is forked from socket2 v0.5.7. We plan to rebase to the latest socket2 stable release regularly.
-
-# Socket2
-
-Socket2 is a crate that provides utilities for creating and using sockets.
-
-The goal of this crate is to create and use a socket using advanced
-configuration options (those that are not available in the types in the standard
-library) without using any unsafe code.
-
-This crate provides as direct as possible access to the system's functionality
-for sockets, this means little effort to provide cross-platform utilities. It is
-up to the user to know how to use sockets when using this crate. *If you don't
-know how to create a socket using libc/system calls then this crate is not for
-you*. Most, if not all, functions directly relate to the equivalent system call
-with no error handling applied, so no handling errors such as `EINTR`. As a
-result using this crate can be a little wordy, but it should give you maximal
-flexibility over configuration of sockets.
-
-See the [API documentation] for more.
-
-[API documentation]: https://docs.rs/socket2
-
-# Branches
-
-Currently Socket2 supports two versions: v0.5 and v0.4. Version 0.5 is being
-developed in the master branch. Version 0.4 is developed in the [v0.4.x branch]
-branch.
-
-[v0.4.x branch]: https://github.com/rust-lang/socket2/tree/v0.4.x
-
-# OS support
-
-Socket2 attempts to support the same OS/architectures as Rust does, see
-https://doc.rust-lang.org/nightly/rustc/platform-support.html. However this is
-not always possible, below is current list of support OSs.
-
-*If your favorite OS is not on the list consider contributing it! See [issue
-#78].*
-
-[issue #78]: https://github.com/rust-lang/socket2/issues/78
-
-### Tier 1
-
-These OSs are tested with each commit in the CI and must always pass the tests.
-All functions/types/etc., excluding ones behind the `all` feature, must work on
-these OSs.
-
-* Linux
-* macOS
-* Windows
-
-### Tier 2
-
-These OSs are currently build in the CI, but not tested. Not all
-functions/types/etc. may work on these OSs, even ones **not** behind the `all`
-feature flag.
-
-* Android
-* FreeBSD
-* Fuchsia
-* iOS
-* illumos
-* NetBSD
-* Redox
-* Solaris
+This first version is forked from `socket2` v0.5.7. We plan to rebase to the latest `socket2` stable release regularly.
 
 # Minimum Supported Rust Version (MSRV)
 
