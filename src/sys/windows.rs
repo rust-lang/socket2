@@ -859,6 +859,64 @@ pub(crate) fn to_mreqn(
     }
 }
 
+/// Get the value for the `SO_ORIGINAL_DST` option on this socket.
+/// Only valid for sockets in accepting mode.
+///
+/// Note: if using this function in a proxy context, you must query the
+/// redirect records for this socket and set them on the outbound socket
+/// created by your proxy in order for any OS level firewall rules to be
+/// applied. Read more in the Windows bind and connect redirection
+/// [documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection).
+#[cfg(feature = "all")]
+#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
+pub(crate) fn original_dst(socket: Socket) -> io::Result<SockAddr> {
+    unsafe {
+        SockAddr::try_init(|storage, len| {
+            syscall!(
+                getsockopt(
+                    socket,
+                    SOL_IP as i32,
+                    SO_ORIGINAL_DST as i32,
+                    storage.cast(),
+                    len,
+                ),
+                PartialEq::eq,
+                SOCKET_ERROR
+            )
+        })
+    }
+    .map(|(_, addr)| addr)
+}
+
+/// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+/// Only valid for sockets in accepting mode.
+///
+/// Note: if using this function in a proxy context, you must query the
+/// redirect records for this socket and set them on the outbound socket
+/// created by your proxy in order for any OS level firewall rules to be
+/// applied. Read more in the Windows bind and connect redirection
+/// [documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection).
+#[cfg(feature = "all")]
+#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
+pub(crate) fn original_dst_ipv6(socket: Socket) -> io::Result<SockAddr> {
+    unsafe {
+        SockAddr::try_init(|storage, len| {
+            syscall!(
+                getsockopt(
+                    socket,
+                    SOL_IP as i32,
+                    IP6T_SO_ORIGINAL_DST as i32,
+                    storage.cast(),
+                    len,
+                ),
+                PartialEq::eq,
+                SOCKET_ERROR
+            )
+        })
+    }
+    .map(|(_, addr)| addr)
+}
+
 #[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
     // SAFETY: a `sockaddr_storage` of all zeros is valid.
@@ -927,64 +985,6 @@ impl crate::Socket {
         } else {
             Ok(())
         }
-    }
-
-    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
-    /// Only valid for sockets in accepting mode.
-    ///
-    /// Note: if using this function in a proxy context, you must query the
-    /// redirect records for this socket and set them on the outbound socket
-    /// created by your proxy in order for any OS level firewall rules to be
-    /// applied. Read more in the Windows bind and connect redirection
-    /// [documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection).
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
-    pub fn original_dst(&self) -> io::Result<SockAddr> {
-        unsafe {
-            SockAddr::try_init(|storage, len| {
-                syscall!(
-                    getsockopt(
-                        self.as_raw(),
-                        SOL_IP as i32,
-                        SO_ORIGINAL_DST as i32,
-                        storage.cast(),
-                        len,
-                    ),
-                    PartialEq::eq,
-                    SOCKET_ERROR
-                )
-            })
-        }
-        .map(|(_, addr)| addr)
-    }
-
-    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
-    /// Only valid for sockets in accepting mode.
-    ///
-    /// Note: if using this function in a proxy context, you must query the
-    /// redirect records for this socket and set them on the outbound socket
-    /// created by your proxy in order for any OS level firewall rules to be
-    /// applied. Read more in the Windows bind and connect redirection
-    /// [documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection).
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
-    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
-        unsafe {
-            SockAddr::try_init(|storage, len| {
-                syscall!(
-                    getsockopt(
-                        self.as_raw(),
-                        SOL_IP as i32,
-                        IP6T_SO_ORIGINAL_DST as i32,
-                        storage.cast(),
-                        len,
-                    ),
-                    PartialEq::eq,
-                    SOCKET_ERROR
-                )
-            })
-        }
-        .map(|(_, addr)| addr)
     }
 
     /// Returns the [`Protocol`] of this socket by checking the `SO_PROTOCOL_INFOW`

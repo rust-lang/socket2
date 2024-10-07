@@ -42,8 +42,6 @@ use std::num::NonZeroUsize;
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
-#[cfg(windows)]
-use windows_sys::Win32::Networking::WinSock::WSAEINVAL;
 
 #[cfg(unix)]
 use std::path::Path;
@@ -1603,36 +1601,29 @@ fn header_included_ipv6() {
 #[test]
 #[cfg(all(
     feature = "all",
-    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    any(
+        target_os = "android",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "windows"
+    )
 ))]
 fn original_dst() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    #[cfg(not(target_os = "windows"))]
+    let expected = Some(libc::ENOENT);
+    #[cfg(target_os = "windows")]
+    let expected = Some(windows_sys::Win32::Networking::WinSock::WSAEINVAL);
+
     match socket.original_dst() {
         Ok(_) => panic!("original_dst on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::ENOENT)),
+        Err(err) => assert_eq!(err.raw_os_error(), expected),
     }
 
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
     match socket.original_dst() {
         Ok(_) => panic!("original_dst on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::ENOENT)),
-    }
-}
-
-#[test]
-#[cfg(all(feature = "all", target_os = "windows"))]
-fn original_dst() {
-    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
-    match socket.original_dst() {
-        Ok(_) => panic!("original_dst on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
-    }
-
-    // Not supported on IPv6 socket.
-    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
-    match socket.original_dst_ipv6() {
-        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
+        Err(err) => assert_eq!(err.raw_os_error(), expected),
     }
 }
 
@@ -1643,33 +1634,24 @@ fn original_dst() {
 ))]
 fn original_dst_ipv6() {
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    #[cfg(not(target_os = "windows"))]
+    let expected = Some(libc::ENOENT);
+    #[cfg(target_os = "windows")]
+    let expected = Some(windows_sys::Win32::Networking::WinSock::WSAEINVAL);
+    #[cfg(not(target_os = "windows"))]
+    let expected_v4 = Some(libc::EOPNOTSUPP);
+    #[cfg(target_os = "windows")]
+    let expected_v4 = Some(windows_sys::Win32::Networking::WinSock::WSAEINVAL);
     match socket.original_dst_ipv6() {
         Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::ENOENT)),
+        Err(err) => assert_eq!(err.raw_os_error(), expected),
     }
 
     // Not supported on IPv4 socket.
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     match socket.original_dst_ipv6() {
         Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(libc::EOPNOTSUPP)),
-    }
-}
-
-#[test]
-#[cfg(all(feature = "all", target_os = "windows"))]
-fn original_dst_ipv6() {
-    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
-    match socket.original_dst_ipv6() {
-        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
-    }
-
-    // Not supported on IPv4 socket.
-    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    match socket.original_dst_ipv6() {
-        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
+        Err(err) => assert_eq!(err.raw_os_error(), expected_v4),
     }
 }
 
