@@ -2205,6 +2205,18 @@ impl Socket {
             )
         }
     }
+
+    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
+    #[cfg(feature = "all")]
+    pub fn original_dst(&self) -> io::Result<SockAddr> {
+        sys::original_dst(self.as_raw())
+    }
+
+    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+    #[cfg(feature = "all")]
+    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
+        sys::original_dst_ipv6(self.as_raw())
+    }
 }
 
 impl Read for Socket {
