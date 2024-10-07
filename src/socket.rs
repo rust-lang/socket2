@@ -2237,7 +2237,6 @@ impl Socket {
         feature = "all",
         any(
             target_os = "android",
-            target_os = "fuchsia",
             target_os = "linux",
             target_os = "windows",
         )
@@ -2248,7 +2247,6 @@ impl Socket {
             feature = "all",
             any(
                 target_os = "android",
-                target_os = "fuchsia",
                 target_os = "linux",
                 target_os = "windows",
             )
