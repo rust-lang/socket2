@@ -1682,7 +1682,17 @@ impl Socket {
     /// For more information about this option, see [`set_header_included`].
     ///
     /// [`set_header_included`]: Socket::set_header_included
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "openbsd",
+            target_os = "freebsd",
+            target_os = "dragonfly",
+            target_os = "netbsd"
+        ))
+    ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
@@ -1706,7 +1716,17 @@ impl Socket {
         any(target_os = "fuchsia", target_os = "illumos", target_os = "solaris"),
         allow(rustdoc::broken_intra_doc_links)
     )]
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "openbsd",
+            target_os = "freebsd",
+            target_os = "dragonfly",
+            target_os = "netbsd"
+        ))
+    ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
