@@ -2812,6 +2812,36 @@ impl crate::Socket {
             )
         }
     }
+
+    /// Get the value of the `UDP_GRO` option on this socket.
+    ///
+    /// For more information about this option, see [`set_udp_gro`].
+    ///
+    /// [`set_udp_gro`]: Socket::set_udp_gro
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn udp_gro(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::SOL_UDP, libc::UDP_GRO).map(|reuse| reuse != 0)
+        }
+    }
+
+    /// Set value for the `UDP_GRO` option on this socket.
+    ///
+    /// This indicates that the kernel can combine multiple datagrams into a
+    /// single buffer, this needs to be used in combination with [`Self::recvmsg`]
+    /// to get the number of segments in the buffer from the [`MsgHdr`].
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn set_udp_gro(&self, reuse: bool) -> io::Result<()> {
+        unsafe { setsockopt(self.as_raw(), libc::SOL_UDP, libc::UDP_GRO, reuse as c_int) }
+    }
 }
 
 /// See [`Socket::dccp_available_ccids`].
