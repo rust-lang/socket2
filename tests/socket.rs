@@ -42,6 +42,9 @@ use std::num::NonZeroUsize;
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
+#[cfg(windows)]
+use windows_sys::Win32::Networking::WinSock::WSAEINVAL;
+
 #[cfg(unix)]
 use std::path::Path;
 use std::str;
@@ -1617,7 +1620,27 @@ fn original_dst() {
 }
 
 #[test]
-#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+#[cfg(all(feature = "all", target_os = "windows"))]
+fn original_dst() {
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    match socket.original_dst() {
+        Ok(_) => panic!("original_dst on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
+    }
+
+    // Not supported on IPv6 socket.
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    match socket.original_dst_ipv6() {
+        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
+    }
+}
+
+#[test]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
 fn original_dst_ipv6() {
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
     match socket.original_dst_ipv6() {
@@ -1630,6 +1653,23 @@ fn original_dst_ipv6() {
     match socket.original_dst_ipv6() {
         Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
         Err(err) => assert_eq!(err.raw_os_error(), Some(libc::EOPNOTSUPP)),
+    }
+}
+
+#[test]
+#[cfg(all(feature = "all", target_os = "windows"))]
+fn original_dst_ipv6() {
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+    match socket.original_dst_ipv6() {
+        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
+    }
+
+    // Not supported on IPv4 socket.
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    match socket.original_dst_ipv6() {
+        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+        Err(err) => assert_eq!(err.raw_os_error(), Some(WSAEINVAL)),
     }
 }
 
