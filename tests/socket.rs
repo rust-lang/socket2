@@ -1564,7 +1564,17 @@ fn header_included() {
 }
 
 #[test]
-#[cfg(all(feature = "all", not(target_os = "redox")))]
+#[cfg(all(
+    feature = "all",
+    not(any(
+        target_os = "redox",
+        target_os = "espidf",
+        target_os = "openbsd",
+        target_os = "freebsd",
+        target_os = "dragonfly",
+        target_os = "netbsd"
+    ))
+))]
 fn header_included_ipv6() {
     let socket = match Socket::new(Domain::IPV6, Type::RAW, None) {
         Ok(socket) => socket,
