@@ -306,15 +306,15 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
                 if (fd_array.revents & POLLERR as i16) != 0
                     || (fd_array.revents & POLLHUP as i16) != 0
                 {
-                    match socket.take_error() {
-                        Ok(Some(err)) => return Err(err),
+                    return match socket.take_error() {
+                        Ok(Some(err)) => Err(err),
                         Ok(None) => {
-                            return Err(io::Error::new(
+                            Err(io::Error::new(
                                 io::ErrorKind::Other,
                                 "no error set after POLLHUP",
                             ))
                         }
-                        Err(err) => return Err(err),
+                        Err(err) => Err(err),
                     }
                 }
                 return Ok(());

@@ -46,7 +46,7 @@
   (https://github.com/rust-lang/socket2/pull/448).
 * Added `Socket::protocol` for Windows (using `WSAPROTOCOL_INFOW`)
   (https://github.com/rust-lang/socket2/pull/470).
-* `From<SocketAddrV{4,6}>` for `SockAddr ` nows sets `ss_len` on platforms that
+* `From<SocketAddrV{4,6}>` for `SockAddr ` now sets `ss_len` on platforms that
   have the fields (most BSDs)
   (https://github.com/rust-lang/socket2/pull/469).
 * Change Windows to use `ADDRESS_FAMILY` for `sa_family_t`, this shouldn't
@@ -90,7 +90,7 @@
 
 ## Fixed
 
-* Generatation of documentation on docs.rs
+* Generation of documentation on docs.rs
   (https://github.com/rust-lang/socket2/pull/398).
 
 # 0.5.0
@@ -204,7 +204,7 @@ This release was broken for Windows.
 
 * Reverted back to the `winapi` dependency as switch to `windows-sys` was a
   breaking change (https://github.com/rust-lang/socket2/pull/340).
-  Note that we'll will switch to `windows-sys` in v0.5 .
+  Note that we'll switch to `windows-sys` in v0.5 .
 * Disable RECVTOS on OpenBSD
   (https://github.com/rust-lang/socket2/pull/307).
 * Derive Clone for SockAddr
@@ -360,7 +360,7 @@ This release was broken for Windows.
   * `Protocol::tcp` => `Protocol::TCP`.
   * `Protocol::udp` => `Protocol::UDP`.
 * **BREAKING:** Changed the signature of `Socket::recv`, `Socket::recv_vectored`
-  and related methods to accept unitialised buffers. The `Read` implementation
+  and related methods to accept uninitialized buffers. The `Read` implementation
   can be used to read into initialised buffers.
 * **BREAKING:** Renamed `SockAddr::as_std` to `as_socket`.
 * **BREAKING:** Renamed `SockAddr::as_inet` to `as_socket_ipv4`.
@@ -374,7 +374,7 @@ This release was broken for Windows.
 * Split the `impl` block for the `Socket` type to create groupings for setting
   and getting different level socket options using
   `setsockopt(2)`/`getsockopt(2)`.
-* Updated `winapi` depdency to version 0.3.9 and dropped unused features.
+* Updated `winapi` dependency to version 0.3.9 and dropped unused features.
 
 ## Removed
 
@@ -389,17 +389,17 @@ This release was broken for Windows.
     * `Socket::into_unix_listener` => `UnixListener::from(socket)`.
     * `Socket::into_unix_datagram` => `UnixDatagram::from(socket)`.
 * Removed `cfg-if` dependency.
-* Remove `redox_syscall` depdency.
+* Remove `redox_syscall` dependency.
 
 ## Fixes
 
-* Fixes the Andoid, Fuchsia, Haiku, iOS, illumos, NetBSD and Redox (nightly
+* Fixes the Android, Fuchsia, Haiku, iOS, illumos, NetBSD and Redox (nightly
   only) targets.
 * Correctly call `recv_from` in `Socket::recv_from_with_flags` (called `recv`
   previously).
 * Correctly call `send_to` in `Socket::send_to_with_flags` (called `recv`
   previously).
-* Use correct inmutable references in `Socket::send_with_flags` and
+* Use correct immutable references in `Socket::send_with_flags` and
   `Socket::send_out_of_band`.
 * Use `IPPROTO_IPV6` in `Socket::join_multicast_v6` on Windows.
 * Use `c_int` instead of `i32` where appropriate.
@@ -426,4 +426,4 @@ This release was broken for Windows.
 # 0.3.16
 
 * Don't assume the memory layout of `std::net::SocketAddr`.
-* Other changes omited
+* Other changes omitted
