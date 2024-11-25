@@ -2225,6 +2225,48 @@ impl Socket {
             )
         }
     }
+
+    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "windows",
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "windows",
+            )
+        )))
+    )]
+    pub fn original_dst(&self) -> io::Result<SockAddr> {
+        sys::original_dst(self.as_raw())
+    }
+
+    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "windows")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "windows")
+        )))
+    )]
+    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
+        sys::original_dst_ipv6(self.as_raw())
+    }
 }
 
 impl Read for Socket {
