@@ -879,16 +879,7 @@ pub(crate) fn original_dst(socket: Socket) -> io::Result<SockAddr> {
     .map(|(_, addr)| addr)
 }
 
-/// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
-/// Only valid for sockets in accepting mode.
-///
-/// Note: if using this function in a proxy context, you must query the
-/// redirect records for this socket and set them on the outbound socket
-/// created by your proxy in order for any OS level firewall rules to be
-/// applied. Read more in the Windows bind and connect redirection
-/// [documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection).
 #[cfg(feature = "all")]
-#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
 pub(crate) fn original_dst_ipv6(socket: Socket) -> io::Result<SockAddr> {
     unsafe {
         SockAddr::try_init(|storage, len| {
