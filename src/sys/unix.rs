@@ -1431,10 +1431,6 @@ pub(crate) fn original_dst(fd: Socket) -> io::Result<SockAddr> {
 /// This value contains the original destination IPv6 address of the connection
 /// redirected using `ip6tables` `REDIRECT` or `TPROXY`.
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-#[cfg_attr(
-    docsrs,
-    doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
-)]
 pub(crate) fn original_dst_ipv6(fd: Socket) -> io::Result<SockAddr> {
     // Safety: `getsockopt` initialises the `SockAddr` for us.
     unsafe {
