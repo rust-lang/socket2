@@ -1406,6 +1406,47 @@ pub(crate) const fn to_mreqn(
     }
 }
 
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+pub(crate) fn original_dst(fd: Socket) -> io::Result<SockAddr> {
+    // Safety: `getsockopt` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::try_init(|storage, len| {
+            syscall!(getsockopt(
+                fd,
+                libc::SOL_IP,
+                libc::SO_ORIGINAL_DST,
+                storage.cast(),
+                len
+            ))
+        })
+    }
+    .map(|(_, addr)| addr)
+}
+
+/// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+///
+/// This value contains the original destination IPv6 address of the connection
+/// redirected using `ip6tables` `REDIRECT` or `TPROXY`.
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+pub(crate) fn original_dst_ipv6(fd: Socket) -> io::Result<SockAddr> {
+    // Safety: `getsockopt` initialises the `SockAddr` for us.
+    unsafe {
+        SockAddr::try_init(|storage, len| {
+            syscall!(getsockopt(
+                fd,
+                libc::SOL_IPV6,
+                libc::IP6T_SO_ORIGINAL_DST,
+                storage.cast(),
+                len
+            ))
+        })
+    }
+    .map(|(_, addr)| addr)
+}
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -2400,62 +2441,6 @@ impl crate::Socket {
                 freebind as c_int,
             )
         }
-    }
-
-    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
-    ///
-    /// This value contains the original destination IPv4 address of the connection
-    /// redirected using `iptables` `REDIRECT` or `TPROXY`.
-    #[cfg(all(
-        feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
-        )))
-    )]
-    pub fn original_dst(&self) -> io::Result<SockAddr> {
-        // Safety: `getsockopt` initialises the `SockAddr` for us.
-        unsafe {
-            SockAddr::try_init(|storage, len| {
-                syscall!(getsockopt(
-                    self.as_raw(),
-                    libc::SOL_IP,
-                    libc::SO_ORIGINAL_DST,
-                    storage.cast(),
-                    len
-                ))
-            })
-        }
-        .map(|(_, addr)| addr)
-    }
-
-    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
-    ///
-    /// This value contains the original destination IPv6 address of the connection
-    /// redirected using `ip6tables` `REDIRECT` or `TPROXY`.
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
-    )]
-    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
-        // Safety: `getsockopt` initialises the `SockAddr` for us.
-        unsafe {
-            SockAddr::try_init(|storage, len| {
-                syscall!(getsockopt(
-                    self.as_raw(),
-                    libc::SOL_IPV6,
-                    libc::IP6T_SO_ORIGINAL_DST,
-                    storage.cast(),
-                    len
-                ))
-            })
-        }
-        .map(|(_, addr)| addr)
     }
 
     /// Copies data between a `file` and this socket using the `sendfile(2)`
