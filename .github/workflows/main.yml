@@ -60,7 +60,8 @@ jobs:
           - aarch64-apple-darwin
           - aarch64-apple-ios
           - aarch64-apple-tvos
-          - aarch64-apple-visionos
+          # Broken, see https://github.com/rust-lang/socket2/issues/538.
+          #- aarch64-apple-visionos
           - aarch64-apple-watchos
           - aarch64-linux-android
           - aarch64-unknown-freebsd
@@ -74,7 +75,8 @@ jobs:
           - armv7-linux-androideabi
           - armv7-sony-vita-newlibeabihf
           - i686-linux-android
-          - i686-unknown-hurd-gnu
+          # Broken, see https://github.com/rust-lang/socket2/issues/539.
+          #- i686-unknown-hurd-gnu
           - i686-unknown-linux-gnu
           - sparcv9-sun-solaris
           - x86_64-apple-darwin

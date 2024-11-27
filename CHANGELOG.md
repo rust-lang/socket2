@@ -1,3 +1,12 @@
+# 0.5.8
+
+* Added `Socket::(set_)header_included_v4` and
+  `Socket::(set_)header_included_v6`
+  (https://github.com/rust-lang/socket2/pull/518).
+* Added support for `Socket::original_dst` and
+  `Socket::original_dst_ipv6` on Windows
+  (https://github.com/rust-lang/socket2/pull/529).
+
 # 0.5.7
 
 * Added `Socket::(set_)passcred`
