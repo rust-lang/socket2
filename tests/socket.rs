@@ -42,7 +42,6 @@ use std::num::NonZeroUsize;
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
-
 #[cfg(unix)]
 use std::path::Path;
 use std::str;
