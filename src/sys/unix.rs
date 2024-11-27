@@ -1410,13 +1410,6 @@ pub(crate) const fn to_mreqn(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-#[cfg_attr(
-    docsrs,
-    doc(cfg(all(
-        feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
-    )))
-)]
 pub(crate) fn original_dst(fd: Socket) -> io::Result<SockAddr> {
     // Safety: `getsockopt` initialises the `SockAddr` for us.
     unsafe {
