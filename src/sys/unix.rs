@@ -135,6 +135,20 @@ pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
     target_os = "espidf",
     target_os = "vita",
 )))]
+pub(crate) use libc::IPV6_RECVHOPLIMIT;
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "fuchsia",
+    target_os = "hurd",
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "haiku",
+    target_os = "espidf",
+    target_os = "vita",
+)))]
 pub(crate) use libc::IPV6_RECVTCLASS;
 #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
 pub(crate) use libc::IP_HDRINCL;
