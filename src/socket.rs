@@ -1998,6 +1998,35 @@ impl Socket {
             )
         }
     }
+
+    /// Set the value of the `IPV6_RECVHOPLIMIT` option for this socket.
+    ///
+    /// If enabled, the `IPV6_TCLASS` ancillary message is passed with incoming
+    /// packets. It contains a byte which specifies the traffic class field of
+    /// the packet header.
+    #[cfg(not(any(
+        target_os = "dragonfly",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "haiku",
+        target_os = "hurd",
+        target_os = "espidf",
+        target_os = "vita",
+    )))]
+    pub fn set_recv_hoplimit_v6(&self, recv_hoplimit: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                sys::IPV6_RECVHOPLIMIT,
+                recv_hoplimit as c_int,
+            )
+        }
+    }
 }
 
 /// Socket options for TCP sockets, get/set using `IPPROTO_TCP`.
