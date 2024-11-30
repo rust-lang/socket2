@@ -1682,7 +1682,17 @@ impl Socket {
     /// For more information about this option, see [`set_header_included`].
     ///
     /// [`set_header_included`]: Socket::set_header_included
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "openbsd",
+            target_os = "freebsd",
+            target_os = "dragonfly",
+            target_os = "netbsd"
+        ))
+    ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
@@ -1706,7 +1716,17 @@ impl Socket {
         any(target_os = "fuchsia", target_os = "illumos", target_os = "solaris"),
         allow(rustdoc::broken_intra_doc_links)
     )]
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "openbsd",
+            target_os = "freebsd",
+            target_os = "dragonfly",
+            target_os = "netbsd"
+        ))
+    ))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf")))))
@@ -2234,6 +2254,48 @@ impl Socket {
                 nodelay as c_int,
             )
         }
+    }
+
+    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "windows",
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "windows",
+            )
+        )))
+    )]
+    pub fn original_dst(&self) -> io::Result<SockAddr> {
+        sys::original_dst(self.as_raw())
+    }
+
+    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "windows")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "windows")
+        )))
+    )]
+    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
+        sys::original_dst_ipv6(self.as_raw())
     }
 }
 
