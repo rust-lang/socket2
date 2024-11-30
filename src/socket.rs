@@ -1972,9 +1972,9 @@ impl Socket {
 
     /// Set the value of the `IPV6_RECVTCLASS` option for this socket.
     ///
-    /// If enabled, the `IPV6_TCLASS` ancillary message is passed with incoming
-    /// packets. It contains a byte which specifies the traffic class field of
-    /// the packet header.
+    /// The received hop limit is returned as ancillary data by recvmsg()
+    /// only if the application has enabled the IPV6_RECVHOPLIMIT socket
+    /// option:
     #[cfg(not(any(
         target_os = "dragonfly",
         target_os = "fuchsia",
