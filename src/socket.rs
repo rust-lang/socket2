@@ -2024,20 +2024,23 @@ impl Socket {
     /// The received hop limit is returned as ancillary data by recvmsg()
     /// only if the application has enabled the IPV6_RECVHOPLIMIT socket
     /// option:
-    #[cfg(not(any(
-        windows,
-        target_os = "dragonfly",
-        target_os = "fuchsia",
-        target_os = "illumos",
-        target_os = "netbsd",
-        target_os = "openbsd",
-        target_os = "redox",
-        target_os = "solaris",
-        target_os = "haiku",
-        target_os = "hurd",
-        target_os = "espidf",
-        target_os = "vita",
-    )))]
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            windows,
+            target_os = "dragonfly",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "netbsd",
+            target_os = "openbsd",
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "haiku",
+            target_os = "hurd",
+            target_os = "espidf",
+            target_os = "vita",
+        ))
+    ))]
     pub fn set_recv_hoplimit_v6(&self, recv_hoplimit: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
