@@ -2027,6 +2027,7 @@ impl Socket {
     #[cfg(all(
         feature = "all",
         not(any(
+            windows,
             target_os = "dragonfly",
             target_os = "fuchsia",
             target_os = "illumos",
