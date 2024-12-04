@@ -2043,7 +2043,7 @@ impl Socket {
     pub fn recv_hoplimit_v6(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_RECVHOPLIMIT)
-                .map(|recv_tclass| recv_tclass > 0)
+                .map(|recv_hoplimit| recv_hoplimit > 0)
         }
     }
     /// Set the value of the `IPV6_RECVHOPLIMIT` option for this socket.
