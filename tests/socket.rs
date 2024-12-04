@@ -1477,6 +1477,24 @@ test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
 
 #[cfg(all(
     feature = "all",
+    not(any(
+        target_os = "dragonfly",
+        target_os = "fuchsia",
+        target_os = "hurd",
+        target_os = "illumos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "windows",
+        target_os = "vita",
+        target_os = "haiku",
+    ))
+))]
+test!(IPv6 recv_hoplimit_v6, set_recv_hoplimit_v6(true));
+
+#[cfg(all(
+    feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
 test!(

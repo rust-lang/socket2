@@ -2019,6 +2019,33 @@ impl Socket {
         }
     }
 
+    /// Get the value of the `IPV6_RECVHOPLIMIT` option for this socket.
+    ///
+    /// For more information about this option, see [`set_recv_hoplimit_v6`].
+    ///
+    /// [`set_recv_hoplimit_v6`]: Socket::set_recv_hoplimit_v6
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            target_os = "dragonfly",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "netbsd",
+            target_os = "openbsd",
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "haiku",
+            target_os = "hurd",
+            target_os = "espidf",
+            target_os = "vita",
+        ))
+    ))]
+    pub fn recv_hoplimit_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_RECVHOPLIMIT)
+                .map(|recv_tclass| recv_tclass > 0)
+        }
+    }
     /// Set the value of the `IPV6_RECVHOPLIMIT` option for this socket.
     ///
     /// The received hop limit is returned as ancillary data by recvmsg()
