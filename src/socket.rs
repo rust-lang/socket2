@@ -2018,6 +2018,67 @@ impl Socket {
             )
         }
     }
+
+    /// Get the value of the `IPV6_RECVHOPLIMIT` option for this socket.
+    ///
+    /// For more information about this option, see [`set_recv_hoplimit_v6`].
+    ///
+    /// [`set_recv_hoplimit_v6`]: Socket::set_recv_hoplimit_v6
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            windows,
+            target_os = "dragonfly",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "netbsd",
+            target_os = "openbsd",
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "haiku",
+            target_os = "hurd",
+            target_os = "espidf",
+            target_os = "vita",
+        ))
+    ))]
+    pub fn recv_hoplimit_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_RECVHOPLIMIT)
+                .map(|recv_hoplimit| recv_hoplimit > 0)
+        }
+    }
+    /// Set the value of the `IPV6_RECVHOPLIMIT` option for this socket.
+    ///
+    /// The received hop limit is returned as ancillary data by recvmsg()
+    /// only if the application has enabled the IPV6_RECVHOPLIMIT socket
+    /// option:
+    #[cfg(all(
+        feature = "all",
+        not(any(
+            windows,
+            target_os = "dragonfly",
+            target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "netbsd",
+            target_os = "openbsd",
+            target_os = "redox",
+            target_os = "solaris",
+            target_os = "haiku",
+            target_os = "hurd",
+            target_os = "espidf",
+            target_os = "vita",
+        ))
+    ))]
+    pub fn set_recv_hoplimit_v6(&self, recv_hoplimit: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                sys::IPV6_RECVHOPLIMIT,
+                recv_hoplimit as c_int,
+            )
+        }
+    }
 }
 
 /// Socket options for TCP sockets, get/set using `IPPROTO_TCP`.
