@@ -2343,11 +2343,7 @@ impl crate::Socket {
         }
     }
 
-    /// Get the value of the `IP_FREEBIND` option on this socket.
-    ///
-    /// For more information about this option, see [`set_freebind`].
-    ///
-    /// [`set_freebind`]: crate::Socket::set_freebind
+    /// This method is deprecated, use [`crate::Socket::ip_bindany_v4`].
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -2359,20 +2355,12 @@ impl crate::Socket {
             any(target_os = "android", target_os = "fuchsia", target_os = "linux")
         )))
     )]
+    #[deprecated = "Use `Socket::ip_bindany_v4` instead"]
     pub fn freebind(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.as_raw(), libc::SOL_IP, libc::IP_FREEBIND)
-                .map(|freebind| freebind != 0)
-        }
+        self.ip_bindany_v4()
     }
 
-    /// Set value for the `IP_FREEBIND` option on this socket.
-    ///
-    /// If enabled, this boolean option allows binding to an IP address that is
-    /// nonlocal or does not (yet) exist.  This permits listening on a socket,
-    /// without requiring the underlying network interface or the specified
-    /// dynamic IP address to be up at the time that the application is trying
-    /// to bind to it.
+    /// This method is deprecated, use [`crate::Socket::set_ip_bindany_v4`].
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -2384,80 +2372,31 @@ impl crate::Socket {
             any(target_os = "android", target_os = "fuchsia", target_os = "linux")
         )))
     )]
+    #[deprecated = "Use `Socket::set_ip_bindany_v4` instead"]
     pub fn set_freebind(&self, freebind: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.as_raw(),
-                libc::SOL_IP,
-                libc::IP_FREEBIND,
-                freebind as c_int,
-            )
-        }
+        self.set_ip_bindany_v4(freebind)
     }
 
-    /// Get the value of the `IPV6_FREEBIND` option on this socket.
-    ///
-    /// This is an IPv6 counterpart of `IP_FREEBIND` socket option on
-    /// Android/Linux. For more information about this option, see
-    /// [`set_freebind`].
-    ///
-    /// [`set_freebind`]: crate::Socket::set_freebind
+    /// This method is deprecated, use [`crate::Socket::ip_bindany_v6`].
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
+    #[deprecated = "Use `Socket::ip_bindany_v6` instead"]
     pub fn freebind_ipv6(&self) -> io::Result<bool> {
-        unsafe {
-            getsockopt::<c_int>(self.as_raw(), libc::SOL_IPV6, libc::IPV6_FREEBIND)
-                .map(|freebind| freebind != 0)
-        }
+        self.ip_bindany_v6()
     }
 
-    /// Set value for the `IPV6_FREEBIND` option on this socket.
-    ///
-    /// This is an IPv6 counterpart of `IP_FREEBIND` socket option on
-    /// Android/Linux. For more information about this option, see
-    /// [`set_freebind`].
-    ///
-    /// [`set_freebind`]: crate::Socket::set_freebind
-    ///
-    /// # Examples
-    ///
-    /// On Linux:
-    ///
-    /// ```
-    /// use socket2::{Domain, Socket, Type};
-    /// use std::io::{self, Error, ErrorKind};
-    ///
-    /// fn enable_freebind(socket: &Socket) -> io::Result<()> {
-    ///     match socket.domain()? {
-    ///         Domain::IPV4 => socket.set_freebind(true)?,
-    ///         Domain::IPV6 => socket.set_freebind_ipv6(true)?,
-    ///         _ => return Err(Error::new(ErrorKind::Other, "unsupported domain")),
-    ///     };
-    ///     Ok(())
-    /// }
-    ///
-    /// # fn main() -> io::Result<()> {
-    /// #     let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
-    /// #     enable_freebind(&socket)
-    /// # }
-    /// ```
+    /// This method is deprecated, use [`crate::Socket::set_ip_bindany_v6`].
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     #[cfg_attr(
         docsrs,
         doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
     )]
+    #[deprecated = "Use `Socket::set_ip_bindany_v6` instead"]
     pub fn set_freebind_ipv6(&self, freebind: bool) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.as_raw(),
-                libc::SOL_IPV6,
-                libc::IPV6_FREEBIND,
-                freebind as c_int,
-            )
-        }
+        self.set_ip_bindany_v6(freebind)
     }
 
     /// Copies data between a `file` and this socket using the `sendfile(2)`
@@ -3098,6 +3037,310 @@ impl crate::Socket {
                 libc::DCCP_SOCKOPT_GET_CUR_MPS,
             )
         }
+    }
+
+    /// This method is deprecated, use [`crate::Socket::ip_transparent_v4`].
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    #[deprecated = "Use `Socket::ip_transparent_v4` instead"]
+    pub fn ip_transparent(&self) -> io::Result<bool> {
+        self.ip_transparent_v4()
+    }
+
+    /// Get the value of the `IP_TRANSPARENT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_transparent_v4`].
+    ///
+    /// [`set_ip_transparent_v4`]: crate::Socket::set_ip_transparent_v4
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    pub fn ip_transparent_v4(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IP, libc::IP_TRANSPARENT)
+                .map(|transparent| transparent != 0)
+        }
+    }
+
+    /// This method is deprecated, use [`crate::Socket::set_ip_transparent_v4`].
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    #[deprecated = "Use `Socket::set_ip_transparent_v4` instead"]
+    pub fn set_ip_transparent(&self, transparent: bool) -> io::Result<()> {
+        self.set_ip_transparent_v4(transparent)
+    }
+
+    /// Set the value of the `IP_TRANSPARENT` option on this socket.
+    ///
+    /// Setting this boolean option enables transparent proxying
+    /// on this socket.  This socket option allows the calling
+    /// application to bind to a nonlocal IP address and operate
+    /// both as a client and a server with the foreign address as
+    /// the local endpoint.  NOTE: this requires that routing be
+    /// set up in a way that packets going to the foreign address
+    /// are routed through the TProxy box (i.e., the system
+    /// hosting the application that employs the IP_TRANSPARENT
+    /// socket option).  Enabling this socket option requires
+    /// superuser privileges (the `CAP_NET_ADMIN` capability).
+    ///
+    /// TProxy redirection with the iptables TPROXY target also
+    /// requires that this option be set on the redirected socket.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+        )))
+    )]
+    pub fn set_ip_transparent_v4(&self, transparent: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IP,
+                libc::IP_TRANSPARENT,
+                transparent as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_TRANSPARENT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_ip_transparent_v6`].
+    ///
+    /// [`set_ip_transparent_v6`]: crate::Socket::set_ip_transparent_v6
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn ip_transparent_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_IPV6, libc::IPV6_TRANSPARENT)
+                .map(|transparent| transparent != 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_TRANSPARENT` option on this socket.
+    ///
+    /// Setting this boolean option enables transparent proxying
+    /// on this socket.  This socket option allows the calling
+    /// application to bind to a nonlocal IP address and operate
+    /// both as a client and a server with the foreign address as
+    /// the local endpoint.  NOTE: this requires that routing be
+    /// set up in a way that packets going to the foreign address
+    /// are routed through the TProxy box (i.e., the system
+    /// hosting the application that employs the IPV6_TRANSPARENT
+    /// socket option).  Enabling this socket option requires
+    /// superuser privileges (the `CAP_NET_ADMIN` capability).
+    ///
+    /// TProxy redirection with the iptables TPROXY target also
+    /// requires that this option be set on the redirected socket.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "all", any(target_os = "android", target_os = "linux"))))
+    )]
+    pub fn set_ip_transparent_v6(&self, transparent: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_IPV6,
+                libc::IPV6_TRANSPARENT,
+                transparent as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the bind-any-like option on this socket.
+    /// The option is that `IP_FREEBIND` on Android/Fuchisa/Linux,
+    /// `IP_BINDANY` on FreeBSD and `SO_BINDANY` on FreeBSD.
+    ///
+    /// For more information about this option, see [`set_ip_bindany_v4`].
+    ///
+    /// [`set_ip_bindany_v4`]: crate::Socket::set_ip_bindany_v4
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
+    pub fn ip_bindany_v4(&self) -> io::Result<bool> {
+        #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
+        let (level, opt) = (libc::SOL_IP, libc::IP_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IP, libc::IP_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
+
+        unsafe { getsockopt::<c_int>(self.as_raw(), level, opt).map(|bindany| bindany != 0) }
+    }
+
+    /// Set the value of the bind-any-like option on this socket.
+    /// The option is that `IP_FREEBIND` on Android/Fuchisa/Linux,
+    /// `IP_BINDANY` on FreeBSD and `SO_BINDANY` on FreeBSD.
+    ///
+    /// The option allows the socket to be bound to addresses which are not
+    /// nonlocal. This permits listening on a socket, without requiring the
+    /// underlying network interface or the specified dynamic IP address to
+    /// be up at the time that the application is trying to bind to it.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "fuchsia",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
+    pub fn set_ip_bindany_v4(&self, bindany: bool) -> io::Result<()> {
+        #[cfg(any(target_os = "android", target_os = "fuchsia", target_os = "linux"))]
+        let (level, opt) = (libc::SOL_IP, libc::IP_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IP, libc::IP_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
+
+        unsafe { setsockopt(self.as_raw(), level, opt, bindany as c_int) }
+    }
+
+    /// Get the value of the bind-any-like option on this socket.
+    /// The option is that `IPV6_FREEBIND` on Android/Linux,
+    /// `IPV6_BINDANY` on FreeBSD and `SO_BINDANY` on FreeBSD.
+    ///
+    /// For more information about this option, see [`set_ip_bindany_v6`].
+    ///
+    /// [`set_ip_bindany_v6`]: crate::Socket::set_ip_bindany_v6
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
+    pub fn ip_bindany_v6(&self) -> io::Result<bool> {
+        #[cfg(any(target_os = "android", target_os = "linux"))]
+        let (level, opt) = (libc::SOL_IPV6, libc::IPV6_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IPV6, libc::IPV6_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
+
+        unsafe { getsockopt::<c_int>(self.as_raw(), level, opt).map(|bindany| bindany != 0) }
+    }
+
+    /// Set the value of the bind-any-like option on this socket.
+    /// The option is that `IPV6_FREEBIND` on Android/Linux,
+    /// `IPV6_BINDANY` on FreeBSD and `SO_BINDANY` on FreeBSD.
+    ///
+    /// This is an IPv6 counterpart of `set_ip_bindany_v4` on a socket.
+    /// For more information about this option, see [`set_ip_bindany_v4`].
+    ///
+    /// [`set_ip_bindany_v4`]: crate::Socket::set_ip_bindany_v4
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "linux",
+            target_os = "freebsd",
+            target_os = "openbsd"
+        )
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "all",
+            any(
+                target_os = "android",
+                target_os = "linux",
+                target_os = "freebsd",
+                target_os = "openbsd"
+            )
+        )))
+    )]
+    pub fn set_ip_bindany_v6(&self, bindany: bool) -> io::Result<()> {
+        #[cfg(any(target_os = "android", target_os = "linux"))]
+        let (level, opt) = (libc::SOL_IPV6, libc::IPV6_FREEBIND);
+        #[cfg(target_os = "freebsd")]
+        let (level, opt) = (libc::IPPROTO_IPV6, libc::IPV6_BINDANY);
+        #[cfg(target_os = "openbsd")]
+        let (level, opt) = (libc::SOL_SOCKET, libc::SO_BINDANY);
+
+        unsafe { setsockopt(self.as_raw(), level, opt, bindany as c_int) }
     }
 }
 

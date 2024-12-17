@@ -1363,11 +1363,20 @@ test!(
     mss,
     set_mss(256)
 );
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(
+    feature = "all",
+    any(target_os = "android", target_os = "linux", target_os = "fuchsia")
+))]
 test!(
     #[ignore = "setting `IP_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
-    ip_transparent,
-    set_ip_transparent(true)
+    ip_transparent_v4,
+    set_ip_transparent_v4(true)
+);
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+test!(
+    #[ignore = "setting `IPV6_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
+    ip_transparent_v6,
+    set_ip_transparent_v6(true)
 );
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(
@@ -1396,10 +1405,27 @@ test!(
     set_read_timeout(Some(Duration::from_secs(10)))
 );
 test!(keepalive, set_keepalive(true));
-#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
-test!(freebind, set_freebind(true));
-#[cfg(all(feature = "all", target_os = "linux"))]
-test!(IPv6 freebind_ipv6, set_freebind_ipv6(true));
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "openbsd"
+    )
+))]
+test!(ip_bindany_v4, set_ip_bindany_v4(true));
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "android",
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "openbsd"
+    )
+))]
+test!(IPv6 ip_bindany_v6, set_ip_bindany_v6(true));
 
 test!(IPv4 ttl, set_ttl(40));
 
