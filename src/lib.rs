@@ -200,7 +200,7 @@ pub use socket::InterfaceIndexOrAddress;
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
 /// addition to an injection point for documentation. Convenience constants such
-/// as [`Domain::IPV4`], [`Domain::IPV6`], etc, are provided to avoid reaching
+/// as [`Domain::IPV4`], [`Domain::IPV6`], etc., are provided to avoid reaching
 /// into libc for various constants.
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
@@ -243,7 +243,7 @@ impl From<Domain> for c_int {
 ///
 /// This is a newtype wrapper around an integer which provides a nicer API in
 /// addition to an injection point for documentation. Convenience constants such
-/// as [`Type::STREAM`], [`Type::DGRAM`], etc, are provided to avoid reaching
+/// as [`Type::STREAM`], [`Type::DGRAM`], etc., are provided to avoid reaching
 /// into libc for various constants.
 ///
 /// This type is freely interconvertible with C's `int` type, however, if a raw
