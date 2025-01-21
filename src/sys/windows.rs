@@ -926,6 +926,17 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         }
 
         storage.sun_family = crate::sys::AF_UNIX as sa_family_t;
+
+        // `windows-sys` 0.52.* represents `SOCKADDR_UN::sun_path` as `&[u8]`, but 0.59.*
+        // represents it as `&[i8]`.
+        //
+        // TODO: Remove this once `windows-sys` 0.52.* is no longer
+        // permitted as a dependency.
+        //
+        // SAFETY: We are safe in doing this, because: `bytes` starts as `&[u8]`, and is converted
+        // to a `&[u8]` or `&[i8]`, and all of these types have the same size and alignment.
+        let bytes = unsafe { slice::from_raw_parts(bytes.as_ptr().cast(), bytes.len()) };
+
         // `storage` was initialized to zero above, so the path is
         // already null terminated.
         storage.sun_path[..bytes.len()].copy_from_slice(bytes);
