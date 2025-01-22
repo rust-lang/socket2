@@ -539,7 +539,7 @@ fn unix_sockets_supported() -> bool {
             Ok(_) => {}
             Err(err)
                 if err.raw_os_error()
-                    == Some(windows_sys::Win32::Networking::WinSock::WSAEAFNOSUPPORT as i32) =>
+                    == Some(windows_sys::Win32::Networking::WinSock::WSAEAFNOSUPPORT) =>
             {
                 return false;
             }

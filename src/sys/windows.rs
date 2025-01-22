@@ -121,7 +121,7 @@ impl_debug!(
 impl Type {
     /// Our custom flag to set `WSA_FLAG_NO_HANDLE_INHERIT` on socket creation.
     /// Trying to mimic `Type::cloexec` on windows.
-    const NO_INHERIT: c_int = 1 << ((size_of::<c_int>() * 8) - 1); // Last bit.
+    const NO_INHERIT: c_int = 1 << (c_int::BITS as usize - 1); // Last bit.
 
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
@@ -166,9 +166,9 @@ pub struct MaybeUninitSlice<'a> {
     _lifetime: PhantomData<&'a mut [MaybeUninit<u8>]>,
 }
 
-unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
+unsafe impl Send for MaybeUninitSlice<'_> {}
 
-unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
+unsafe impl Sync for MaybeUninitSlice<'_> {}
 
 impl<'a> MaybeUninitSlice<'a> {
     pub fn new(buf: &'a mut [MaybeUninit<u8>]) -> MaybeUninitSlice<'a> {
@@ -251,7 +251,7 @@ pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Resul
 
     // Check if we set our custom flag.
     let flags = if ty & Type::NO_INHERIT != 0 {
-        ty = ty & !Type::NO_INHERIT;
+        ty &= !Type::NO_INHERIT;
         WSA_FLAG_NO_HANDLE_INHERIT
     } else {
         0
@@ -284,7 +284,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
 
     let mut fd_array = WSAPOLLFD {
         fd: socket.as_raw(),
-        events: (POLLRDNORM | POLLWRNORM) as i16,
+        events: (POLLRDNORM | POLLWRNORM),
         revents: 0,
     };
 
@@ -305,9 +305,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
             Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
             Ok(_) => {
                 // Error or hang up indicates an error (or failure to connect).
-                if (fd_array.revents & POLLERR as i16) != 0
-                    || (fd_array.revents & POLLHUP as i16) != 0
-                {
+                if (fd_array.revents & POLLERR) != 0 || (fd_array.revents & POLLHUP) != 0 {
                     match socket.take_error() {
                         Ok(Some(err)) => return Err(err),
                         Ok(None) => {
@@ -422,7 +420,7 @@ pub(crate) fn shutdown(socket: Socket, how: Shutdown) -> io::Result<()> {
         Shutdown::Write => SD_SEND,
         Shutdown::Read => SD_RECEIVE,
         Shutdown::Both => SD_BOTH,
-    } as i32;
+    };
     syscall!(shutdown(socket, how), PartialEq::eq, SOCKET_ERROR).map(|_| ())
 }
 
@@ -439,7 +437,7 @@ pub(crate) fn recv(socket: Socket, buf: &mut [MaybeUninit<u8>], flags: c_int) ->
     );
     match res {
         Ok(n) => Ok(n as usize),
-        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => Ok(0),
+        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => Ok(0),
         Err(err) => Err(err),
     }
 }
@@ -466,8 +464,8 @@ pub(crate) fn recv_vectored(
     );
     match res {
         Ok(_) => Ok((nread as usize, RecvFlags(0))),
-        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => Ok((0, RecvFlags(0))),
-        Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE as i32) => {
+        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => Ok((0, RecvFlags(0))),
+        Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE) => {
             Ok((nread as usize, RecvFlags(MSG_TRUNC)))
         }
         Err(err) => Err(err),
@@ -496,7 +494,7 @@ pub(crate) fn recv_from(
             );
             match res {
                 Ok(n) => Ok(n as usize),
-                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => Ok(0),
+                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => Ok(0),
                 Err(err) => Err(err),
             }
         })
@@ -523,9 +521,7 @@ pub(crate) fn peek_sender(socket: Socket) -> io::Result<SockAddr> {
             match res {
                 Ok(_n) => Ok(()),
                 Err(e) => match e.raw_os_error() {
-                    Some(code) if code == (WSAESHUTDOWN as i32) || code == (WSAEMSGSIZE as i32) => {
-                        Ok(())
-                    }
+                    Some(code) if code == WSAESHUTDOWN || code == WSAEMSGSIZE => Ok(()),
                     _ => Err(e),
                 },
             }
@@ -562,10 +558,10 @@ pub(crate) fn recv_from_vectored(
             );
             match res {
                 Ok(_) => Ok((nread as usize, RecvFlags(0))),
-                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => {
+                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => {
                     Ok((nread as usize, RecvFlags(0)))
                 }
-                Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE as i32) => {
+                Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE) => {
                     Ok((nread as usize, RecvFlags(MSG_TRUNC)))
                 }
                 Err(err) => Err(err),
@@ -699,7 +695,7 @@ fn from_ms(duration: u32) -> Option<Duration> {
     } else {
         let secs = duration / 1000;
         let nsec = (duration % 1000) * 1000000;
-        Some(Duration::new(secs as u64, nsec as u32))
+        Some(Duration::new(secs as u64, nsec))
     }
 }
 
@@ -760,7 +756,7 @@ pub(crate) unsafe fn getsockopt<T>(socket: Socket, level: c_int, optname: i32) -
     syscall!(
         getsockopt(
             socket,
-            level as i32,
+            level,
             optname,
             optval.as_mut_ptr().cast(),
             &mut optlen,
@@ -786,7 +782,7 @@ pub(crate) unsafe fn setsockopt<T>(
     syscall!(
         setsockopt(
             socket,
-            level as i32,
+            level,
             optname,
             (&optval as *const T).cast(),
             mem::size_of::<T>() as c_int,
@@ -1034,14 +1030,14 @@ impl FromRawSocket for crate::Socket {
 fn in_addr_convertion() {
     let ip = Ipv4Addr::new(127, 0, 0, 1);
     let raw = to_in_addr(&ip);
-    assert_eq!(unsafe { raw.S_un.S_addr }, 127 << 0 | 1 << 24);
+    assert_eq!(unsafe { raw.S_un.S_addr }, 127 | 1 << 24);
     assert_eq!(from_in_addr(raw), ip);
 
     let ip = Ipv4Addr::new(127, 34, 4, 12);
     let raw = to_in_addr(&ip);
     assert_eq!(
         unsafe { raw.S_un.S_addr },
-        127 << 0 | 34 << 8 | 4 << 16 | 12 << 24
+        127 | 34 << 8 | 4 << 16 | 12 << 24
     );
     assert_eq!(from_in_addr(raw), ip);
 }

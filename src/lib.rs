@@ -389,7 +389,7 @@ impl RecvFlags {
 #[repr(transparent)]
 pub struct MaybeUninitSlice<'a>(sys::MaybeUninitSlice<'a>);
 
-impl<'a> fmt::Debug for MaybeUninitSlice<'a> {
+impl fmt::Debug for MaybeUninitSlice<'_> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self.0.as_slice(), fmt)
     }
@@ -406,7 +406,7 @@ impl<'a> MaybeUninitSlice<'a> {
     }
 }
 
-impl<'a> Deref for MaybeUninitSlice<'a> {
+impl Deref for MaybeUninitSlice<'_> {
     type Target = [MaybeUninit<u8>];
 
     fn deref(&self) -> &[MaybeUninit<u8>] {
@@ -414,7 +414,7 @@ impl<'a> Deref for MaybeUninitSlice<'a> {
     }
 }
 
-impl<'a> DerefMut for MaybeUninitSlice<'a> {
+impl DerefMut for MaybeUninitSlice<'_> {
     fn deref_mut(&mut self) -> &mut [MaybeUninit<u8>] {
         self.0.as_mut_slice()
     }
@@ -659,7 +659,7 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
 }
 
 #[cfg(not(target_os = "redox"))]
-impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
+impl fmt::Debug for MsgHdr<'_, '_, '_> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MsgHdr".fmt(fmt)
     }
@@ -736,7 +736,7 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
 }
 
 #[cfg(not(target_os = "redox"))]
-impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
+impl fmt::Debug for MsgHdrMut<'_, '_, '_> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MsgHdrMut".fmt(fmt)
     }
