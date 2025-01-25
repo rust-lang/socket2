@@ -1190,8 +1190,8 @@ impl Socket {
     ///
     /// [`SOCK_RAW`]: Type::RAW
     /// [raw(7)]: https://man7.org/linux/man-pages/man7/raw.7.html
-    /// [`IP_TOS`]: Socket::set_tos
     /// [`IP_TTL`]: Socket::set_ttl_v4
+    /// [`IP_TOS`]: Socket::set_tos_v4
     #[cfg_attr(
         any(target_os = "fuchsia", target_os = "illumos", target_os = "solaris"),
         allow(rustdoc::broken_intra_doc_links)
@@ -1587,18 +1587,18 @@ impl Socket {
         target_os = "illumos",
         target_os = "haiku",
     )))]
-    pub fn set_tos(&self, tos: u32) -> io::Result<()> {
+    pub fn set_tos_v4(&self, tos: u32) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TOS, tos as c_int) }
     }
 
     /// Get the value of the `IP_TOS` option for this socket.
     ///
-    /// For more information about this option, see [`set_tos`].
+    /// For more information about this option, see [`set_tos_v4`].
     ///
     /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options>
     /// documents that not all versions of windows support `IP_TOS`.
     ///
-    /// [`set_tos`]: Socket::set_tos
+    /// [`set_tos_v4`]: Socket::set_tos_v4
     #[cfg(not(any(
         target_os = "fuchsia",
         target_os = "redox",
@@ -1606,7 +1606,7 @@ impl Socket {
         target_os = "illumos",
         target_os = "haiku",
     )))]
-    pub fn tos(&self) -> io::Result<u32> {
+    pub fn tos_v4(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_TOS).map(|tos| tos as u32)
         }

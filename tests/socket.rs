@@ -1410,7 +1410,7 @@ test!(IPv4 ttl_v4, set_ttl_v4(40));
     target_os = "illumos",
     target_os = "haiku",
 )))]
-test!(IPv4 tos, set_tos(96));
+test!(IPv4 tos_v4, set_tos_v4(96));
 
 #[cfg(not(any(
     target_os = "dragonfly",
