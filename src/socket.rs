@@ -1141,9 +1141,9 @@ const fn into_linger(duration: Option<Duration>) -> sys::linger {
 impl Socket {
     /// Get the value of the `IP_HDRINCL` option on this socket.
     ///
-    /// For more information about this option, see [`set_header_included`].
+    /// For more information about this option, see [`set_header_included_v4`].
     ///
-    /// [`set_header_included`]: Socket::set_header_included
+    /// [`set_header_included_v4`]: Socket::set_header_included_v4
     #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
     #[cfg_attr(
         docsrs,
@@ -1654,9 +1654,9 @@ impl Socket {
 impl Socket {
     /// Get the value of the `IP_HDRINCL` option on this socket.
     ///
-    /// For more information about this option, see [`set_header_included`].
+    /// For more information about this option, see [`set_header_included_v6`].
     ///
-    /// [`set_header_included`]: Socket::set_header_included
+    /// [`set_header_included_v6`]: Socket::set_header_included_v6
     #[cfg(all(
         feature = "all",
         not(any(
