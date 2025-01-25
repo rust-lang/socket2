@@ -1607,7 +1607,7 @@ impl Socket {
         target_os = "espidf",
         target_os = "vita",
     )))]
-    pub fn set_recv_tos(&self, recv_tos: bool) -> io::Result<()> {
+    pub fn set_recv_tos_v4(&self, recv_tos: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
@@ -1620,9 +1620,9 @@ impl Socket {
 
     /// Get the value of the `IP_RECVTOS` option for this socket.
     ///
-    /// For more information about this option, see [`set_recv_tos`].
+    /// For more information about this option, see [`set_recv_tos_v4`].
     ///
-    /// [`set_recv_tos`]: Socket::set_recv_tos
+    /// [`set_recv_tos_v4`]: Socket::set_recv_tos_v4
     #[cfg(not(any(
         target_os = "aix",
         target_os = "dragonfly",
@@ -1638,7 +1638,7 @@ impl Socket {
         target_os = "espidf",
         target_os = "vita",
     )))]
-    pub fn recv_tos(&self) -> io::Result<bool> {
+    pub fn recv_tos_v4(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_RECVTOS)
                 .map(|recv_tos| recv_tos > 0)
