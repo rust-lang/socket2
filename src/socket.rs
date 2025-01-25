@@ -1165,8 +1165,8 @@ impl Socket {
     ///
     /// [`SOCK_RAW`]: Type::RAW
     /// [raw(7)]: https://man7.org/linux/man-pages/man7/raw.7.html
-    /// [`IP_TTL`]: Socket::set_ttl
     /// [`IP_TOS`]: Socket::set_tos
+    /// [`IP_TTL`]: Socket::set_ttl_v4
     #[cfg_attr(
         any(target_os = "fuchsia", target_os = "illumos", target_os = "solaris"),
         allow(rustdoc::broken_intra_doc_links)
@@ -1531,10 +1531,10 @@ impl Socket {
 
     /// Get the value of the `IP_TTL` option for this socket.
     ///
-    /// For more information about this option, see [`set_ttl`].
+    /// For more information about this option, see [`set_ttl_v4`].
     ///
-    /// [`set_ttl`]: Socket::set_ttl
-    pub fn ttl(&self) -> io::Result<u32> {
+    /// [`set_ttl_v4`]: Socket::set_ttl_v4
+    pub fn ttl_v4(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_TTL).map(|ttl| ttl as u32)
         }
@@ -1544,7 +1544,7 @@ impl Socket {
     ///
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
-    pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
+    pub fn set_ttl_v4(&self, ttl: u32) -> io::Result<()> {
         unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
 
