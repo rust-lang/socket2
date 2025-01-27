@@ -20,7 +20,7 @@ use crate::Socket;
 ///
 /// [`TcpStream`]: std::net::TcpStream
 // Don't use intra-doc links because they won't build on every platform.
-/// [`AsFd`]: https://doc.rust-lang.org/stable/std/os/unix/io/trait.AsFd.html
+/// [`AsFd`]: https://doc.rust-lang.org/stable/std/os/fd/trait.AsFd.html
 /// [`AsSocket`]: https://doc.rust-lang.org/stable/std/os/windows/io/trait.AsSocket.html
 ///
 /// # Examples
