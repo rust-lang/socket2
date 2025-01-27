@@ -2029,35 +2029,6 @@ impl crate::Socket {
         .map(|_| ())
     }
 
-    /// This method is deprecated, use [`crate::Socket::bind_device_by_index_v4`].
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "ios",
-            target_os = "visionos",
-            target_os = "macos",
-            target_os = "tvos",
-            target_os = "watchos",
-        )
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(
-                target_os = "ios",
-                target_os = "visionos",
-                target_os = "macos",
-                target_os = "tvos",
-                target_os = "watchos",
-            )
-        )))
-    )]
-    #[deprecated = "Use `Socket::bind_device_by_index_v4` instead"]
-    pub fn bind_device_by_index(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
-        self.bind_device_by_index_v4(interface)
-    }
-
     /// Sets the value for `IP_BOUND_IF` option on this socket.
     ///
     /// If a socket is bound to an interface, only packets received from that
@@ -2166,35 +2137,6 @@ impl crate::Socket {
         let index =
             unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF)? };
         Ok(NonZeroU32::new(index))
-    }
-
-    /// This method is deprecated, use [`crate::Socket::device_index_v4`].
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "ios",
-            target_os = "visionos",
-            target_os = "macos",
-            target_os = "tvos",
-            target_os = "watchos",
-        )
-    ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(
-                target_os = "ios",
-                target_os = "visionos",
-                target_os = "macos",
-                target_os = "tvos",
-                target_os = "watchos",
-            )
-        )))
-    )]
-    #[deprecated = "Use `Socket::device_index_v4` instead"]
-    pub fn device_index(&self) -> io::Result<Option<NonZeroU32>> {
-        self.device_index_v4()
     }
 
     /// Gets the value for `IPV6_BOUND_IF` option on this socket, i.e. the index
