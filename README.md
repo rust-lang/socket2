@@ -62,6 +62,7 @@ feature flag.
 * NetBSD
 * Redox
 * Solaris
+* [OpenHarmony](https://doc.rust-lang.org/nightly/rustc/platform-support/openharmony.html)
 
 # Minimum Supported Rust Version (MSRV)
 
