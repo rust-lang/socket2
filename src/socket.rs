@@ -2324,7 +2324,7 @@ impl Read for Socket {
     }
 }
 
-impl<'a> Read for &'a Socket {
+impl Read for &Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         // Safety: see other `Read::read` impl.
         let buf = unsafe { &mut *(buf as *mut [u8] as *mut [MaybeUninit<u8>]) };
@@ -2354,7 +2354,7 @@ impl Write for Socket {
     }
 }
 
-impl<'a> Write for &'a Socket {
+impl Write for &Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.send(buf)
     }
