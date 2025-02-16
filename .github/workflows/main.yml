@@ -67,6 +67,7 @@ jobs:
           - aarch64-unknown-freebsd
           - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
+          - aarch64-unknown-linux-ohos
           - aarch64-unknown-netbsd
           - aarch64-unknown-openbsd
           - aarch64-unknown-redox
@@ -74,6 +75,7 @@ jobs:
           - arm64_32-apple-watchos
           - armv7-linux-androideabi
           - armv7-sony-vita-newlibeabihf
+          - armv7-unknown-linux-ohos
           - i686-linux-android
           # Broken, see https://github.com/rust-lang/socket2/issues/539.
           #- i686-unknown-hurd-gnu
@@ -94,6 +96,7 @@ jobs:
           - x86_64-unknown-illumos
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
+          - x86_64-unknown-linux-ohos
           - x86_64-unknown-netbsd
           - x86_64-unknown-openbsd
           - x86_64-unknown-redox
