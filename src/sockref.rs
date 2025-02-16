@@ -68,7 +68,7 @@ pub struct SockRef<'s> {
     _lifetime: PhantomData<&'s Socket>,
 }
 
-impl<'s> Deref for SockRef<'s> {
+impl Deref for SockRef<'_> {
     type Target = Socket;
 
     fn deref(&self) -> &Self::Target {

@@ -662,9 +662,9 @@ pub struct MaybeUninitSlice<'a> {
     _lifetime: PhantomData<&'a mut [MaybeUninit<u8>]>,
 }
 
-unsafe impl<'a> Send for MaybeUninitSlice<'a> {}
+unsafe impl Send for MaybeUninitSlice<'_> {}
 
-unsafe impl<'a> Sync for MaybeUninitSlice<'a> {}
+unsafe impl Sync for MaybeUninitSlice<'_> {}
 
 impl<'a> MaybeUninitSlice<'a> {
     pub(crate) fn new(buf: &'a mut [MaybeUninit<u8>]) -> MaybeUninitSlice<'a> {
