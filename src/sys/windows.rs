@@ -125,7 +125,6 @@ impl Type {
 
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
     pub const fn no_inherit(self) -> Type {
         self._no_inherit()
     }
@@ -946,7 +945,6 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
 impl crate::Socket {
     /// Sets `HANDLE_FLAG_INHERIT` using `SetHandleInformation`.
     #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(all(windows, feature = "all"))))]
     pub fn set_no_inherit(&self, no_inherit: bool) -> io::Result<()> {
         self._set_no_inherit(no_inherit)
     }
@@ -985,7 +983,6 @@ impl crate::Socket {
     }
 }
 
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl AsSocket for crate::Socket {
     fn as_socket(&self) -> BorrowedSocket<'_> {
         // SAFETY: lifetime is bound by self.
@@ -993,14 +990,12 @@ impl AsSocket for crate::Socket {
     }
 }
 
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl AsRawSocket for crate::Socket {
     fn as_raw_socket(&self) -> RawSocket {
         self.as_raw() as RawSocket
     }
 }
 
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl From<crate::Socket> for OwnedSocket {
     fn from(sock: crate::Socket) -> OwnedSocket {
         // SAFETY: sock.into_raw() always returns a valid fd.
@@ -1008,14 +1003,12 @@ impl From<crate::Socket> for OwnedSocket {
     }
 }
 
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl IntoRawSocket for crate::Socket {
     fn into_raw_socket(self) -> RawSocket {
         self.into_raw() as RawSocket
     }
 }
 
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl From<OwnedSocket> for crate::Socket {
     fn from(fd: OwnedSocket) -> crate::Socket {
         // SAFETY: `OwnedFd` ensures the fd is valid.
@@ -1023,7 +1016,6 @@ impl From<OwnedSocket> for crate::Socket {
     }
 }
 
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl FromRawSocket for crate::Socket {
     unsafe fn from_raw_socket(socket: RawSocket) -> crate::Socket {
         crate::Socket::from_raw(socket as Socket)
