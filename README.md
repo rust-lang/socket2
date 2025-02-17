@@ -66,7 +66,7 @@ feature flag.
 
 # Minimum Supported Rust Version (MSRV)
 
-Socket2 uses 1.63.0 as MSRV.
+Socket2 uses 1.63.0 (1.66.0 for wasm32-wasip2) as MSRV.
 
 # License
 
