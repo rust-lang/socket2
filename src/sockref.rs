@@ -78,7 +78,6 @@ impl<'s> Deref for SockRef<'s> {
 
 /// On Windows, a corresponding `From<&impl AsSocket>` implementation exists.
 #[cfg(unix)]
-#[cfg_attr(docsrs, doc(cfg(unix)))]
 impl<'s, S> From<&'s S> for SockRef<'s>
 where
     S: AsFd,
@@ -96,7 +95,6 @@ where
 
 /// On Unix, a corresponding `From<&impl AsFd>` implementation exists.
 #[cfg(windows)]
-#[cfg_attr(docsrs, doc(cfg(windows)))]
 impl<'s, S> From<&'s S> for SockRef<'s>
 where
     S: AsSocket,
