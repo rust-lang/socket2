@@ -84,6 +84,19 @@ pub(crate) use windows_sys::Win32::Networking::WinSock::{
 pub(crate) const IPPROTO_IP: c_int = windows_sys::Win32::Networking::WinSock::IPPROTO_IP as c_int;
 pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SOL_SOCKET as c_int;
 
+macro_rules! export_constants {
+    ($id:ident, $ref:ident) => {
+        pub(crate) const $id: c_int = windows_sys::Win32::Networking::WinSock::$ref as c_int;
+    };
+    ($id:ident) => {
+        export_constants!($id, $id);
+    };
+}
+
+export_constants!(IPV6_MTU_DISCOVER);
+export_constants!(IP_MTU_DISCOVER);
+export_constants!(IP_PMTUDISC_DO);
+export_constants!(IP_PMTUDISC_DONT);
 /// Type used in set/getsockopt to retrieve the `TCP_NODELAY` option.
 ///
 /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt>

@@ -204,6 +204,24 @@ pub(crate) use libc::{
     SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
     SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
+
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "redox",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "watchos",
+    target_os = "vita",
+    target_os = "dragonfly",
+    target_os = "fuchsia",
+    target_os = "illumos",
+)))]
+pub(crate) use libc::{IPV6_MTU_DISCOVER, IP_MTU_DISCOVER, IP_PMTUDISC_DO, IP_PMTUDISC_DONT};
+
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "haiku",
