@@ -1350,6 +1350,18 @@ test!(
 #[cfg(not(target_os = "redox"))]
 test!(out_of_band_inline, set_out_of_band_inline(true));
 test!(reuse_address, set_reuse_address(true));
+
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "windows",
+))]
+test!(IPv4 dont_frag, set_dont_frag(cfg!(not(target_os = "windows"))));
+// TODO: macos can only set on udp socket.
+#[cfg(any(target_os = "linux", target_os = "windows",))]
+test!(IPv6 dont_frag_v6, set_dont_frag_v6(cfg!(not(target_os = "freebsd"))));
+
 #[cfg(all(
     feature = "all",
     not(any(windows, target_os = "solaris", target_os = "illumos"))

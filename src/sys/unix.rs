@@ -204,6 +204,10 @@ pub(crate) use libc::{
     SO_BROADCAST, SO_ERROR, SO_KEEPALIVE, SO_RCVBUF, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDBUF,
     SO_SNDTIMEO, SO_TYPE, TCP_NODELAY,
 };
+
+#[cfg(target_os = "linux")]
+pub(crate) use libc::{IPV6_MTU_DISCOVER, IP_MTU_DISCOVER, IP_PMTUDISC_DO, IP_PMTUDISC_DONT};
+
 #[cfg(not(any(
     target_os = "dragonfly",
     target_os = "haiku",
