@@ -84,6 +84,19 @@ pub(crate) use windows_sys::Win32::Networking::WinSock::{
 pub(crate) const IPPROTO_IP: c_int = windows_sys::Win32::Networking::WinSock::IPPROTO_IP as c_int;
 pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SOL_SOCKET as c_int;
 
+macro_rules! export_constants {
+    ($id:ident, $ref:ident) => {
+        pub(crate) const $id: c_int = windows_sys::Win32::Networking::WinSock::$ref as c_int;
+    };
+    ($id:ident) => {
+        export_constants!($id, $id);
+    };
+}
+
+export_constants!(IPV6_MTU_DISCOVER);
+export_constants!(IP_MTU_DISCOVER);
+export_constants!(IP_PMTUDISC_DO);
+export_constants!(IP_PMTUDISC_DONT);
 /// Type used in set/getsockopt to retrieve the `TCP_NODELAY` option.
 ///
 /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt>
@@ -1022,36 +1035,41 @@ impl FromRawSocket for crate::Socket {
     }
 }
 
-#[test]
-fn in_addr_convertion() {
-    let ip = Ipv4Addr::new(127, 0, 0, 1);
-    let raw = to_in_addr(&ip);
-    assert_eq!(unsafe { raw.S_un.S_addr }, 127 << 0 | 1 << 24);
-    assert_eq!(from_in_addr(raw), ip);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let ip = Ipv4Addr::new(127, 34, 4, 12);
-    let raw = to_in_addr(&ip);
-    assert_eq!(
-        unsafe { raw.S_un.S_addr },
-        127 << 0 | 34 << 8 | 4 << 16 | 12 << 24
-    );
-    assert_eq!(from_in_addr(raw), ip);
-}
+    #[test]
+    fn in_addr_convertion() {
+        let ip = Ipv4Addr::new(127, 0, 0, 1);
+        let raw = to_in_addr(&ip);
+        assert_eq!(unsafe { raw.S_un.S_addr }, 127 << 0 | 1 << 24);
+        assert_eq!(from_in_addr(raw), ip);
 
-#[test]
-fn in6_addr_convertion() {
-    let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
-    let raw = to_in6_addr(&ip);
-    let want = [
-        0x2000u16.to_be(),
-        1u16.to_be(),
-        2u16.to_be(),
-        3u16.to_be(),
-        4u16.to_be(),
-        5u16.to_be(),
-        6u16.to_be(),
-        7u16.to_be(),
-    ];
-    assert_eq!(unsafe { raw.u.Word }, want);
-    assert_eq!(from_in6_addr(raw), ip);
+        let ip = Ipv4Addr::new(127, 34, 4, 12);
+        let raw = to_in_addr(&ip);
+        assert_eq!(
+            unsafe { raw.S_un.S_addr },
+            127 << 0 | 34 << 8 | 4 << 16 | 12 << 24
+        );
+        assert_eq!(from_in_addr(raw), ip);
+    }
+
+    #[test]
+    fn in6_addr_convertion() {
+        let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
+        let raw = to_in6_addr(&ip);
+        let want = [
+            0x2000u16.to_be(),
+            1u16.to_be(),
+            2u16.to_be(),
+            3u16.to_be(),
+            4u16.to_be(),
+            5u16.to_be(),
+            6u16.to_be(),
+            7u16.to_be(),
+        ];
+        assert_eq!(unsafe { raw.u.Word }, want);
+        assert_eq!(from_in6_addr(raw), ip);
+    }
 }
