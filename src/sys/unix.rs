@@ -2720,27 +2720,32 @@ from!(crate::Socket, UnixListener);
 #[cfg(feature = "all")]
 from!(crate::Socket, UnixDatagram);
 
-#[test]
-fn in_addr_convertion() {
-    let ip = Ipv4Addr::new(127, 0, 0, 1);
-    let raw = to_in_addr(&ip);
-    // NOTE: `in_addr` is packed on NetBSD and it's unsafe to borrow.
-    let a = raw.s_addr;
-    assert_eq!(a, u32::from_ne_bytes([127, 0, 0, 1]));
-    assert_eq!(from_in_addr(raw), ip);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let ip = Ipv4Addr::new(127, 34, 4, 12);
-    let raw = to_in_addr(&ip);
-    let a = raw.s_addr;
-    assert_eq!(a, u32::from_ne_bytes([127, 34, 4, 12]));
-    assert_eq!(from_in_addr(raw), ip);
-}
+    #[test]
+    fn in_addr_convertion() {
+        let ip = Ipv4Addr::new(127, 0, 0, 1);
+        let raw = to_in_addr(&ip);
+        // NOTE: `in_addr` is packed on NetBSD and it's unsafe to borrow.
+        let a = raw.s_addr;
+        assert_eq!(a, u32::from_ne_bytes([127, 0, 0, 1]));
+        assert_eq!(from_in_addr(raw), ip);
 
-#[test]
-fn in6_addr_convertion() {
-    let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
-    let raw = to_in6_addr(&ip);
-    let want = [32, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7];
-    assert_eq!(raw.s6_addr, want);
-    assert_eq!(from_in6_addr(raw), ip);
+        let ip = Ipv4Addr::new(127, 34, 4, 12);
+        let raw = to_in_addr(&ip);
+        let a = raw.s_addr;
+        assert_eq!(a, u32::from_ne_bytes([127, 34, 4, 12]));
+        assert_eq!(from_in_addr(raw), ip);
+    }
+
+    #[test]
+    fn in6_addr_convertion() {
+        let ip = Ipv6Addr::new(0x2000, 1, 2, 3, 4, 5, 6, 7);
+        let raw = to_in6_addr(&ip);
+        let want = [32, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7];
+        assert_eq!(raw.s6_addr, want);
+        assert_eq!(from_in6_addr(raw), ip);
+    }
 }
