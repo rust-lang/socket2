@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![allow(clippy::needless_lifetimes)]
+
 //! Utilities for creating and using sockets.
 //!
 //! The goal of this crate is to create and use a socket using advanced
