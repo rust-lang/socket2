@@ -438,7 +438,6 @@ pub struct TcpKeepalive {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
-        target_os = "windows",
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
@@ -467,7 +466,6 @@ impl TcpKeepalive {
                 target_os = "openbsd",
                 target_os = "redox",
                 target_os = "solaris",
-                target_os = "windows",
                 target_os = "nto",
                 target_os = "espidf",
                 target_os = "vita",
@@ -543,6 +541,7 @@ impl TcpKeepalive {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "windows",
         )
     ))]
     pub const fn with_retries(self, retries: u32) -> Self {
