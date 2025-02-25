@@ -1615,6 +1615,53 @@ impl Socket {
                 .map(|recv_tos| recv_tos > 0)
         }
     }
+
+    /// Set value for `IP_DONTFRAG` option of this socket
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "windows",
+    ))]
+    pub fn dont_frag(&self) -> io::Result<bool> {
+        unsafe {
+            #[cfg(any(target_os = "macos", target_os = "ios",))]
+            return getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, libc::IP_DONTFRAG)
+                .map(|dont_frag| dont_frag > 0);
+            #[cfg(any(target_os = "linux", target_os = "windows",))]
+            return getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MTU_DISCOVER)
+                .map(|dont_frag| dont_frag == 0);
+        }
+    }
+    /// Set value for `IP_DONTFRAG` option on this socket
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "windows",
+    ))]
+    pub fn set_dont_frag(&self, dont_frag: bool) -> io::Result<()> {
+        unsafe {
+            #[cfg(any(target_os = "macos", target_os = "ios",))]
+            return setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                libc::IP_DONTFRAG,
+                dont_frag as c_int,
+            );
+            #[cfg(any(target_os = "linux", target_os = "windows",))]
+            return setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_MTU_DISCOVER,
+                if dont_frag {
+                    sys::IP_PMTUDISC_DONT
+                } else {
+                    sys::IP_PMTUDISC_DO
+                },
+            );
+        };
+    }
 }
 
 /// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6`.
@@ -2012,6 +2059,54 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_RECVHOPLIMIT,
                 recv_hoplimit as c_int,
+            )
+        }
+    }
+
+    /// Get value for `IP_DONTFRAG` option on this socket.
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "ios",
+    ))]
+    pub fn dont_frag_v6(&self) -> io::Result<bool> {
+        unsafe {
+            #[cfg(any(target_os = "macos", target_os = "ios",))]
+            return getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, libc::IPV6_DONTFRAG)
+                .map(|dont_frag| dont_frag > 0);
+            #[cfg(any(target_os = "linux", target_os = "windows",))]
+            return getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_MTU_DISCOVER)
+                .map(|dont_frag| dont_frag == sys::IP_PMTUDISC_DONT);
+        }
+    }
+
+    /// Set value for `IP_DONTFRAG` option on this socket
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "windows",
+    ))]
+    pub fn set_dont_frag_v6(&self, dont_frag: bool) -> io::Result<()> {
+        unsafe {
+            #[cfg(any(target_os = "macos", target_os = "ios",))]
+            return setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                libc::IPV6_DONTFRAG,
+                dont_frag as c_int,
+            );
+            #[cfg(any(target_os = "linux", target_os = "windows",))]
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MTU_DISCOVER,
+                if dont_frag {
+                    sys::IP_PMTUDISC_DONT
+                } else {
+                    sys::IP_PMTUDISC_DO
+                },
             )
         }
     }
