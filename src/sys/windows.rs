@@ -931,7 +931,7 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         storage.sun_family = crate::sys::AF_UNIX as sa_family_t;
         // `storage` was initialized to zero above, so the path is
         // already null terminated.
-        let bytes: &[i8] = unsafe { slice::from_raw_parts(bytes.as_ptr().cast(), bytes.len()) }; 
+        let bytes: &[i8] = unsafe { slice::from_raw_parts(bytes.as_ptr().cast(), bytes.len()) };
         storage.sun_path[..bytes.len()].copy_from_slice(bytes);
 
         let base = storage as *const _ as usize;
