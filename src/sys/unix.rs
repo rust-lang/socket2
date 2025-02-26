@@ -1392,25 +1392,31 @@ pub(crate) fn original_dst_ipv6(fd: Socket) -> io::Result<SockAddr> {
 }
 
 // TODO(eliza): use libc's definition on solarish once it merges...
-#[cfg(any(target_os = "illumos", target_os = "solaris",))]
+#[cfg(all(feature = "all", any(target_os = "illumos", target_os = "solaris")))]
 const IP_BOUND_IF: libc::c_int = 0x41;
-#[cfg(any(
-    target_os = "ios",
-    target_os = "visionos",
-    target_os = "macos",
-    target_os = "tvos",
-    target_os = "watchos",
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
+    )
 ))]
 use libc::IP_BOUND_IF;
 
-#[cfg(any(target_os = "illumos", target_os = "solaris",))]
+#[cfg(all(feature = "all", any(target_os = "illumos", target_os = "solaris")))]
 const IPV6_BOUND_IF: libc::c_int = 0x41;
-#[cfg(any(
-    target_os = "ios",
-    target_os = "visionos",
-    target_os = "macos",
-    target_os = "tvos",
-    target_os = "watchos",
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos",
+    )
 ))]
 use libc::IPV6_BOUND_IF;
 
