@@ -1391,7 +1391,7 @@ pub(crate) fn original_dst_ipv6(fd: Socket) -> io::Result<SockAddr> {
     .map(|(_, addr)| addr)
 }
 
-// TODO(eliza): use libc's definition on solarish once it merges...
+// TODO: remove this once https://github.com/rust-lang/libc/pull/4287 merges
 #[cfg(all(feature = "all", any(target_os = "illumos", target_os = "solaris")))]
 const IP_BOUND_IF: libc::c_int = 0x41;
 #[cfg(all(
@@ -1406,6 +1406,7 @@ const IP_BOUND_IF: libc::c_int = 0x41;
 ))]
 use libc::IP_BOUND_IF;
 
+// TODO: remove this once https://github.com/rust-lang/libc/pull/4287 merges
 #[cfg(all(feature = "all", any(target_os = "illumos", target_os = "solaris")))]
 const IPV6_BOUND_IF: libc::c_int = 0x41;
 #[cfg(all(
