@@ -1391,6 +1391,29 @@ pub(crate) fn original_dst_ipv6(fd: Socket) -> io::Result<SockAddr> {
     .map(|(_, addr)| addr)
 }
 
+// TODO(eliza): use libc's definition on solarish once it merges...
+#[cfg(any(target_os = "illumos", target_os = "solaris",))]
+const IP_BOUND_IF: libc::c_int = 0x41;
+#[cfg(any(
+    target_os = "ios",
+    target_os = "visionos",
+    target_os = "macos",
+    target_os = "tvos",
+    target_os = "watchos",
+))]
+use libc::IP_BOUND_IF;
+
+#[cfg(any(target_os = "illumos", target_os = "solaris",))]
+const IPV6_BOUND_IF: libc::c_int = 0x41;
+#[cfg(any(
+    target_os = "ios",
+    target_os = "visionos",
+    target_os = "macos",
+    target_os = "tvos",
+    target_os = "watchos",
+))]
+use libc::IPV6_BOUND_IF;
+
 /// Unix only API.
 impl crate::Socket {
     /// Accept a new incoming connection from this listener.
@@ -1842,7 +1865,7 @@ impl crate::Socket {
     ))]
     pub fn bind_device_by_index_v4(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         let index = interface.map_or(0, NonZeroU32::get);
-        unsafe { setsockopt(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF, index) }
+        unsafe { setsockopt(self.as_raw(), IPPROTO_IP, IP_BOUND_IF, index) }
     }
 
     /// Sets the value for `IPV6_BOUND_IF` option on this socket.
@@ -1869,7 +1892,7 @@ impl crate::Socket {
     ))]
     pub fn bind_device_by_index_v6(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         let index = interface.map_or(0, NonZeroU32::get);
-        unsafe { setsockopt(self.as_raw(), IPPROTO_IPV6, libc::IPV6_BOUND_IF, index) }
+        unsafe { setsockopt(self.as_raw(), IPPROTO_IPV6, IPV6_BOUND_IF, index) }
     }
 
     /// Gets the value for `IP_BOUND_IF` option on this socket, i.e. the index
@@ -1890,8 +1913,7 @@ impl crate::Socket {
         )
     ))]
     pub fn device_index_v4(&self) -> io::Result<Option<NonZeroU32>> {
-        let index =
-            unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF)? };
+        let index = unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IP, IP_BOUND_IF)? };
         Ok(NonZeroU32::new(index))
     }
 
@@ -1913,9 +1935,8 @@ impl crate::Socket {
         )
     ))]
     pub fn device_index_v6(&self) -> io::Result<Option<NonZeroU32>> {
-        let index = unsafe {
-            getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IPV6, libc::IPV6_BOUND_IF)?
-        };
+        let index =
+            unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IPV6, IPV6_BOUND_IF)? };
         Ok(NonZeroU32::new(index))
     }
 
