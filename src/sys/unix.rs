@@ -22,6 +22,8 @@ use std::net::{Ipv4Addr, Ipv6Addr};
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
+        target_os = "illumos",
+        target_os = "solaris",
     )
 ))]
 use std::num::NonZeroU32;
@@ -1834,6 +1836,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     pub fn bind_device_by_index_v4(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
@@ -1859,6 +1863,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     pub fn bind_device_by_index_v6(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
@@ -1879,6 +1885,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     pub fn device_index_v4(&self) -> io::Result<Option<NonZeroU32>> {
@@ -1900,6 +1908,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     pub fn device_index_v6(&self) -> io::Result<Option<NonZeroU32>> {
