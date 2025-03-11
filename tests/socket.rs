@@ -990,6 +990,8 @@ fn device() {
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
+        target_os = "solaris",
+        target_os = "illumos",
     )
 ))]
 #[test]
@@ -1036,6 +1038,8 @@ fn device() {
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
+        target_os = "solaris",
+        target_os = "illumos",
     )
 ))]
 #[test]

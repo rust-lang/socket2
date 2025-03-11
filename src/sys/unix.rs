@@ -22,6 +22,8 @@ use std::net::{Ipv4Addr, Ipv6Addr};
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
+        target_os = "illumos",
+        target_os = "solaris",
     )
 ))]
 use std::num::NonZeroU32;
@@ -2076,6 +2078,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     #[cfg_attr(
@@ -2114,6 +2118,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     #[cfg_attr(
@@ -2147,6 +2153,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     #[cfg_attr(
@@ -2210,6 +2218,8 @@ impl crate::Socket {
             target_os = "macos",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
         )
     ))]
     #[cfg_attr(
