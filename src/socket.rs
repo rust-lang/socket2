@@ -1674,6 +1674,9 @@ impl Socket {
             setsockopt(
                 self.as_raw(),
                 sys::IPPROTO_IPV6,
+                #[cfg(target_os = "linux")]
+                sys::IPV6_HDRINCL,
+                #[cfg(not(target_os = "linux"))]
                 sys::IP_HDRINCL,
                 included as c_int,
             )
