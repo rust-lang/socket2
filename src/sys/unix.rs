@@ -124,6 +124,8 @@ pub(crate) use libc::SO_OOBINLINE;
 // Used in `Socket`.
 #[cfg(not(target_os = "nto"))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
+#[cfg(all(feature = "all", target_os = "linux"))]
+pub(crate) use libc::IPV6_HDRINCL;
 #[cfg(all(
     feature = "all",
     not(any(
