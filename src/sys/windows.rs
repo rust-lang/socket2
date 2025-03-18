@@ -59,6 +59,8 @@ pub(crate) const SOCK_SEQPACKET: c_int =
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
     IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP,
 };
+
+pub(crate) use windows_sys::Win32::Networking::WinSock::TCP_KEEPCNT;
 // Used in `SockAddr`.
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
     SOCKADDR as sockaddr, SOCKADDR_IN as sockaddr_in, SOCKADDR_IN6 as sockaddr_in6,
@@ -727,17 +729,28 @@ fn into_ms(duration: Option<Duration>) -> u32 {
 }
 
 pub(crate) fn set_tcp_keepalive(socket: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
-    let mut keepalive = tcp_keepalive {
+    let mut w_keepalive = tcp_keepalive {
         onoff: 1,
         keepalivetime: into_ms(keepalive.time),
         keepaliveinterval: into_ms(keepalive.interval),
     };
+
+    if let Some(retries) = keepalive.retries {
+        unsafe {
+            setsockopt(
+                socket,
+                WinSock::IPPROTO_TCP,
+                WinSock::TCP_KEEPCNT,
+                retries as c_int,
+            )?
+        }
+    }
     let mut out = 0;
     syscall!(
         WSAIoctl(
             socket,
             SIO_KEEPALIVE_VALS,
-            &mut keepalive as *mut _ as *mut _,
+            &mut w_keepalive as *mut _ as *mut _,
             size_of::<tcp_keepalive>() as _,
             ptr::null_mut(),
             0,
@@ -931,7 +944,13 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
         storage.sun_family = crate::sys::AF_UNIX as sa_family_t;
         // `storage` was initialized to zero above, so the path is
         // already null terminated.
-        storage.sun_path[..bytes.len()].copy_from_slice(bytes);
+        storage.sun_path[..bytes.len()].copy_from_slice(
+            bytes
+                .iter()
+                .map(|b| *b as i8)
+                .collect::<Vec<_>>()
+                .as_slice(),
+        );
 
         let base = storage as *const _ as usize;
         let path = &storage.sun_path as *const _ as usize;

@@ -38,6 +38,7 @@ targets = [
   "x86_64-apple-darwin",
   "x86_64-pc-solaris",
   "x86_64-pc-windows-msvc",
+  "x86_64-pc-windows-gnu",
   "x86_64-unknown-freebsd",
   "x86_64-unknown-fuchsia",
   "x86_64-unknown-illumos",
@@ -54,7 +55,7 @@ features = ["all"]
 libc = "0.2.171"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.52"
+version = "0.59"
 features = [
   "Win32_Foundation",
   "Win32_Networking_WinSock",
