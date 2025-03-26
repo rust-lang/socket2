@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::mem::{self, size_of, MaybeUninit};
 use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::path::Path;
@@ -8,7 +9,7 @@ use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
 
 use crate::sys::{
     c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
-    AF_INET6,
+    AF_INET6, AF_UNIX,
 };
 use crate::Domain;
 
@@ -24,16 +25,6 @@ pub struct SockAddr {
 
 #[allow(clippy::len_without_is_empty)]
 impl SockAddr {
-    /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
-    ///
-    /// Returns an error if the path is longer than `SUN_LEN`.
-    pub fn unix<P>(path: P) -> io::Result<SockAddr>
-    where
-        P: AsRef<Path>,
-    {
-        crate::sys::unix_sockaddr(path.as_ref())
-    }
-
     /// Create a `SockAddr` from the underlying storage and its length.
     ///
     /// # Safety
@@ -152,6 +143,26 @@ impl SockAddr {
         })
     }
 
+    /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
+    ///
+    /// Returns an error if the path is longer than `SUN_LEN`.
+    pub fn unix<P>(path: P) -> io::Result<SockAddr>
+    where
+        P: AsRef<Path>,
+    {
+        crate::sys::unix_sockaddr(path.as_ref())
+    }
+
+    /// Set the length of the address.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure that the address up to `length` bytes are properly
+    /// initialised.
+    pub unsafe fn set_length(&mut self, length: socklen_t) {
+        self.len = length;
+    }
+
     /// Returns this address's family.
     pub const fn family(&self) -> sa_family_t {
         self.storage.ss_family
@@ -172,6 +183,11 @@ impl SockAddr {
         ptr::addr_of!(self.storage).cast()
     }
 
+    /// Retuns the address as the storage.
+    pub const fn as_storage(self) -> sockaddr_storage {
+        self.storage
+    }
+
     /// Returns true if this address is in the `AF_INET` (IPv4) family, false otherwise.
     pub const fn is_ipv4(&self) -> bool {
         self.storage.ss_family == AF_INET as sa_family_t
@@ -183,10 +199,10 @@ impl SockAddr {
         self.storage.ss_family == AF_INET6 as sa_family_t
     }
 
-    /// Returns a raw pointer to the address storage.
-    #[cfg(all(unix, not(target_os = "redox")))]
-    pub(crate) const fn as_storage_ptr(&self) -> *const sockaddr_storage {
-        &self.storage
+    /// Returns true if this address is of a unix socket (for local interprocess communication),
+    /// i.e. it is from the `AF_UNIX` family, false otherwise.
+    pub fn is_unix(&self) -> bool {
+        self.storage.ss_family == AF_UNIX as sa_family_t
     }
 
     /// Returns this address as a `SocketAddr` if it is in the `AF_INET` (IPv4)
@@ -238,6 +254,14 @@ impl SockAddr {
             _ => None,
         }
     }
+
+    /// Returns the initialised storage bytes.
+    fn as_bytes(&self) -> &[u8] {
+        // SAFETY: `self.storage` is a C struct which can always be treated a
+        // slice of bytes. Furthermore, we ensure we don't read any unitialised
+        // bytes by using `self.len`.
+        unsafe { std::slice::from_raw_parts(self.as_ptr().cast(), self.len as usize) }
+    }
 }
 
 impl From<SocketAddr> for SockAddr {
@@ -261,6 +285,24 @@ impl From<SocketAddrV4> for SockAddr {
             storage.sin_zero = Default::default();
             mem::size_of::<sockaddr_in>() as socklen_t
         };
+        #[cfg(any(
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "haiku",
+            target_os = "hermit",
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "netbsd",
+            target_os = "nto",
+            target_os = "openbsd",
+            target_os = "tvos",
+            target_os = "vxworks",
+            target_os = "watchos",
+        ))]
+        {
+            storage.ss_len = len as u8;
+        }
         SockAddr { storage, len }
     }
 }
@@ -287,6 +329,24 @@ impl From<SocketAddrV6> for SockAddr {
             }
             mem::size_of::<sockaddr_in6>() as socklen_t
         };
+        #[cfg(any(
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "haiku",
+            target_os = "hermit",
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "netbsd",
+            target_os = "nto",
+            target_os = "openbsd",
+            target_os = "tvos",
+            target_os = "vxworks",
+            target_os = "watchos",
+        ))]
+        {
+            storage.ss_len = len as u8;
+        }
         SockAddr { storage, len }
     }
 }
@@ -300,10 +360,14 @@ impl fmt::Debug for SockAddr {
             target_os = "haiku",
             target_os = "hermit",
             target_os = "ios",
+            target_os = "visionos",
             target_os = "macos",
             target_os = "netbsd",
+            target_os = "nto",
             target_os = "openbsd",
+            target_os = "tvos",
             target_os = "vxworks",
+            target_os = "watchos",
         ))]
         f.field("ss_len", &self.storage.ss_len);
         f.field("ss_family", &self.storage.ss_family)
@@ -312,44 +376,200 @@ impl fmt::Debug for SockAddr {
     }
 }
 
-#[test]
-fn ipv4() {
-    use std::net::Ipv4Addr;
-    let std = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
-    let addr = SockAddr::from(std);
-    assert!(addr.is_ipv4());
-    assert_eq!(addr.family(), AF_INET as sa_family_t);
-    assert_eq!(addr.domain(), Domain::IPV4);
-    assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
-    assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
-    assert_eq!(addr.as_socket_ipv4(), Some(std));
-    assert!(addr.as_socket_ipv6().is_none());
-
-    let addr = SockAddr::from(SocketAddr::from(std));
-    assert_eq!(addr.family(), AF_INET as sa_family_t);
-    assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
-    assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
-    assert_eq!(addr.as_socket_ipv4(), Some(std));
-    assert!(addr.as_socket_ipv6().is_none());
+impl PartialEq for SockAddr {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
 }
 
-#[test]
-fn ipv6() {
-    use std::net::Ipv6Addr;
-    let std = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
-    let addr = SockAddr::from(std);
-    assert!(addr.is_ipv6());
-    assert_eq!(addr.family(), AF_INET6 as sa_family_t);
-    assert_eq!(addr.domain(), Domain::IPV6);
-    assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
-    assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
-    assert!(addr.as_socket_ipv4().is_none());
-    assert_eq!(addr.as_socket_ipv6(), Some(std));
+impl Eq for SockAddr {}
 
-    let addr = SockAddr::from(SocketAddr::from(std));
-    assert_eq!(addr.family(), AF_INET6 as sa_family_t);
-    assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
-    assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
-    assert!(addr.as_socket_ipv4().is_none());
-    assert_eq!(addr.as_socket_ipv6(), Some(std));
+impl Hash for SockAddr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_bytes().hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ipv4() {
+        use std::net::Ipv4Addr;
+        let std = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+        let addr = SockAddr::from(std);
+        assert!(addr.is_ipv4());
+        assert!(!addr.is_ipv6());
+        assert!(!addr.is_unix());
+        assert_eq!(addr.family(), AF_INET as sa_family_t);
+        assert_eq!(addr.domain(), Domain::IPV4);
+        assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
+        assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
+        assert_eq!(addr.as_socket_ipv4(), Some(std));
+        assert!(addr.as_socket_ipv6().is_none());
+
+        let addr = SockAddr::from(SocketAddr::from(std));
+        assert_eq!(addr.family(), AF_INET as sa_family_t);
+        assert_eq!(addr.len(), size_of::<sockaddr_in>() as socklen_t);
+        assert_eq!(addr.as_socket(), Some(SocketAddr::V4(std)));
+        assert_eq!(addr.as_socket_ipv4(), Some(std));
+        assert!(addr.as_socket_ipv6().is_none());
+        #[cfg(unix)]
+        {
+            assert!(addr.as_pathname().is_none());
+            assert!(addr.as_abstract_namespace().is_none());
+        }
+    }
+
+    #[test]
+    fn ipv6() {
+        use std::net::Ipv6Addr;
+        let std = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+        let addr = SockAddr::from(std);
+        assert!(addr.is_ipv6());
+        assert!(!addr.is_ipv4());
+        assert!(!addr.is_unix());
+        assert_eq!(addr.family(), AF_INET6 as sa_family_t);
+        assert_eq!(addr.domain(), Domain::IPV6);
+        assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
+        assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
+        assert!(addr.as_socket_ipv4().is_none());
+        assert_eq!(addr.as_socket_ipv6(), Some(std));
+
+        let addr = SockAddr::from(SocketAddr::from(std));
+        assert_eq!(addr.family(), AF_INET6 as sa_family_t);
+        assert_eq!(addr.len(), size_of::<sockaddr_in6>() as socklen_t);
+        assert_eq!(addr.as_socket(), Some(SocketAddr::V6(std)));
+        assert!(addr.as_socket_ipv4().is_none());
+        assert_eq!(addr.as_socket_ipv6(), Some(std));
+        #[cfg(unix)]
+        {
+            assert!(addr.as_pathname().is_none());
+            assert!(addr.as_abstract_namespace().is_none());
+        }
+    }
+
+    #[test]
+    fn ipv4_eq() {
+        use std::net::Ipv4Addr;
+
+        let std1 = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+        let std2 = SocketAddrV4::new(Ipv4Addr::new(5, 6, 7, 8), 8765);
+
+        test_eq(
+            SockAddr::from(std1),
+            SockAddr::from(std1),
+            SockAddr::from(std2),
+        );
+    }
+
+    #[test]
+    fn ipv4_hash() {
+        use std::net::Ipv4Addr;
+
+        let std1 = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+        let std2 = SocketAddrV4::new(Ipv4Addr::new(5, 6, 7, 8), 8765);
+
+        test_hash(
+            SockAddr::from(std1),
+            SockAddr::from(std1),
+            SockAddr::from(std2),
+        );
+    }
+
+    #[test]
+    fn ipv6_eq() {
+        use std::net::Ipv6Addr;
+
+        let std1 = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+        let std2 = SocketAddrV6::new(Ipv6Addr::new(3, 4, 5, 6, 7, 8, 9, 0), 7654, 13, 14);
+
+        test_eq(
+            SockAddr::from(std1),
+            SockAddr::from(std1),
+            SockAddr::from(std2),
+        );
+    }
+
+    #[test]
+    fn ipv6_hash() {
+        use std::net::Ipv6Addr;
+
+        let std1 = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+        let std2 = SocketAddrV6::new(Ipv6Addr::new(3, 4, 5, 6, 7, 8, 9, 0), 7654, 13, 14);
+
+        test_hash(
+            SockAddr::from(std1),
+            SockAddr::from(std1),
+            SockAddr::from(std2),
+        );
+    }
+
+    #[test]
+    fn ipv4_ipv6_eq() {
+        use std::net::Ipv4Addr;
+        use std::net::Ipv6Addr;
+
+        let std1 = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+        let std2 = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+
+        test_eq(
+            SockAddr::from(std1),
+            SockAddr::from(std1),
+            SockAddr::from(std2),
+        );
+
+        test_eq(
+            SockAddr::from(std2),
+            SockAddr::from(std2),
+            SockAddr::from(std1),
+        );
+    }
+
+    #[test]
+    fn ipv4_ipv6_hash() {
+        use std::net::Ipv4Addr;
+        use std::net::Ipv6Addr;
+
+        let std1 = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9876);
+        let std2 = SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9876, 11, 12);
+
+        test_hash(
+            SockAddr::from(std1),
+            SockAddr::from(std1),
+            SockAddr::from(std2),
+        );
+
+        test_hash(
+            SockAddr::from(std2),
+            SockAddr::from(std2),
+            SockAddr::from(std1),
+        );
+    }
+
+    #[allow(clippy::eq_op)] // allow a0 == a0 check
+    fn test_eq(a0: SockAddr, a1: SockAddr, b: SockAddr) {
+        assert!(a0 == a0);
+        assert!(a0 == a1);
+        assert!(a1 == a0);
+        assert!(a0 != b);
+        assert!(b != a0);
+    }
+
+    fn test_hash(a0: SockAddr, a1: SockAddr, b: SockAddr) {
+        assert!(calculate_hash(&a0) == calculate_hash(&a0));
+        assert!(calculate_hash(&a0) == calculate_hash(&a1));
+        // technically unequal values can have the same hash, in this case x != z and both have different hashes
+        assert!(calculate_hash(&a0) != calculate_hash(&b));
+    }
+
+    fn calculate_hash(x: &SockAddr) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::Hasher;
+
+        let mut hasher = DefaultHasher::new();
+        x.hash(&mut hasher);
+        hasher.finish()
+    }
 }

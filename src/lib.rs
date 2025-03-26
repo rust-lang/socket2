@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![allow(clippy::needless_lifetimes)]
+
 //! Utilities for creating and using sockets.
 //!
 //! The goal of this crate is to create and use a socket using advanced
@@ -50,16 +52,21 @@
 //! This crate has a single feature `all`, which enables all functions even ones
 //! that are not available on all OSs.
 
-#![doc(html_root_url = "https://docs.rs/socket2/0.4")]
 #![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
-// Show required OS/features on docs.rs.
-#![cfg_attr(docsrs, feature(doc_cfg))]
+// Automatically generate required OS/features for docs.rs.
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 // Disallow warnings when running tests.
 #![cfg_attr(test, deny(warnings))]
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
 use std::fmt;
+#[cfg(not(target_os = "redox"))]
+use std::io::IoSlice;
+#[cfg(not(target_os = "redox"))]
+use std::marker::PhantomData;
+#[cfg(not(target_os = "redox"))]
+use std::mem;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
@@ -89,7 +96,7 @@ macro_rules! impl_debug {
                         $(#[$target])*
                         $libc :: $flag => stringify!($flag),
                     )+
-                    n => return write!(f, "{}", n),
+                    n => return write!(f, "{n}"),
                 };
                 f.write_str(string)
             }
@@ -257,14 +264,18 @@ impl Type {
     /// Used for protocols such as UDP.
     pub const DGRAM: Type = Type(sys::SOCK_DGRAM);
 
+    /// Type corresponding to `SOCK_DCCP`.
+    ///
+    /// Used for the DCCP protocol.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const DCCP: Type = Type(sys::SOCK_DCCP);
+
     /// Type corresponding to `SOCK_SEQPACKET`.
-    #[cfg(feature = "all")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "all")))]
+    #[cfg(all(feature = "all", not(target_os = "espidf")))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
-    #[cfg(all(feature = "all", not(target_os = "redox")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", not(target_os = "redox")))))]
+    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
@@ -302,6 +313,34 @@ impl Protocol {
 
     /// Protocol corresponding to `UDP`.
     pub const UDP: Protocol = Protocol(sys::IPPROTO_UDP);
+
+    #[cfg(target_os = "linux")]
+    /// Protocol corresponding to `MPTCP`.
+    pub const MPTCP: Protocol = Protocol(sys::IPPROTO_MPTCP);
+
+    /// Protocol corresponding to `DCCP`.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub const DCCP: Protocol = Protocol(sys::IPPROTO_DCCP);
+
+    /// Protocol corresponding to `SCTP`.
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "linux")))]
+    pub const SCTP: Protocol = Protocol(sys::IPPROTO_SCTP);
+
+    /// Protocol corresponding to `UDPLITE`.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+        )
+    ))]
+    pub const UDPLITE: Protocol = Protocol(sys::IPPROTO_UDPLITE);
+
+    /// Protocol corresponding to `DIVERT`.
+    #[cfg(all(feature = "all", any(target_os = "freebsd", target_os = "openbsd")))]
+    pub const DIVERT: Protocol = Protocol(sys::IPPROTO_DIVERT);
 }
 
 impl From<c_int> for Protocol {
@@ -320,7 +359,6 @@ impl From<Protocol> for c_int {
 ///
 /// Flags provide additional information about incoming messages.
 #[cfg(not(target_os = "redox"))]
-#[cfg_attr(docsrs, doc(cfg(not(target_os = "redox"))))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct RecvFlags(c_int);
 
@@ -333,6 +371,7 @@ impl RecvFlags {
     ///
     /// On Unix this corresponds to the `MSG_TRUNC` flag.
     /// On Windows this corresponds to the `WSAEMSGSIZE` error code.
+    #[cfg(not(target_os = "espidf"))]
     pub const fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
     }
@@ -380,21 +419,60 @@ impl<'a> DerefMut for MaybeUninitSlice<'a> {
 /// See [`Socket::set_tcp_keepalive`].
 #[derive(Debug, Clone)]
 pub struct TcpKeepalive {
+    #[cfg_attr(
+        any(target_os = "openbsd", target_os = "haiku", target_os = "vita"),
+        allow(dead_code)
+    )]
     time: Option<Duration>,
-    #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
+    #[cfg(not(any(
+        target_os = "openbsd",
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "nto",
+        target_os = "espidf",
+        target_os = "vita",
+        target_os = "haiku",
+    )))]
     interval: Option<Duration>,
-    #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
+    #[cfg(not(any(
+        target_os = "openbsd",
+        target_os = "redox",
+        target_os = "solaris",
+        target_os = "windows",
+        target_os = "nto",
+        target_os = "espidf",
+        target_os = "vita",
+        target_os = "haiku",
+    )))]
     retries: Option<u32>,
 }
 
 impl TcpKeepalive {
     /// Returns a new, empty set of TCP keepalive parameters.
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> TcpKeepalive {
         TcpKeepalive {
             time: None,
-            #[cfg(not(any(target_os = "redox", target_os = "solaris")))]
+            #[cfg(not(any(
+                target_os = "openbsd",
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "nto",
+                target_os = "espidf",
+                target_os = "vita",
+                target_os = "haiku",
+            )))]
             interval: None,
-            #[cfg(not(any(target_os = "redox", target_os = "solaris", target_os = "windows")))]
+            #[cfg(not(any(
+                target_os = "openbsd",
+                target_os = "redox",
+                target_os = "solaris",
+                target_os = "windows",
+                target_os = "nto",
+                target_os = "espidf",
+                target_os = "vita",
+                target_os = "haiku",
+            )))]
             retries: None,
         }
     }
@@ -424,32 +502,21 @@ impl TcpKeepalive {
     ///
     /// Some platforms specify this value in seconds, so sub-second
     /// specifications may be omitted.
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "dragonfly",
-            target_os = "freebsd",
-            target_os = "fuchsia",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_vendor = "apple",
-            windows,
-        )
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "windows",
     ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(
-                target_os = "freebsd",
-                target_os = "fuchsia",
-                target_os = "linux",
-                target_os = "netbsd",
-                target_vendor = "apple",
-                windows,
-            )
-        )))
-    )]
     pub const fn with_interval(self, interval: Duration) -> Self {
         Self {
             interval: Some(interval),
@@ -464,32 +531,169 @@ impl TcpKeepalive {
     #[cfg(all(
         feature = "all",
         any(
-            doc,
+            target_os = "android",
             target_os = "dragonfly",
             target_os = "freebsd",
             target_os = "fuchsia",
+            target_os = "illumos",
+            target_os = "ios",
+            target_os = "visionos",
             target_os = "linux",
+            target_os = "macos",
             target_os = "netbsd",
-            target_vendor = "apple",
+            target_os = "tvos",
+            target_os = "watchos",
         )
     ))]
-    #[cfg_attr(
-        docsrs,
-        doc(cfg(all(
-            feature = "all",
-            any(
-                target_os = "freebsd",
-                target_os = "fuchsia",
-                target_os = "linux",
-                target_os = "netbsd",
-                target_vendor = "apple",
-            )
-        )))
-    )]
     pub const fn with_retries(self, retries: u32) -> Self {
         Self {
             retries: Some(retries),
             ..self
         }
+    }
+}
+
+/// Configuration of a `sendmsg(2)` system call.
+///
+/// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdrMut`]
+/// for the variant used by `recvmsg(2)`.
+#[cfg(not(target_os = "redox"))]
+pub struct MsgHdr<'addr, 'bufs, 'control> {
+    inner: sys::msghdr,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
+    /// Create a new `MsgHdr` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MsgHdr<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `msghdr` and `WSAMSG`.
+        MsgHdr {
+            inner: unsafe { mem::zeroed() },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
+    /// and `namelen` on Windows.
+    pub fn with_addr(mut self, addr: &'addr SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner, addr);
+        self
+    }
+
+    /// Set the buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
+    /// and `dwBufferCount` on Windows.
+    pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'_>]) -> Self {
+        let ptr = bufs.as_ptr() as *mut _;
+        sys::set_msghdr_iov(&mut self.inner, ptr, bufs.len());
+        self
+    }
+
+    /// Set the control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
+    /// `Control` on Windows.
+    pub fn with_control(mut self, buf: &'control [u8]) -> Self {
+        let ptr = buf.as_ptr() as *mut _;
+        sys::set_msghdr_control(&mut self.inner, ptr, buf.len());
+        self
+    }
+
+    /// Set the flags of the message.
+    ///
+    /// Corresponds to setting `msg_flags` on Unix and `dwFlags` on Windows.
+    pub fn with_flags(mut self, flags: sys::c_int) -> Self {
+        sys::set_msghdr_flags(&mut self.inner, flags);
+        self
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MsgHdr".fmt(fmt)
+    }
+}
+
+/// Configuration of a `recvmsg(2)` system call.
+///
+/// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdr`] for
+/// the variant used by `sendmsg(2)`.
+#[cfg(not(target_os = "redox"))]
+pub struct MsgHdrMut<'addr, 'bufs, 'control> {
+    inner: sys::msghdr,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(
+        &'addr mut SockAddr,
+        &'bufs mut MaybeUninitSlice<'bufs>,
+        &'control mut [u8],
+    )>,
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
+    /// Create a new `MsgHdrMut` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MsgHdrMut<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `msghdr` and `WSAMSG`.
+        MsgHdrMut {
+            inner: unsafe { mem::zeroed() },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the mutable address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
+    /// and `namelen` on Windows.
+    #[allow(clippy::needless_pass_by_ref_mut)]
+    pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner, addr);
+        self
+    }
+
+    /// Set the mutable buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
+    /// and `dwBufferCount` on Windows.
+    pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'_>]) -> Self {
+        sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), bufs.len());
+        self
+    }
+
+    /// Set the mutable control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
+    /// `Control` on Windows.
+    pub fn with_control(mut self, buf: &'control mut [MaybeUninit<u8>]) -> Self {
+        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), buf.len());
+        self
+    }
+
+    /// Returns the flags of the message.
+    pub fn flags(&self) -> RecvFlags {
+        sys::msghdr_flags(&self.inner)
+    }
+
+    /// Gets the length of the control buffer.
+    ///
+    /// Can be used to determine how much, if any, of the control buffer was filled by `recvmsg`.
+    ///
+    /// Corresponds to `msg_controllen` on Unix and `Control.len` on Windows.
+    pub fn control_len(&self) -> usize {
+        sys::msghdr_control_len(&self.inner)
+    }
+}
+
+#[cfg(not(target_os = "redox"))]
+impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MsgHdrMut".fmt(fmt)
     }
 }
