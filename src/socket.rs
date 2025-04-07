@@ -1254,6 +1254,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn join_multicast_v4_n(
         &self,
@@ -1287,6 +1288,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn leave_multicast_v4_n(
         &self,
@@ -1577,6 +1579,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn set_recv_tos_v4(&self, recv_tos: bool) -> io::Result<()> {
         unsafe {
@@ -1608,6 +1611,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn recv_tos_v4(&self) -> io::Result<bool> {
         unsafe {
@@ -1978,6 +1982,7 @@ impl Socket {
             target_os = "hurd",
             target_os = "espidf",
             target_os = "vita",
+            target_os = "cygwin",
         ))
     ))]
     pub fn recv_hoplimit_v6(&self) -> io::Result<bool> {
@@ -2006,6 +2011,7 @@ impl Socket {
             target_os = "hurd",
             target_os = "espidf",
             target_os = "vita",
+            target_os = "cygwin",
         ))
     ))]
     pub fn set_recv_hoplimit_v6(&self, recv_hoplimit: bool) -> io::Result<()> {

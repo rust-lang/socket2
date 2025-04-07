@@ -1247,6 +1247,7 @@ fn r#type() {
             target_os = "tvos",
             target_os = "watchos",
             target_os = "vita",
+            target_os = "cygwin",
         )),
         feature = "all",
     ))]
@@ -1356,12 +1357,21 @@ test!(out_of_band_inline, set_out_of_band_inline(true));
 test!(reuse_address, set_reuse_address(true));
 #[cfg(all(
     feature = "all",
-    not(any(windows, target_os = "solaris", target_os = "illumos"))
+    not(any(
+        windows,
+        target_os = "solaris",
+        target_os = "illumos",
+        target_os = "cygwin",
+    ))
 ))]
 test!(reuse_port, set_reuse_port(true));
 #[cfg(all(feature = "all", target_os = "freebsd"))]
 test!(reuse_port_lb, set_reuse_port_lb(true));
-#[cfg(all(feature = "all", unix, not(target_os = "redox")))]
+#[cfg(all(
+    feature = "all",
+    unix,
+    not(any(target_os = "redox", target_os = "cygwin")),
+))]
 test!(
     #[cfg_attr(target_os = "linux", ignore = "Different value returned")]
     mss,
@@ -1413,6 +1423,7 @@ test!(IPv4 ttl_v4, set_ttl_v4(40));
     target_os = "solaris",
     target_os = "illumos",
     target_os = "haiku",
+    target_os = "cygwin",
 )))]
 test!(IPv4 tos_v4, set_tos_v4(96));
 
@@ -1428,10 +1439,11 @@ test!(IPv4 tos_v4, set_tos_v4(96));
     target_os = "windows",
     target_os = "vita",
     target_os = "haiku",
+    target_os = "cygwin",
 )))]
 test!(IPv4 recv_tos_v4, set_recv_tos_v4(true));
 
-#[cfg(not(windows))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
+#[cfg(not(any(windows, target_os = "cygwin")))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
 test!(IPv4 broadcast, set_broadcast(true));
 
 #[cfg(not(target_os = "vita"))]
@@ -1442,11 +1454,12 @@ test!(IPv6 unicast_hops_v6, set_unicast_hops_v6(20));
     target_os = "dragonfly",
     target_os = "freebsd",
     target_os = "openbsd",
-    target_os = "vita"
+    target_os = "vita",
+    target_os = "cygwin",
 )))]
 test!(IPv6 only_v6, set_only_v6(true));
 // IPv6 socket are already IPv6 only on FreeBSD and Windows.
-#[cfg(any(windows, target_os = "freebsd"))]
+#[cfg(any(windows, target_os = "freebsd", target_os = "cygwin"))]
 test!(IPv6 only_v6, set_only_v6(false));
 
 #[cfg(all(
@@ -1476,6 +1489,7 @@ test!(IPv6 tclass_v6, set_tclass_v6(96));
     target_os = "windows",
     target_os = "vita",
     target_os = "haiku",
+    target_os = "cygwin",
 )))]
 test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
 
@@ -1493,6 +1507,7 @@ test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
         target_os = "windows",
         target_os = "vita",
         target_os = "haiku",
+        target_os = "cygwin",
     ))
 ))]
 test!(IPv6 recv_hoplimit_v6, set_recv_hoplimit_v6(true));
@@ -1520,6 +1535,7 @@ test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
     target_os = "redox",
     target_os = "solaris",
     target_os = "vita",
+    target_os = "cygwin",
 )))]
 fn join_leave_multicast_v4_n() {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();

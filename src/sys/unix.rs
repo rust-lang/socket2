@@ -140,6 +140,7 @@ pub(crate) use libc::IPV6_HDRINCL;
         target_os = "haiku",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     ))
 ))]
 pub(crate) use libc::IPV6_RECVHOPLIMIT;
@@ -173,6 +174,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "nto",
     target_os = "espidf",
     target_os = "vita",
+    target_os = "cygwin",
 )))]
 pub(crate) use libc::IP_RECVTOS;
 #[cfg(not(any(
@@ -383,6 +385,7 @@ type IovLen = usize;
     target_os = "watchos",
     target_os = "espidf",
     target_os = "vita",
+    target_os = "cygwin",
 ))]
 type IovLen = c_int;
 
@@ -1200,6 +1203,7 @@ pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Res
         target_os = "netbsd",
         target_os = "tvos",
         target_os = "watchos",
+        target_os = "cygwin",
     ))]
     {
         if let Some(interval) = keepalive.interval {
@@ -1333,6 +1337,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "nto",
     target_os = "espidf",
     target_os = "vita",
+    target_os = "cygwin",
 )))]
 pub(crate) const fn to_mreqn(
     multiaddr: &Ipv4Addr,
@@ -1956,7 +1961,7 @@ impl crate::Socket {
     /// [`set_reuse_port`]: crate::Socket::set_reuse_port
     #[cfg(all(
         feature = "all",
-        not(any(target_os = "solaris", target_os = "illumos"))
+        not(any(target_os = "solaris", target_os = "illumos", target_os = "cygwin"))
     ))]
     pub fn reuse_port(&self) -> io::Result<bool> {
         unsafe {
@@ -1972,7 +1977,7 @@ impl crate::Socket {
     /// there's a socket already listening on this port.
     #[cfg(all(
         feature = "all",
-        not(any(target_os = "solaris", target_os = "illumos"))
+        not(any(target_os = "solaris", target_os = "illumos", target_os = "cygwin"))
     ))]
     pub fn set_reuse_port(&self, reuse: bool) -> io::Result<()> {
         unsafe {
