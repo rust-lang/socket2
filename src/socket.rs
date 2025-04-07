@@ -271,6 +271,7 @@ impl Socket {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
+            target_os = "cygwin",
         ))]
         return self._accept4(libc::SOCK_CLOEXEC);
 
@@ -284,6 +285,7 @@ impl Socket {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
+            target_os = "cygwin",
         )))]
         {
             let (socket, addr) = self.accept_raw()?;
@@ -752,6 +754,7 @@ const fn set_common_type(ty: Type) -> Type {
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd",
+        target_os = "cygwin",
     ))]
     let ty = ty._cloexec();
 
@@ -781,6 +784,7 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
             target_os = "openbsd",
             target_os = "espidf",
             target_os = "vita",
+            target_os = "cygwin",
         ))
     ))]
     socket._set_cloexec(true)?;
@@ -956,7 +960,7 @@ impl Socket {
     /// For more information about this option, see [`set_passcred`].
     ///
     /// [`set_passcred`]: Socket::set_passcred
-    #[cfg(all(unix, target_os = "linux"))]
+    #[cfg(all(unix, any(target_os = "linux", target_os = "cygwin")))]
     pub fn passcred(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_PASSCRED)
@@ -968,7 +972,7 @@ impl Socket {
     ///
     /// If this option is enabled, enables the receiving of the `SCM_CREDENTIALS`
     /// control messages.
-    #[cfg(all(unix, target_os = "linux"))]
+    #[cfg(all(unix, any(target_os = "linux", target_os = "cygwin")))]
     pub fn set_passcred(&self, passcred: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -2069,6 +2073,7 @@ impl Socket {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "cygwin",
         )
     ))]
     pub fn keepalive_interval(&self) -> io::Result<Duration> {
@@ -2098,6 +2103,7 @@ impl Socket {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "cygwin",
         )
     ))]
     pub fn keepalive_retries(&self) -> io::Result<u32> {

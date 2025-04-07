@@ -72,6 +72,7 @@ use std::{io, slice};
     target_os = "macos",
     target_os = "tvos",
     target_os = "watchos",
+    target_os = "cygwin",
 )))]
 use libc::ssize_t;
 use libc::{in6_addr, in_addr};
@@ -201,7 +202,7 @@ pub(crate) use libc::SO_LINGER;
     target_os = "watchos",
 ))]
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "cygwin"))]
 pub(crate) use libc::SO_PASSCRED;
 pub(crate) use libc::{
     ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
@@ -273,6 +274,7 @@ pub(crate) use libc::{
         target_os = "netbsd",
         target_os = "tvos",
         target_os = "watchos",
+        target_os = "cygwin",
     )
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
@@ -322,6 +324,7 @@ macro_rules! syscall {
     target_os = "macos",
     target_os = "tvos",
     target_os = "watchos",
+    target_os = "cygwin",
 )))]
 const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
 
@@ -339,6 +342,7 @@ const MAX_BUF_LEN: usize = ssize_t::MAX as usize;
     target_os = "macos",
     target_os = "tvos",
     target_os = "watchos",
+    target_os = "cygwin",
 ))]
 const MAX_BUF_LEN: usize = c_int::MAX as usize - 1;
 
@@ -428,7 +432,8 @@ impl Type {
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
-            target_os = "openbsd"
+            target_os = "openbsd",
+            target_os = "cygwin",
         )
     ))]
     pub const fn nonblocking(self) -> Type {
@@ -450,6 +455,7 @@ impl Type {
             target_os = "openbsd",
             target_os = "redox",
             target_os = "solaris",
+            target_os = "cygwin",
         )
     ))]
     pub const fn cloexec(self) -> Type {
@@ -468,6 +474,7 @@ impl Type {
         target_os = "openbsd",
         target_os = "redox",
         target_os = "solaris",
+        target_os = "cygwin",
     ))]
     pub(crate) const fn _cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
@@ -581,7 +588,10 @@ impl RecvFlags {
     /// on the local host.
     ///
     /// On Unix this corresponds to the `MSG_DONTROUTE` flag.
-    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "cygwin"),
+    ))]
     pub const fn is_dontroute(self) -> bool {
         self.0 & libc::MSG_DONTROUTE != 0
     }
@@ -598,7 +608,10 @@ impl std::fmt::Debug for RecvFlags {
         s.field("is_truncated", &self.is_truncated());
         #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
         s.field("is_confirm", &self.is_confirm());
-        #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+        #[cfg(all(
+            feature = "all",
+            any(target_os = "android", target_os = "linux", target_os = "cygwin"),
+        ))]
         s.field("is_dontroute", &self.is_dontroute());
         s.finish()
     }
@@ -770,7 +783,7 @@ impl SockAddr {
                     // Abstract addresses only exist on Linux.
                     // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
                     // See https://github.com/rust-lang/socket2/pull/403#discussion_r1123557978
-                    || (cfg!(not(any(target_os = "linux", target_os = "android")))
+                    || (cfg!(not(any(target_os = "linux", target_os = "android", target_os = "cygwin")))
                     && storage.sun_path[0] == 0)
             })
             .unwrap_or_default()
@@ -843,14 +856,14 @@ impl SockAddr {
     pub fn as_abstract_namespace(&self) -> Option<&[u8]> {
         // NOTE: although Fuchsia does define `AF_UNIX` it's not actually implemented.
         // See https://github.com/rust-lang/socket2/pull/403#discussion_r1123557978
-        #[cfg(any(target_os = "linux", target_os = "android"))]
+        #[cfg(any(target_os = "linux", target_os = "android", target_os = "cygwin"))]
         {
             self.as_sockaddr_un().and_then(|storage| {
                 (self.len() > offset_of_path(storage) as _ && storage.sun_path[0] == 0)
                     .then(|| self.path_bytes(storage, true))
             })
         }
-        #[cfg(not(any(target_os = "linux", target_os = "android")))]
+        #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "cygwin")))]
         None
     }
 }
@@ -1419,6 +1432,7 @@ impl crate::Socket {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
+            target_os = "cygwin",
         )
     ))]
     pub fn accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
@@ -1434,6 +1448,7 @@ impl crate::Socket {
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd",
+        target_os = "cygwin",
     ))]
     pub(crate) fn _accept4(&self, flags: c_int) -> io::Result<(crate::Socket, SockAddr)> {
         // Safety: `accept4` initialises the `SockAddr` for us.
@@ -1556,6 +1571,7 @@ impl crate::Socket {
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "linux",
+            target_os = "cygwin",
         )
     ))]
     pub fn is_listener(&self) -> io::Result<bool> {
@@ -1685,7 +1701,12 @@ impl crate::Socket {
     /// [`set_quickack`]: crate::Socket::set_quickack
     #[cfg(all(
         feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "cygwin",
+        )
     ))]
     pub fn quickack(&self) -> io::Result<bool> {
         unsafe {
@@ -1702,7 +1723,12 @@ impl crate::Socket {
     /// internal protocol processing and factors such as delayed ack timeouts occurring and data transfer.
     #[cfg(all(
         feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "cygwin",
+        )
     ))]
     pub fn set_quickack(&self, quickack: bool) -> io::Result<()> {
         unsafe {
@@ -2277,7 +2303,12 @@ impl crate::Socket {
     /// approximately 49.71 days.
     #[cfg(all(
         feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "cygwin",
+        )
     ))]
     pub fn set_tcp_user_timeout(&self, timeout: Option<Duration>) -> io::Result<()> {
         let timeout = timeout.map_or(0, |to| {
@@ -2300,7 +2331,12 @@ impl crate::Socket {
     /// [`set_tcp_user_timeout`]: crate::Socket::set_tcp_user_timeout
     #[cfg(all(
         feature = "all",
-        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "cygwin",
+        )
     ))]
     pub fn tcp_user_timeout(&self) -> io::Result<Option<Duration>> {
         unsafe {
@@ -2374,7 +2410,8 @@ impl crate::Socket {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
-            target_os = "openbsd"
+            target_os = "openbsd",
+            target_os = "cygwin",
         )
     ))]
     pub fn tclass_v6(&self) -> io::Result<u32> {
@@ -2398,7 +2435,8 @@ impl crate::Socket {
             target_os = "linux",
             target_os = "macos",
             target_os = "netbsd",
-            target_os = "openbsd"
+            target_os = "openbsd",
+            target_os = "cygwin",
         )
     ))]
     pub fn set_tclass_v6(&self, tclass: u32) -> io::Result<()> {
