@@ -282,6 +282,8 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
+#[cfg(target_os = "cygwin")]
+use libc::SO_PEERCRED;
 #[cfg(any(
     target_os = "ios",
     target_os = "visionos",
@@ -1497,6 +1499,20 @@ impl crate::Socket {
                 libc::FD_CLOEXEC,
             )
         }
+    }
+
+    /// Sets `SO_PEERCRED` to null on the socket.
+    /// It disables the initial handshake of unix domain sockets.
+    #[cfg(target_os = "cygwin")]
+    pub fn set_no_peercred(&self) -> io::Result<()> {
+        syscall!(setsockopt(
+            self.as_raw(),
+            SOL_SOCKET,
+            SO_PEERCRED,
+            ptr::null_mut(),
+            0,
+        ))
+        .map(|_| ())
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.

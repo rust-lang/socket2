@@ -557,24 +557,6 @@ fn unix_sockets_supported() -> bool {
     true
 }
 
-// An extension on cygwin. It disables initial handshake on AF_UNIX sockets.
-// https://cygwin.com/git/?p=newlib-cygwin.git;a=commit;h=697b9afe0
-#[cfg(target_os = "cygwin")]
-fn set_no_peercred(s: &Socket) {
-    let res = unsafe {
-        libc::setsockopt(
-            s.as_raw_fd(),
-            libc::SOL_SOCKET,
-            libc::SO_PEERCRED,
-            std::ptr::null(),
-            0,
-        )
-    };
-    if res == -1 {
-        panic!("{:?}", std::io::Error::last_os_error());
-    }
-}
-
 #[test]
 fn unix() {
     if !unix_sockets_supported() {
@@ -590,13 +572,13 @@ fn unix() {
 
     let listener = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
     #[cfg(target_os = "cygwin")]
-    set_no_peercred(&listener);
+    listener.set_no_peercred().unwrap();
     listener.bind(&addr).unwrap();
     listener.listen(10).unwrap();
 
     let mut a = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
     #[cfg(target_os = "cygwin")]
-    set_no_peercred(&a);
+    a.set_no_peercred().unwrap();
     a.connect(&addr).unwrap();
     let mut b = listener.accept().unwrap().0;
 
