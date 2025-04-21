@@ -24,6 +24,8 @@ use std::net::{Ipv4Addr, Ipv6Addr};
         target_os = "watchos",
         target_os = "illumos",
         target_os = "solaris",
+        target_os = "linux",
+        target_os = "android",
     )
 ))]
 use std::num::NonZeroU32;
@@ -1820,7 +1822,7 @@ impl crate::Socket {
         .map(|_| ())
     }
 
-    /// Sets the value for `IP_BOUND_IF` option on this socket.
+    /// Sets the value for `IP_BOUND_IF` or `SO_BINDTOIFINDEX` option on this socket.
     ///
     /// If a socket is bound to an interface, only packets received from that
     /// particular interface are processed by the socket.
@@ -1840,14 +1842,38 @@ impl crate::Socket {
             target_os = "watchos",
             target_os = "illumos",
             target_os = "solaris",
+            target_os = "linux",
+            target_os = "android",
         )
     ))]
     pub fn bind_device_by_index_v4(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         let index = interface.map_or(0, NonZeroU32::get);
-        unsafe { setsockopt(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF, index) }
+
+        #[cfg(any(
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
+        ))]
+        unsafe {
+            setsockopt(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF, index)
+        }
+
+        #[cfg(any(target_os = "linux", target_os = "android",))]
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_BINDTOIFINDEX,
+                index,
+            )
+        }
     }
 
-    /// Sets the value for `IPV6_BOUND_IF` option on this socket.
+    /// Sets the value for `IPV6_BOUND_IF` or `SO_BINDTOIFINDEX` option on this socket.
     ///
     /// If a socket is bound to an interface, only packets received from that
     /// particular interface are processed by the socket.
@@ -1867,11 +1893,35 @@ impl crate::Socket {
             target_os = "watchos",
             target_os = "illumos",
             target_os = "solaris",
+            target_os = "linux",
+            target_os = "android",
         )
     ))]
     pub fn bind_device_by_index_v6(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         let index = interface.map_or(0, NonZeroU32::get);
-        unsafe { setsockopt(self.as_raw(), IPPROTO_IPV6, libc::IPV6_BOUND_IF, index) }
+
+        #[cfg(any(
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
+        ))]
+        unsafe {
+            setsockopt(self.as_raw(), IPPROTO_IPV6, libc::IPV6_BOUND_IF, index)
+        }
+
+        #[cfg(any(target_os = "linux", target_os = "android",))]
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_BINDTOIFINDEX,
+                index,
+            )
+        }
     }
 
     /// Gets the value for `IP_BOUND_IF` option on this socket, i.e. the index
@@ -1889,11 +1939,28 @@ impl crate::Socket {
             target_os = "watchos",
             target_os = "illumos",
             target_os = "solaris",
+            target_os = "linux",
+            target_os = "android",
         )
     ))]
     pub fn device_index_v4(&self) -> io::Result<Option<NonZeroU32>> {
+        #[cfg(any(
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
+        ))]
         let index =
             unsafe { getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IP, libc::IP_BOUND_IF)? };
+
+        #[cfg(any(target_os = "linux", target_os = "android",))]
+        let index = unsafe {
+            getsockopt::<libc::c_uint>(self.as_raw(), libc::SOL_SOCKET, libc::SO_BINDTOIFINDEX)?
+        };
+
         Ok(NonZeroU32::new(index))
     }
 
@@ -1912,12 +1979,29 @@ impl crate::Socket {
             target_os = "watchos",
             target_os = "illumos",
             target_os = "solaris",
+            target_os = "linux",
+            target_os = "android",
         )
     ))]
     pub fn device_index_v6(&self) -> io::Result<Option<NonZeroU32>> {
+        #[cfg(any(
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "illumos",
+            target_os = "solaris",
+        ))]
         let index = unsafe {
             getsockopt::<libc::c_uint>(self.as_raw(), IPPROTO_IPV6, libc::IPV6_BOUND_IF)?
         };
+
+        #[cfg(any(target_os = "linux", target_os = "android",))]
+        let index = unsafe {
+            getsockopt::<libc::c_uint>(self.as_raw(), libc::SOL_SOCKET, libc::SO_BINDTOIFINDEX)?
+        };
+
         Ok(NonZeroU32::new(index))
     }
 
