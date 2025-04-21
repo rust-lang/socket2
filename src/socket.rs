@@ -809,7 +809,7 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     target_os = "redox",
     target_os = "solaris",
 )))]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum InterfaceIndexOrAddress {
     /// An interface index.
     Index(u32),
