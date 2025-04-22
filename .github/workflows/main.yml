@@ -81,6 +81,7 @@ jobs:
           #- i686-unknown-hurd-gnu
           - i686-unknown-linux-gnu
           - sparcv9-sun-solaris
+          - wasm32-wasip2
           - x86_64-apple-darwin
           - x86_64-apple-ios
           - x86_64-pc-solaris

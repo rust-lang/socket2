@@ -50,7 +50,7 @@ targets = [
 [package.metadata.playground]
 features = ["all"]
 
-[target."cfg(unix)".dependencies]
+[target.'cfg(any(unix, target_os = "wasi"))'.dependencies]
 libc = "0.2.171"
 
 [target.'cfg(windows)'.dependencies.windows-sys]

@@ -60,15 +60,18 @@
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
+#[cfg(not(target_os = "wasi"))]
 use std::fmt;
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 use std::io::IoSlice;
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 use std::marker::PhantomData;
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 use std::mem;
+#[cfg(not(target_os = "wasi"))]
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
+#[cfg(not(target_os = "wasi"))]
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
@@ -109,7 +112,7 @@ macro_rules! from {
     ($from: ty, $for: ty) => {
         impl From<$from> for $for {
             fn from(socket: $from) -> $for {
-                #[cfg(unix)]
+                #[cfg(any(unix, target_os = "wasi"))]
                 unsafe {
                     <$for>::from_raw_fd(socket.into_raw_fd())
                 }
@@ -178,9 +181,10 @@ mod sockref;
 
 #[cfg_attr(unix, path = "sys/unix.rs")]
 #[cfg_attr(windows, path = "sys/windows.rs")]
+#[cfg_attr(target_os = "wasi", path = "sys/wasi.rs")]
 mod sys;
 
-#[cfg(not(any(windows, unix)))]
+#[cfg(not(any(windows, unix, all(target_os = "wasi", target_env = "p2"))))]
 compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
@@ -218,6 +222,7 @@ impl Domain {
     pub const IPV6: Domain = Domain(sys::AF_INET6);
 
     /// Domain for Unix socket communication, corresponding to `AF_UNIX`.
+    #[cfg(not(target_os = "wasi"))]
     pub const UNIX: Domain = Domain(sys::AF_UNIX);
 
     /// Returns the correct domain for `address`.
@@ -271,11 +276,14 @@ impl Type {
     pub const DCCP: Type = Type(sys::SOCK_DCCP);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
-    #[cfg(all(feature = "all", not(target_os = "espidf")))]
+    #[cfg(all(feature = "all", not(any(target_os = "espidf", target_os = "wasi"))))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
-    #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "espidf"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "redox", target_os = "espidf", target_os = "wasi"))
+    ))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
 
@@ -302,17 +310,19 @@ impl From<Type> for c_int {
 pub struct Protocol(c_int);
 
 impl Protocol {
-    /// Protocol corresponding to `ICMPv4`.
-    pub const ICMPV4: Protocol = Protocol(sys::IPPROTO_ICMP);
-
-    /// Protocol corresponding to `ICMPv6`.
-    pub const ICMPV6: Protocol = Protocol(sys::IPPROTO_ICMPV6);
-
     /// Protocol corresponding to `TCP`.
     pub const TCP: Protocol = Protocol(sys::IPPROTO_TCP);
 
     /// Protocol corresponding to `UDP`.
     pub const UDP: Protocol = Protocol(sys::IPPROTO_UDP);
+
+    #[cfg(not(target_os = "wasi"))]
+    /// Protocol corresponding to `ICMPv4`.
+    pub const ICMPV4: Protocol = Protocol(sys::IPPROTO_ICMP);
+
+    #[cfg(not(target_os = "wasi"))]
+    /// Protocol corresponding to `ICMPv6`.
+    pub const ICMPV6: Protocol = Protocol(sys::IPPROTO_ICMPV6);
 
     #[cfg(target_os = "linux")]
     /// Protocol corresponding to `MPTCP`.
@@ -358,11 +368,11 @@ impl From<Protocol> for c_int {
 /// Flags for incoming messages.
 ///
 /// Flags provide additional information about incoming messages.
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct RecvFlags(c_int);
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 impl RecvFlags {
     /// Check if the message contains a truncated datagram.
     ///
@@ -380,15 +390,18 @@ impl RecvFlags {
 /// A version of [`IoSliceMut`] that allows the buffer to be uninitialised.
 ///
 /// [`IoSliceMut`]: std::io::IoSliceMut
+#[cfg(not(target_os = "wasi"))]
 #[repr(transparent)]
 pub struct MaybeUninitSlice<'a>(sys::MaybeUninitSlice<'a>);
 
+#[cfg(not(target_os = "wasi"))]
 impl<'a> fmt::Debug for MaybeUninitSlice<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self.0.as_slice(), fmt)
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 impl<'a> MaybeUninitSlice<'a> {
     /// Creates a new `MaybeUninitSlice` wrapping a byte slice.
     ///
@@ -400,6 +413,7 @@ impl<'a> MaybeUninitSlice<'a> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 impl<'a> Deref for MaybeUninitSlice<'a> {
     type Target = [MaybeUninit<u8>];
 
@@ -408,6 +422,7 @@ impl<'a> Deref for MaybeUninitSlice<'a> {
     }
 }
 
+#[cfg(not(target_os = "wasi"))]
 impl<'a> DerefMut for MaybeUninitSlice<'a> {
     fn deref_mut(&mut self) -> &mut [MaybeUninit<u8>] {
         self.0.as_mut_slice()
@@ -514,6 +529,7 @@ impl TcpKeepalive {
         target_os = "macos",
         target_os = "netbsd",
         target_os = "tvos",
+        target_os = "wasi",
         target_os = "watchos",
         target_os = "windows",
     ))]
@@ -542,6 +558,7 @@ impl TcpKeepalive {
             target_os = "macos",
             target_os = "netbsd",
             target_os = "tvos",
+            target_os = "wasi",
             target_os = "watchos",
         )
     ))]
@@ -557,14 +574,14 @@ impl TcpKeepalive {
 ///
 /// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdrMut`]
 /// for the variant used by `recvmsg(2)`.
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 pub struct MsgHdr<'addr, 'bufs, 'control> {
     inner: sys::msghdr,
     #[allow(clippy::type_complexity)]
     _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Create a new `MsgHdr` with all empty/zero fields.
     #[allow(clippy::new_without_default)]
@@ -614,7 +631,7 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     }
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MsgHdr".fmt(fmt)
@@ -625,7 +642,7 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
 ///
 /// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdr`] for
 /// the variant used by `sendmsg(2)`.
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 pub struct MsgHdrMut<'addr, 'bufs, 'control> {
     inner: sys::msghdr,
     #[allow(clippy::type_complexity)]
@@ -636,7 +653,7 @@ pub struct MsgHdrMut<'addr, 'bufs, 'control> {
     )>,
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     /// Create a new `MsgHdrMut` with all empty/zero fields.
     #[allow(clippy::new_without_default)]
@@ -691,7 +708,7 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     }
 }
 
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         "MsgHdrMut".fmt(fmt)
