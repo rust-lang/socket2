@@ -17,8 +17,11 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 #[cfg(all(
     feature = "all",
     any(
+        target_os = "android",
+        target_os = "fuchsia",
         target_os = "ios",
         target_os = "visionos",
+        target_os = "linux",
         target_os = "macos",
         target_os = "tvos",
         target_os = "watchos",
@@ -1782,7 +1785,8 @@ impl crate::Socket {
     ///
     /// If a socket is bound to an interface, only packets received from that
     /// particular interface are processed by the socket. Note that this only
-    /// works for some socket types, particularly `AF_INET` sockets.
+    /// works for some socket types, particularly `AF_INET` and `AF_INET6`
+    /// sockets.
     ///
     /// If `interface` is `None` or an empty string it removes the binding.
     #[cfg(all(
@@ -1818,6 +1822,31 @@ impl crate::Socket {
             mem::size_of::<u32>() as libc::socklen_t,
         ))
         .map(|_| ())
+    }
+
+    /// Sets the value for `SO_BINDTOIFINDEX` option on this socket.
+    ///
+    /// If a socket is bound to an interface, only packets received from that
+    /// particular interface are processed by the socket. Note that this only
+    /// works for some socket types, particularly `AF_INET` and `AF_INET6`
+    /// sockets.
+    ///
+    /// If `interface` is `None`, the binding is removed. If the `interface`
+    /// index is not valid, an error is returned.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    pub fn bind_device_by_index(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
+        let index = interface.map_or(0, NonZeroU32::get);
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_BINDTOIFINDEX,
+                index as c_int,
+            )
+        }
     }
 
     /// Sets the value for `IP_BOUND_IF` option on this socket.
@@ -1872,6 +1901,21 @@ impl crate::Socket {
     pub fn bind_device_by_index_v6(&self, interface: Option<NonZeroU32>) -> io::Result<()> {
         let index = interface.map_or(0, NonZeroU32::get);
         unsafe { setsockopt(self.as_raw(), IPPROTO_IPV6, libc::IPV6_BOUND_IF, index) }
+    }
+
+    /// Gets the value for the `SO_BINDTOIFINDEX` option on this socket.
+    ///
+    /// Returns `None` if the socket is not bound to any interface, otherwise
+    /// returns an interface index.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    ))]
+    pub fn device_index(&self) -> io::Result<Option<NonZeroU32>> {
+        let index_raw = unsafe {
+            getsockopt::<libc::c_uint>(self.as_raw(), libc::SOL_SOCKET, libc::SO_BINDTOIFINDEX)?
+        };
+        Ok(NonZeroU32::new(index_raw))
     }
 
     /// Gets the value for `IP_BOUND_IF` option on this socket, i.e. the index

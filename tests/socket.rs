@@ -984,6 +984,41 @@ fn device() {
 
 #[cfg(all(
     feature = "all",
+    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+))]
+#[test]
+#[ignore = "setting `SO_BINDTOIFINDEX` requires the `CAP_NET_RAW` capability (works when running as root)"]
+fn device_by_index() {
+    const INTERFACE_INDICES: &[u32; 3] = &[1, 2, 3];
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+    assert_eq!(socket.device().unwrap(), None);
+
+    for if_index in INTERFACE_INDICES {
+        if let Err(err) = socket.bind_device_by_index(std::num::NonZeroU32::new(*if_index)) {
+            if matches!(err.raw_os_error(), Some(libc::ENODEV)) {
+                eprintln!("error binding to interface index (`{if_index}`): {err}");
+                continue;
+            } else {
+                panic!("unexpected error binding device: {}", err);
+            }
+        }
+        assert_eq!(
+            socket.device_index().unwrap(),
+            std::num::NonZeroU32::new(*if_index)
+        );
+
+        socket.bind_device_by_index(None).unwrap();
+        assert_eq!(socket.device_index().unwrap(), None);
+        // Just need to do it with one interface.
+        return;
+    }
+
+    panic!("failed to bind to any device by IFINDEX.");
+}
+
+#[cfg(all(
+    feature = "all",
     any(
         target_os = "ios",
         target_os = "visionos",
