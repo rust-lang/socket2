@@ -76,7 +76,7 @@ use std::{io, slice};
 use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
-use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+use crate::{Domain, Protocol, SockAddr, SockAddrStorage, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
@@ -640,10 +640,10 @@ pub(crate) fn offset_of_path(storage: &libc::sockaddr_un) -> usize {
 
 #[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
-    // SAFETY: a `sockaddr_storage` of all zeros is valid.
-    let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
+    let mut storage = SockAddrStorage::zeroed();
     let len = {
-        let storage = unsafe { &mut *ptr::addr_of_mut!(storage).cast::<libc::sockaddr_un>() };
+        // SAFETY: sockaddr_un is one of the sockaddr_* types defined by this platform.
+        let storage = unsafe { storage.view_as::<libc::sockaddr_un>() };
 
         let bytes = path.as_os_str().as_bytes();
         let too_long = match bytes.first() {
@@ -732,11 +732,10 @@ impl SockAddr {
     #[allow(unsafe_op_in_unsafe_fn)]
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     pub fn vsock(cid: u32, port: u32) -> SockAddr {
-        // SAFETY: a `sockaddr_storage` of all zeros is valid.
-        let mut storage = unsafe { mem::zeroed::<sockaddr_storage>() };
+        let mut storage = SockAddrStorage::zeroed();
         {
-            let storage: &mut libc::sockaddr_vm =
-                unsafe { &mut *((&mut storage as *mut sockaddr_storage).cast()) };
+            // SAFETY: sockaddr_vm is one of the sockaddr_* types defined by this platform.
+            let storage = unsafe { storage.view_as::<libc::sockaddr_vm>() };
             storage.svm_family = libc::AF_VSOCK as sa_family_t;
             storage.svm_cid = cid;
             storage.svm_port = port;
@@ -877,11 +876,11 @@ pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Resul
 }
 
 pub(crate) fn bind(fd: Socket, addr: &SockAddr) -> io::Result<()> {
-    syscall!(bind(fd, addr.as_ptr(), addr.len() as _)).map(|_| ())
+    syscall!(bind(fd, addr.as_ptr().cast::<sockaddr>(), addr.len() as _)).map(|_| ())
 }
 
 pub(crate) fn connect(fd: Socket, addr: &SockAddr) -> io::Result<()> {
-    syscall!(connect(fd, addr.as_ptr(), addr.len())).map(|_| ())
+    syscall!(connect(fd, addr.as_ptr().cast::<sockaddr>(), addr.len())).map(|_| ())
 }
 
 pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Result<()> {
@@ -1098,7 +1097,7 @@ pub(crate) fn send_to(fd: Socket, buf: &[u8], addr: &SockAddr, flags: c_int) -> 
         buf.as_ptr().cast(),
         min(buf.len(), MAX_BUF_LEN),
         flags,
-        addr.as_ptr(),
+        addr.as_ptr().cast::<sockaddr>(),
         addr.len(),
     ))
     .map(|n| n as usize)
