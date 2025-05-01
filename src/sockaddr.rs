@@ -8,10 +8,14 @@ use std::{fmt, io, ptr};
 use windows_sys::Win32::Networking::WinSock::SOCKADDR_IN6_0;
 
 use crate::sys::{
-    c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t, AF_INET,
-    AF_INET6, AF_UNIX,
+    c_int, sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, AF_INET, AF_INET6,
+    AF_UNIX,
 };
 use crate::Domain;
+
+/// The integer type used with `getsockname` on this platform.
+#[allow(non_camel_case_types)]
+pub type socklen_t = crate::sys::socklen_t;
 
 /// The address of a socket.
 ///

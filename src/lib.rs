@@ -185,7 +185,7 @@ compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
 
-pub use sockaddr::SockAddr;
+pub use sockaddr::{socklen_t, SockAddr};
 pub use socket::Socket;
 pub use sockref::SockRef;
 
