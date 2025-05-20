@@ -200,6 +200,9 @@ impl Socket {
     /// non-blocking mode before calling this function), socket option can't be
     /// set *while connecting*. This will cause errors on Windows. Socket
     /// options can be safely set before and after connecting the socket.
+    ///
+    /// On Cygwin, a Unix domain socket connect blocks until the server accepts
+    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`].
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
         sys::connect(self.as_raw(), address)
     }
@@ -260,6 +263,11 @@ impl Socket {
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::accept_raw`] can be used if you don't want to set those flags.
     #[doc = man_links!(accept(2))]
+    ///
+    /// # Notes
+    ///
+    /// On Cygwin, a Unix domain socket connect blocks until the server accepts
+    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`].
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         // Use `accept4` on platforms that support it.
         #[cfg(any(
