@@ -1502,13 +1502,15 @@ impl crate::Socket {
     }
 
     /// Sets `SO_PEERCRED` to null on the socket.
+    ///
     /// This is a Cygwin extension.
     ///
     /// Normally the Unix domain sockets of Cygwin are implemented by TCP sockets,
-    /// so it performs a handshake on `connect` and `accept`, to verify the remote
-    /// connection and exchange peer cred info. Therefore, `connect` blocks until
-    /// the server `accept`s it. This option turns off the handshake. Both client
-    /// and server should turn it off to let `connect` returns immediately.
+    /// so it performs a handshake on `connect` and `accept` to verify the remote
+    /// connection and exchange peer cred info. At the time of writing, this
+    /// means that `connect` on a Unix domain socket will block until the server
+    /// calls `accept` on Cygwin. This behavior is inconsistent with most other
+    /// platforms, and this option can be used to disable that.
     ///
     /// See also: the [mailing list](https://inbox.sourceware.org/cygwin/TYCPR01MB10926FF8926CA63704867ADC8F8AA2@TYCPR01MB10926.jpnprd01.prod.outlook.com/)
     #[cfg(target_os = "cygwin")]
