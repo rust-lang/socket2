@@ -1514,7 +1514,6 @@ impl crate::Socket {
     ///
     /// See also: the [mailing list](https://inbox.sourceware.org/cygwin/TYCPR01MB10926FF8926CA63704867ADC8F8AA2@TYCPR01MB10926.jpnprd01.prod.outlook.com/)
     #[cfg(any(doc, all(feature = "all", target_os = "cygwin")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "cygwin"))))]
     pub fn set_no_peercred(&self) -> io::Result<()> {
         #[cfg(target_os = "cygwin")]
         {
