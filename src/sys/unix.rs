@@ -1501,35 +1501,16 @@ impl crate::Socket {
         }
     }
 
-    /// Sets `SO_PEERCRED` to null on the socket.
-    ///
-    /// This is a Cygwin extension.
-    ///
-    /// Normally the Unix domain sockets of Cygwin are implemented by TCP sockets,
-    /// so it performs a handshake on `connect` and `accept` to verify the remote
-    /// connection and exchange peer cred info. At the time of writing, this
-    /// means that `connect` on a Unix domain socket will block until the server
-    /// calls `accept` on Cygwin. This behavior is inconsistent with most other
-    /// platforms, and this option can be used to disable that.
-    ///
-    /// See also: the [mailing list](https://inbox.sourceware.org/cygwin/TYCPR01MB10926FF8926CA63704867ADC8F8AA2@TYCPR01MB10926.jpnprd01.prod.outlook.com/)
-    #[cfg(any(doc, all(feature = "all", target_os = "cygwin")))]
-    pub fn set_no_peercred(&self) -> io::Result<()> {
-        #[cfg(target_os = "cygwin")]
-        {
-            syscall!(setsockopt(
-                self.as_raw(),
-                SOL_SOCKET,
-                SO_PEERCRED,
-                ptr::null_mut(),
-                0,
-            ))
-            .map(|_| ())
-        }
-        #[cfg(not(target_os = "cygwin"))]
-        {
-            unimplemented!()
-        }
+    #[cfg(target_os = "cygwin")]
+    pub(crate) fn _set_no_peercred(&self) -> io::Result<()> {
+        syscall!(setsockopt(
+            self.as_raw(),
+            SOL_SOCKET,
+            SO_PEERCRED,
+            ptr::null_mut(),
+            0,
+        ))
+        .map(|_| ())
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
