@@ -968,7 +968,7 @@ impl Socket {
     /// For more information about this option, see [`set_passcred`].
     ///
     /// [`set_passcred`]: Socket::set_passcred
-    #[cfg(all(unix, any(target_os = "linux", target_os = "cygwin")))]
+    #[cfg(any(target_os = "linux", target_os = "cygwin"))]
     pub fn passcred(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_PASSCRED)
@@ -980,7 +980,7 @@ impl Socket {
     ///
     /// If this option is enabled, enables the receiving of the `SCM_CREDENTIALS`
     /// control messages.
-    #[cfg(all(unix, any(target_os = "linux", target_os = "cygwin")))]
+    #[cfg(any(target_os = "linux", target_os = "cygwin"))]
     pub fn set_passcred(&self, passcred: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
