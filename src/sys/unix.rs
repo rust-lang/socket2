@@ -1513,16 +1513,24 @@ impl crate::Socket {
     /// platforms, and this option can be used to disable that.
     ///
     /// See also: the [mailing list](https://inbox.sourceware.org/cygwin/TYCPR01MB10926FF8926CA63704867ADC8F8AA2@TYCPR01MB10926.jpnprd01.prod.outlook.com/)
-    #[cfg(target_os = "cygwin")]
+    #[cfg(any(doc, all(feature = "all", target_os = "cygwin")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "all", target_os = "cygwin"))))]
     pub fn set_no_peercred(&self) -> io::Result<()> {
-        syscall!(setsockopt(
-            self.as_raw(),
-            SOL_SOCKET,
-            SO_PEERCRED,
-            ptr::null_mut(),
-            0,
-        ))
-        .map(|_| ())
+        #[cfg(target_os = "cygwin")]
+        {
+            syscall!(setsockopt(
+                self.as_raw(),
+                SOL_SOCKET,
+                SO_PEERCRED,
+                ptr::null_mut(),
+                0,
+            ))
+            .map(|_| ())
+        }
+        #[cfg(not(target_os = "cygwin"))]
+        {
+            unimplemented!()
+        }
     }
 
     /// Sets `SO_NOSIGPIPE` on the socket.
