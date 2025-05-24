@@ -1924,8 +1924,8 @@ impl crate::Socket {
         }
     }
 
-    /// Gets the value for `IP_BOUND_IF` option on this socket, i.e. the index
-    /// for the interface to which the socket is bound.
+    /// Gets the value for `IP_BOUND_IF` or `SO_BINDTOIFINDEX` option on this
+    /// socket, i.e. the index for the interface to which the socket is bound.
     ///
     /// Returns `None` if the socket is not bound to any interface, otherwise
     /// returns an interface index.
@@ -1964,8 +1964,8 @@ impl crate::Socket {
         Ok(NonZeroU32::new(index))
     }
 
-    /// Gets the value for `IPV6_BOUND_IF` option on this socket, i.e. the index
-    /// for the interface to which the socket is bound.
+    /// Gets the value for `IPV6_BOUND_IF` or `SO_BINDTOIFINDEX` option on this
+    /// socket, i.e. the index for the interface to which the socket is bound.
     ///
     /// Returns `None` if the socket is not bound to any interface, otherwise
     /// returns an interface index.
