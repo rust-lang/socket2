@@ -127,6 +127,7 @@ jobs:
         os:
           - windows-latest
           - ubuntu-latest
+          - macos-latest
         rust:
           # `check-external-types` requires a specific Rust nightly version. See
           # the README for details: https://github.com/awslabs/cargo-check-external-types
