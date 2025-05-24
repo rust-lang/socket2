@@ -70,6 +70,8 @@ all = []
 [package.metadata.cargo_check_external_types]
 allowed_external_types = [
   # Referenced via a type alias.
+  "libc::c_int",
+  "libc::primitives::c_int", # libc::c_int isn't always detected.
   "libc::socklen_t",
   "libc::unix::bsd::socklen_t", # libc::socklen_t isn't always detected.
   "libc::sa_family_t",
