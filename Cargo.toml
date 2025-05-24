@@ -69,8 +69,11 @@ all = []
 
 [package.metadata.cargo_check_external_types]
 allowed_external_types = [
-  "libc::*",
   # Referenced via a type alias.
+  "libc::socklen_t",
+  "libc::unix::bsd::socklen_t", # libc::socklen_t isn't always detected.
+  "libc::sa_family_t",
+  "libc::unix::bsd::sa_family_t", # libc::sa_family_t is always detected.
   "windows_sys::Win32::Networking::WinSock::socklen_t",
   "windows_sys::Win32::Networking::WinSock::ADDRESS_FAMILY",
 ]
