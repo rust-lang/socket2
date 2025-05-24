@@ -2459,16 +2459,17 @@ impl crate::Socket {
         }
     }
 
-    /// Attach Berkeley Packet Filter(BPF) on this socket.
+    /// Attach Berkeley Packet Filter (BPF) on this socket.
     ///
     /// BPF allows a user-space program to attach a filter onto any socket
     /// and allow or disallow certain types of data to come through the socket.
     ///
     /// For more information about this option, see [filter](https://www.kernel.org/doc/html/v5.12/networking/filter.html)
     #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
-    pub fn attach_filter(&self, filters: &[libc::sock_filter]) -> io::Result<()> {
+    pub fn attach_filter(&self, filters: &[SockFilter]) -> io::Result<()> {
         let prog = libc::sock_fprog {
             len: filters.len() as u16,
+            // SAFETY: this is safe due to `repr(transparent)`.
             filter: filters.as_ptr() as *mut _,
         };
 
@@ -2811,6 +2812,34 @@ impl crate::Socket {
                 libc::DCCP_SOCKOPT_GET_CUR_MPS,
             )
         }
+    }
+}
+
+/// Berkeley Packet Filter (BPF).
+///
+/// See [`Socket::attach_filter`].
+///
+/// [`Socket::attach_filter`]: crate::Socket::attach_filter
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+#[repr(transparent)]
+pub struct SockFilter {
+    filter: libc::sock_filter,
+}
+
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+impl SockFilter {
+    /// Create new `SockFilter`.
+    pub fn new(code: u16, jt: u8, jf: u8, k: u32) -> SockFilter {
+        SockFilter {
+            filter: libc::sock_filter { code, jt, jf, k },
+        }
+    }
+}
+
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+impl std::fmt::Debug for SockFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SockFilter").finish_non_exhaustive()
     }
 }
 
