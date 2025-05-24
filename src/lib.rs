@@ -186,9 +186,6 @@ compile_error!("Socket2 doesn't support the compile target");
 use sys::c_int;
 
 pub use sockaddr::{sa_family_t, socklen_t, SockAddr, SockAddrStorage};
-pub use socket::Socket;
-pub use sockref::SockRef;
-
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "illumos",
@@ -197,6 +194,10 @@ pub use sockref::SockRef;
     target_os = "solaris",
 )))]
 pub use socket::InterfaceIndexOrAddress;
+pub use socket::Socket;
+pub use sockref::SockRef;
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
+pub use sys::SockFilter;
 
 /// Specification of the communication domain for a socket.
 ///
