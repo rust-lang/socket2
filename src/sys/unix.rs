@@ -83,7 +83,7 @@ use crate::{Domain, Protocol, SockAddr, SockAddrStorage, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
-pub(crate) use libc::c_int;
+pub(crate) use std::ffi::c_int;
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
