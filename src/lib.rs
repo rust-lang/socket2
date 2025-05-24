@@ -516,6 +516,7 @@ impl TcpKeepalive {
         target_os = "tvos",
         target_os = "watchos",
         target_os = "windows",
+        target_os = "cygwin",
     ))]
     pub const fn with_interval(self, interval: Duration) -> Self {
         Self {
@@ -543,6 +544,7 @@ impl TcpKeepalive {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "cygwin",
         )
     ))]
     pub const fn with_retries(self, retries: u32) -> Self {

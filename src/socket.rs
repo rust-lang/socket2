@@ -200,6 +200,11 @@ impl Socket {
     /// non-blocking mode before calling this function), socket option can't be
     /// set *while connecting*. This will cause errors on Windows. Socket
     /// options can be safely set before and after connecting the socket.
+    ///
+    /// On Cygwin, a Unix domain socket connect blocks until the server accepts
+    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`]
+    /// (Cygwin only).
+    #[allow(rustdoc::broken_intra_doc_links)] // Socket::set_no_peercred
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
         sys::connect(self.as_raw(), address)
     }
@@ -260,6 +265,13 @@ impl Socket {
     /// This function sets the same flags as in done for [`Socket::new`],
     /// [`Socket::accept_raw`] can be used if you don't want to set those flags.
     #[doc = man_links!(accept(2))]
+    ///
+    /// # Notes
+    ///
+    /// On Cygwin, a Unix domain socket connect blocks until the server accepts
+    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`]
+    /// (Cygwin only).
+    #[allow(rustdoc::broken_intra_doc_links)] // Socket::set_no_peercred
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         // Use `accept4` on platforms that support it.
         #[cfg(any(
@@ -271,6 +283,7 @@ impl Socket {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
+            target_os = "cygwin",
         ))]
         return self._accept4(libc::SOCK_CLOEXEC);
 
@@ -284,6 +297,7 @@ impl Socket {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
+            target_os = "cygwin",
         )))]
         {
             let (socket, addr) = self.accept_raw()?;
@@ -752,6 +766,7 @@ const fn set_common_type(ty: Type) -> Type {
         target_os = "linux",
         target_os = "netbsd",
         target_os = "openbsd",
+        target_os = "cygwin",
     ))]
     let ty = ty._cloexec();
 
@@ -781,6 +796,7 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
             target_os = "openbsd",
             target_os = "espidf",
             target_os = "vita",
+            target_os = "cygwin",
         ))
     ))]
     socket._set_cloexec(true)?;
@@ -956,7 +972,7 @@ impl Socket {
     /// For more information about this option, see [`set_passcred`].
     ///
     /// [`set_passcred`]: Socket::set_passcred
-    #[cfg(all(unix, target_os = "linux"))]
+    #[cfg(any(target_os = "linux", target_os = "cygwin"))]
     pub fn passcred(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_PASSCRED)
@@ -968,7 +984,7 @@ impl Socket {
     ///
     /// If this option is enabled, enables the receiving of the `SCM_CREDENTIALS`
     /// control messages.
-    #[cfg(all(unix, target_os = "linux"))]
+    #[cfg(any(target_os = "linux", target_os = "cygwin"))]
     pub fn set_passcred(&self, passcred: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
@@ -1254,6 +1270,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn join_multicast_v4_n(
         &self,
@@ -1287,6 +1304,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn leave_multicast_v4_n(
         &self,
@@ -1577,6 +1595,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn set_recv_tos_v4(&self, recv_tos: bool) -> io::Result<()> {
         unsafe {
@@ -1608,6 +1627,7 @@ impl Socket {
         target_os = "nto",
         target_os = "espidf",
         target_os = "vita",
+        target_os = "cygwin",
     )))]
     pub fn recv_tos_v4(&self) -> io::Result<bool> {
         unsafe {
@@ -1978,6 +1998,7 @@ impl Socket {
             target_os = "hurd",
             target_os = "espidf",
             target_os = "vita",
+            target_os = "cygwin",
         ))
     ))]
     pub fn recv_hoplimit_v6(&self) -> io::Result<bool> {
@@ -2006,6 +2027,7 @@ impl Socket {
             target_os = "hurd",
             target_os = "espidf",
             target_os = "vita",
+            target_os = "cygwin",
         ))
     ))]
     pub fn set_recv_hoplimit_v6(&self, recv_hoplimit: bool) -> io::Result<()> {
@@ -2063,6 +2085,7 @@ impl Socket {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "cygwin",
         )
     ))]
     pub fn keepalive_interval(&self) -> io::Result<Duration> {
@@ -2092,6 +2115,7 @@ impl Socket {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "cygwin",
         )
     ))]
     pub fn keepalive_retries(&self) -> io::Result<u32> {
