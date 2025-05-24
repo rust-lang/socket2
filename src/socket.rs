@@ -202,7 +202,9 @@ impl Socket {
     /// options can be safely set before and after connecting the socket.
     ///
     /// On Cygwin, a Unix domain socket connect blocks until the server accepts
-    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`].
+    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`]
+    /// (Cygwin only).
+    #[allow(rustdoc::broken_intra_doc_links)] // Socket::set_no_peercred
     pub fn connect(&self, address: &SockAddr) -> io::Result<()> {
         sys::connect(self.as_raw(), address)
     }
@@ -267,7 +269,9 @@ impl Socket {
     /// # Notes
     ///
     /// On Cygwin, a Unix domain socket connect blocks until the server accepts
-    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`].
+    /// it. If the behavior is not expected, try [`Socket::set_no_peercred`]
+    /// (Cygwin only).
+    #[allow(rustdoc::broken_intra_doc_links)] // Socket::set_no_peercred
     pub fn accept(&self) -> io::Result<(Socket, SockAddr)> {
         // Use `accept4` on platforms that support it.
         #[cfg(any(
