@@ -24,6 +24,19 @@ use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
 #[cfg(all(unix, not(target_os = "redox")))]
 use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+use crate::{MMsgHdr, MMsgHdrMut};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
 
@@ -632,6 +645,30 @@ impl Socket {
         sys::recvmsg(self.as_raw(), msg, flags)
     }
 
+    /// Receive a list of messages on a socket using a message structure.
+    /// Note that the timeout is buggy on Linux, see BUGS section in the Linux manual page.
+    #[doc = man_links!(recvmmsg(2))]
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "aix",
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        )
+    ))]
+    pub fn recvmmsg(
+        &self,
+        msgs: &mut [MMsgHdrMut<'_, '_, '_>],
+        flags: sys::c_int,
+        timeout: Option<Duration>,
+    ) -> io::Result<usize> {
+        sys::recvmmsg(self.as_raw(), msgs, flags, timeout)
+    }
+
     /// Sends data on the socket to a connected peer.
     ///
     /// This is typically used on TCP sockets or datagram sockets which have
@@ -732,6 +769,28 @@ impl Socket {
     #[cfg(not(target_os = "redox"))]
     pub fn sendmsg(&self, msg: &MsgHdr<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
         sys::sendmsg(self.as_raw(), msg, flags)
+    }
+
+    /// Send a list of messages on a socket using a message structure.
+    #[doc = man_links!(sendmmsg(2))]
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "aix",
+            target_os = "android",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+        )
+    ))]
+    pub fn sendmmsg(
+        &self,
+        msgs: &mut [MMsgHdr<'_, '_, '_>],
+        flags: sys::c_int,
+    ) -> io::Result<usize> {
+        sys::sendmmsg(self.as_raw(), msgs, flags)
     }
 }
 
