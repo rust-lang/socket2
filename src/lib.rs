@@ -522,6 +522,7 @@ impl TcpKeepalive {
         target_os = "tvos",
         target_os = "watchos",
         target_os = "windows",
+        target_os = "cygwin",
     ))]
     #[cfg_attr(
         docsrs,
@@ -567,6 +568,7 @@ impl TcpKeepalive {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "cygwin",
         )
     ))]
     #[cfg_attr(
