@@ -66,3 +66,11 @@ features = [
 [features]
 # Enable all API, even ones not available on all OSs.
 all = []
+
+[package.metadata.cargo_check_external_types]
+allowed_external_types = [
+  "libc::*",
+  # Referenced via a type alias.
+  "windows_sys::Win32::Networking::WinSock::socklen_t",
+  "windows_sys::Win32::Networking::WinSock::ADDRESS_FAMILY",
+]

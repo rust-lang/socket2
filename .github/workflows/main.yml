@@ -119,3 +119,28 @@ jobs:
     - uses: dtolnay/rust-toolchain@stable
     - name: Run Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
+  CheckExternalTypes:
+    name: check-external-types (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+        rust:
+          # `check-external-types` requires a specific Rust nightly version. See
+          # the README for details: https://github.com/awslabs/cargo-check-external-types
+          - nightly-2024-06-30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      - name: Install cargo-check-external-types
+        uses: taiki-e/cache-cargo-install-action@v1
+        with:
+          tool: cargo-check-external-types@0.1.13
+          locked: true
+      - name: check-external-types
+        run: cargo check-external-types --all-features
