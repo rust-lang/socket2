@@ -900,6 +900,7 @@ fn tcp_keepalive() {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "windows"
         )
     ))]
     let params = params.with_retries(10);
@@ -950,6 +951,7 @@ fn tcp_keepalive() {
             target_os = "netbsd",
             target_os = "tvos",
             target_os = "watchos",
+            target_os = "windows",
         )
     ))]
     assert_eq!(socket.keepalive_retries().unwrap(), 10);
