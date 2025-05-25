@@ -73,9 +73,9 @@ allowed_external_types = [
   "libc::c_int",
   "libc::primitives::c_int", # libc::c_int isn't always detected.
   "libc::socklen_t",
-  "libc::unix::bsd::socklen_t", # libc::socklen_t isn't always detected.
+  "libc::*::socklen_t", # libc::socklen_t isn't always detected.
   "libc::sa_family_t",
-  "libc::unix::bsd::sa_family_t", # libc::sa_family_t is always detected.
+  "libc::*::sa_family_t", # libc::sa_family_t is always detected.
   "windows_sys::Win32::Networking::WinSock::socklen_t",
   "windows_sys::Win32::Networking::WinSock::ADDRESS_FAMILY",
 ]
