@@ -196,6 +196,8 @@ pub use sockaddr::{sa_family_t, socklen_t, SockAddr, SockAddrStorage};
 pub use socket::InterfaceIndexOrAddress;
 pub use socket::Socket;
 pub use sockref::SockRef;
+#[cfg(all(feature = "all", target_os = "linux"))]
+pub use sys::CcidEndpoints;
 #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 pub use sys::SockFilter;
 

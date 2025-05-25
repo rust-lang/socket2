@@ -2844,6 +2844,8 @@ impl std::fmt::Debug for SockFilter {
 }
 
 /// See [`Socket::dccp_available_ccids`].
+///
+/// [`Socket::dccp_available_ccids`]: crate::Socket::dccp_available_ccids
 #[cfg(all(feature = "all", target_os = "linux"))]
 #[derive(Debug)]
 pub struct CcidEndpoints<const N: usize> {
