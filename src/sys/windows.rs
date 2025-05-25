@@ -59,6 +59,9 @@ pub(crate) const SOCK_SEQPACKET: c_int =
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
     IPPROTO_ICMP, IPPROTO_ICMPV6, IPPROTO_TCP, IPPROTO_UDP,
 };
+
+#[cfg(feature = "all")]
+pub(crate) use windows_sys::Win32::Networking::WinSock::TCP_KEEPCNT;
 // Used in `SockAddr`.
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
     SOCKADDR as sockaddr, SOCKADDR_IN as sockaddr_in, SOCKADDR_IN6 as sockaddr_in6,
@@ -737,17 +740,18 @@ fn into_ms(duration: Option<Duration>) -> u32 {
 }
 
 pub(crate) fn set_tcp_keepalive(socket: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
-    let mut keepalive = tcp_keepalive {
+    let mut tcp_keepalive = tcp_keepalive {
         onoff: 1,
         keepalivetime: into_ms(keepalive.time),
         keepaliveinterval: into_ms(keepalive.interval),
     };
+
     let mut out = 0;
     syscall!(
         WSAIoctl(
             socket,
             SIO_KEEPALIVE_VALS,
-            &mut keepalive as *mut _ as *mut _,
+            &mut tcp_keepalive as *mut _ as *mut _,
             size_of::<tcp_keepalive>() as _,
             ptr::null_mut(),
             0,
@@ -757,8 +761,18 @@ pub(crate) fn set_tcp_keepalive(socket: Socket, keepalive: &TcpKeepalive) -> io:
         ),
         PartialEq::eq,
         SOCKET_ERROR
-    )
-    .map(|_| ())
+    )?;
+    if let Some(retries) = keepalive.retries {
+        unsafe {
+            setsockopt(
+                socket,
+                WinSock::IPPROTO_TCP,
+                WinSock::TCP_KEEPCNT,
+                retries as c_int,
+            )?
+        }
+    }
+    Ok(())
 }
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.

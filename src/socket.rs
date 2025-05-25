@@ -2116,6 +2116,7 @@ impl Socket {
             target_os = "tvos",
             target_os = "watchos",
             target_os = "cygwin",
+            target_os = "windows",
         )
     ))]
     pub fn keepalive_retries(&self) -> io::Result<u32> {
