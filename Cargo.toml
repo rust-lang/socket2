@@ -1,6 +1,6 @@
 [package]
 name          = "socket2"
-version       = "0.5.9"
+version       = "0.5.10"
 authors       = [
   "Alex Crichton <alex@alexcrichton.com>",
   "Thomas de Zeeuw <thomasdezeeuw@gmail.com>"
