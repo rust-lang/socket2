@@ -1,3 +1,15 @@
+# 0.5.10
+
+* Add cygwin support
+  (https://github.com/rust-lang/socket2/pull/568,
+  https://github.com/rust-lang/socket2/pull/578).
+
+# 0.5.9
+
+* Enable `IP_BOUND_IF` on illumos and Solaris
+  (https://github.com/rust-lang/socket2/pull/561,
+  https://github.com/rust-lang/socket2/pull/566).
+
 # 0.5.8
 
 * Added `Socket::(set_)header_included_v4` and
