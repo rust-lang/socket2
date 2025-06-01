@@ -1811,3 +1811,16 @@ fn set_passcred() {
     socket.set_passcred(true).unwrap();
     assert!(socket.passcred().unwrap());
 }
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[test]
+fn set_priority() {
+    let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
+    assert!(socket.priority().unwrap() == 0);
+
+    // test priorities 6 .. 0; values above 6 require additional priviledges
+    for i in (0..=6).rev() {
+        socket.set_priority(i).unwrap();
+        assert!(socket.priority().unwrap() == i);
+    }
+}

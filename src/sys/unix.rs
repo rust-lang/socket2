@@ -206,6 +206,11 @@ pub(crate) use libc::SO_LINGER;
 pub(crate) use libc::SO_LINGER_SEC as SO_LINGER;
 #[cfg(any(target_os = "linux", target_os = "cygwin"))]
 pub(crate) use libc::SO_PASSCRED;
+#[cfg(all(
+    feature = "all",
+    any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+))]
+pub(crate) use libc::SO_PRIORITY;
 pub(crate) use libc::{
     ip_mreq as IpMreq, linger, IPPROTO_IP, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF,
     IPV6_MULTICAST_LOOP, IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_DROP_MEMBERSHIP,
