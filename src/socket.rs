@@ -996,6 +996,41 @@ impl Socket {
         }
     }
 
+    /// Get value for the `SO_PRIORITY` option on this socket.
+    ///
+    /// For more information about this option, see [`set_priority`].
+    ///
+    /// [`set_priority`]: Socket::set_priority
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+    ))]
+    pub fn priority(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::SOL_SOCKET, sys::SO_PRIORITY)
+                .map(|prio| prio as u32)
+        }
+    }
+
+    /// Set value for the `SO_PRIORITY` option on this socket.
+    ///
+    /// Packets with a higher priority may be processed earlier depending on the selected device
+    /// queueing discipline.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "linux", target_os = "android", target_os = "fuchsia")
+    ))]
+    pub fn set_priority(&self, priority: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::SOL_SOCKET,
+                sys::SO_PRIORITY,
+                priority as c_int,
+            )
+        }
+    }
+
     /// Get value for the `SO_RCVBUF` option on this socket.
     ///
     /// For more information about this option, see [`set_recv_buffer_size`].
