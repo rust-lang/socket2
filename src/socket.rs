@@ -1681,8 +1681,8 @@ impl Socket {
             target_os = "windows",
         )
     ))]
-    pub fn original_dst(&self) -> io::Result<SockAddr> {
-        sys::original_dst(self.as_raw())
+    pub fn original_dst_v4(&self) -> io::Result<SockAddr> {
+        sys::original_dst_v4(self.as_raw())
     }
 }
 
