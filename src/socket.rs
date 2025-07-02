@@ -1167,7 +1167,7 @@ const fn into_linger(duration: Option<Duration>) -> sys::linger {
     }
 }
 
-/// Socket options for IPv4 sockets, get/set using `IPPROTO_IP`.
+/// Socket options for IPv4 sockets, get/set using `IPPROTO_IP` or `SOL_IP`.
 ///
 /// Additional documentation can be found in documentation of the OS.
 /// * Linux: <https://man7.org/linux/man-pages/man7/ip.7.html>
@@ -1670,9 +1670,23 @@ impl Socket {
                 .map(|recv_tos| recv_tos > 0)
         }
     }
+
+    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "android",
+            target_os = "fuchsia",
+            target_os = "linux",
+            target_os = "windows",
+        )
+    ))]
+    pub fn original_dst(&self) -> io::Result<SockAddr> {
+        sys::original_dst(self.as_raw())
+    }
 }
 
-/// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6`.
+/// Socket options for IPv6 sockets, get/set using `IPPROTO_IPV6` or `SOL_IPV6`.
 ///
 /// Additional documentation can be found in documentation of the OS.
 /// * Linux: <https://man7.org/linux/man-pages/man7/ipv6.7.html>
@@ -2075,6 +2089,15 @@ impl Socket {
             )
         }
     }
+
+    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
+    #[cfg(all(
+        feature = "all",
+        any(target_os = "android", target_os = "linux", target_os = "windows")
+    ))]
+    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
+        sys::original_dst_ipv6(self.as_raw())
+    }
 }
 
 /// Socket options for TCP sockets, get/set using `IPPROTO_TCP`.
@@ -2232,29 +2255,6 @@ impl Socket {
                 nodelay as c_int,
             )
         }
-    }
-
-    /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
-    #[cfg(all(
-        feature = "all",
-        any(
-            target_os = "android",
-            target_os = "fuchsia",
-            target_os = "linux",
-            target_os = "windows",
-        )
-    ))]
-    pub fn original_dst(&self) -> io::Result<SockAddr> {
-        sys::original_dst(self.as_raw())
-    }
-
-    /// Get the value for the `IP6T_SO_ORIGINAL_DST` option on this socket.
-    #[cfg(all(
-        feature = "all",
-        any(target_os = "android", target_os = "linux", target_os = "windows")
-    ))]
-    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
-        sys::original_dst_ipv6(self.as_raw())
     }
 }
 
