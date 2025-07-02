@@ -1380,7 +1380,7 @@ pub(crate) const fn to_mreqn(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-pub(crate) fn original_dst(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn original_dst_v4(fd: Socket) -> io::Result<SockAddr> {
     // Safety: `getsockopt` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::try_init(|storage, len| {
@@ -1401,7 +1401,7 @@ pub(crate) fn original_dst(fd: Socket) -> io::Result<SockAddr> {
 /// This value contains the original destination IPv6 address of the connection
 /// redirected using `ip6tables` `REDIRECT` or `TPROXY`.
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-pub(crate) fn original_dst_ipv6(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn original_dst_v6(fd: Socket) -> io::Result<SockAddr> {
     // Safety: `getsockopt` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::try_init(|storage, len| {

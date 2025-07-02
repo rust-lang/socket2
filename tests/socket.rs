@@ -1654,21 +1654,21 @@ fn header_included_ipv6() {
         target_os = "windows"
     )
 ))]
-fn original_dst() {
+fn original_dst_v4() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     #[cfg(not(target_os = "windows"))]
     let expected = Some(libc::ENOENT);
     #[cfg(target_os = "windows")]
     let expected = Some(windows_sys::Win32::Networking::WinSock::WSAEINVAL);
 
-    match socket.original_dst() {
-        Ok(_) => panic!("original_dst on non-redirected socket should fail"),
+    match socket.original_dst_v4() {
+        Ok(_) => panic!("original_dst_v4 on non-redirected socket should fail"),
         Err(err) => assert_eq!(err.raw_os_error(), expected),
     }
 
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
-    match socket.original_dst() {
-        Ok(_) => panic!("original_dst on non-redirected socket should fail"),
+    match socket.original_dst_v4() {
+        Ok(_) => panic!("original_dst_v4 on non-redirected socket should fail"),
         Err(err) => assert_eq!(err.raw_os_error(), expected),
     }
 }

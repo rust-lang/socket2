@@ -883,7 +883,7 @@ pub(crate) fn to_mreqn(
 }
 
 #[cfg(feature = "all")]
-pub(crate) fn original_dst(socket: Socket) -> io::Result<SockAddr> {
+pub(crate) fn original_dst_v4(socket: Socket) -> io::Result<SockAddr> {
     unsafe {
         SockAddr::try_init(|storage, len| {
             syscall!(
@@ -903,7 +903,7 @@ pub(crate) fn original_dst(socket: Socket) -> io::Result<SockAddr> {
 }
 
 #[cfg(feature = "all")]
-pub(crate) fn original_dst_ipv6(socket: Socket) -> io::Result<SockAddr> {
+pub(crate) fn original_dst_v6(socket: Socket) -> io::Result<SockAddr> {
     unsafe {
         SockAddr::try_init(|storage, len| {
             syscall!(
