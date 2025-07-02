@@ -1425,7 +1425,7 @@ test!(keepalive, set_keepalive(true));
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 test!(freebind_v4, set_freebind_v4(true));
 #[cfg(all(feature = "all", target_os = "linux"))]
-test!(IPv6 freebind_ipv6, set_freebind_ipv6(true));
+test!(IPv6 freebind_v6, set_freebind_v6(true));
 
 test!(IPv4 ttl_v4, set_ttl_v4(40));
 
