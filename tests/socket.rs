@@ -483,7 +483,7 @@ fn connect_timeout_unrouteable() {
     match socket.connect_timeout(&addr, Duration::from_millis(250)) {
         Ok(_) => panic!("unexpected success"),
         Err(ref err) if err.kind() == io::ErrorKind::TimedOut => {}
-        Err(err) => panic!("unexpected error {}", err),
+        Err(err) => panic!("unexpected error {err}"),
     }
 }
 
@@ -503,7 +503,7 @@ fn connect_timeout_unbound() {
         Err(ref err)
             if err.kind() == io::ErrorKind::ConnectionRefused
                 || err.kind() == io::ErrorKind::TimedOut => {}
-        Err(err) => panic!("unexpected error {}", err),
+        Err(err) => panic!("unexpected error {err}"),
     }
 }
 
@@ -974,7 +974,7 @@ fn device() {
                 eprintln!("error binding to device (`{interface}`): {err}");
                 continue;
             } else {
-                panic!("unexpected error binding device: {}", err);
+                panic!("unexpected error binding device: {err}");
             }
         }
         assert_eq!(
@@ -1025,7 +1025,7 @@ fn device() {
                 eprintln!("error binding to device (`{interface}`): {err}");
                 continue;
             } else {
-                panic!("unexpected error binding device: {}", err);
+                panic!("unexpected error binding device: {err}");
             }
         }
         assert_eq!(socket.device_index_v4().unwrap(), iface_index);
@@ -1073,7 +1073,7 @@ fn device_v6() {
                 eprintln!("error binding to device (`{interface}`): {err}");
                 continue;
             } else {
-                panic!("unexpected error binding device: {}", err);
+                panic!("unexpected error binding device: {err}");
             }
         }
         assert_eq!(socket.device_index_v6().unwrap(), iface_index);
@@ -1595,7 +1595,7 @@ fn header_included() {
         Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => return,
         #[cfg(unix)]
         Err(ref err) if err.raw_os_error() == Some(libc::EPROTONOSUPPORT) => return,
-        Err(err) => panic!("unexpected error creating socket: {}", err),
+        Err(err) => panic!("unexpected error creating socket: {err}"),
     };
 
     let initial = socket
@@ -1629,7 +1629,7 @@ fn header_included_ipv6() {
         Err(ref err) if err.kind() == io::ErrorKind::PermissionDenied => return,
         #[cfg(unix)]
         Err(ref err) if err.raw_os_error() == Some(libc::EPROTONOSUPPORT) => return,
-        Err(err) => panic!("unexpected error creating socket: {}", err),
+        Err(err) => panic!("unexpected error creating socket: {err}"),
     };
 
     let initial = socket
