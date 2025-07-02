@@ -2119,8 +2119,8 @@ impl Socket {
             target_os = "vita"
         ))
     ))]
-    pub fn keepalive_time(&self) -> io::Result<Duration> {
-        sys::keepalive_time(self.as_raw())
+    pub fn tcp_keepalive_time(&self) -> io::Result<Duration> {
+        sys::tcp_keepalive_time(self.as_raw())
     }
 
     /// Get the value of the `TCP_KEEPINTVL` option on this socket.
@@ -2146,7 +2146,7 @@ impl Socket {
             target_os = "cygwin",
         )
     ))]
-    pub fn keepalive_interval(&self) -> io::Result<Duration> {
+    pub fn tcp_keepalive_interval(&self) -> io::Result<Duration> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_KEEPINTVL)
                 .map(|secs| Duration::from_secs(secs as u64))
@@ -2177,7 +2177,7 @@ impl Socket {
             target_os = "windows",
         )
     ))]
-    pub fn keepalive_retries(&self) -> io::Result<u32> {
+    pub fn tcp_keepalive_retries(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_KEEPCNT)
                 .map(|retries| retries as u32)
@@ -2229,10 +2229,10 @@ impl Socket {
 
     /// Get the value of the `TCP_NODELAY` option on this socket.
     ///
-    /// For more information about this option, see [`set_nodelay`].
+    /// For more information about this option, see [`set_tcp_nodelay`].
     ///
-    /// [`set_nodelay`]: Socket::set_nodelay
-    pub fn nodelay(&self) -> io::Result<bool> {
+    /// [`set_tcp_nodelay`]: Socket::set_tcp_nodelay
+    pub fn tcp_nodelay(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_NODELAY)
                 .map(|nodelay| nodelay != 0)
@@ -2246,7 +2246,7 @@ impl Socket {
     /// small amount of data. When not set, data is buffered until there is a
     /// sufficient amount to send out, thereby avoiding the frequent sending of
     /// small packets.
-    pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
+    pub fn set_tcp_nodelay(&self, nodelay: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),

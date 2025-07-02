@@ -49,8 +49,8 @@ use crate::Socket;
 ///
 /// // Create a `SockRef`erence to the stream.
 /// let socket_ref = SockRef::from(&stream);
-/// // Use `Socket::set_nodelay` on the stream.
-/// socket_ref.set_nodelay(true)?;
+/// // Use `Socket::set_tcp_nodelay` on the stream.
+/// socket_ref.set_tcp_nodelay(true)?;
 /// drop(socket_ref);
 ///
 /// assert_eq!(stream.nodelay()?, true);

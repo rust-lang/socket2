@@ -912,7 +912,10 @@ fn tcp_keepalive() {
         feature = "all",
         not(any(windows, target_os = "haiku", target_os = "openbsd"))
     ))]
-    assert_eq!(socket.keepalive_time().unwrap(), Duration::from_secs(200));
+    assert_eq!(
+        socket.tcp_keepalive_time().unwrap(),
+        Duration::from_secs(200)
+    );
 
     #[cfg(all(
         feature = "all",
@@ -932,7 +935,7 @@ fn tcp_keepalive() {
         )
     ))]
     assert_eq!(
-        socket.keepalive_interval().unwrap(),
+        socket.tcp_keepalive_interval().unwrap(),
         Duration::from_secs(30)
     );
 
@@ -954,7 +957,7 @@ fn tcp_keepalive() {
             target_os = "windows",
         )
     ))]
-    assert_eq!(socket.keepalive_retries().unwrap(), 10);
+    assert_eq!(socket.tcp_keepalive_retries().unwrap(), 10);
 }
 
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
@@ -1350,7 +1353,7 @@ const GET_BUF_SIZE: usize = SET_BUF_SIZE;
 #[cfg(target_os = "linux")]
 const GET_BUF_SIZE: usize = 2 * SET_BUF_SIZE;
 
-test!(nodelay, set_nodelay(true));
+test!(tcp_nodelay, set_tcp_nodelay(true));
 test!(
     recv_buffer_size,
     set_recv_buffer_size(SET_BUF_SIZE),
@@ -1383,8 +1386,8 @@ test!(reuse_port_lb, set_reuse_port_lb(true));
 ))]
 test!(
     #[cfg_attr(target_os = "linux", ignore = "Different value returned")]
-    mss,
-    set_mss(256)
+    tcp_mss,
+    set_tcp_mss(256)
 );
 #[cfg(all(feature = "all", target_os = "linux"))]
 test!(
@@ -1402,17 +1405,17 @@ test!(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-test!(cork, set_cork(true));
+test!(tcp_cork, set_tcp_cork(true));
 #[cfg(all(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-test!(quickack, set_quickack(false));
+test!(tcp_quickack, set_tcp_quickack(false));
 #[cfg(all(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-test!(thin_linear_timeouts, set_thin_linear_timeouts(true));
+test!(tcp_thin_linear_timeouts, set_tcp_thin_linear_timeouts(true));
 test!(linger, set_linger(Some(Duration::from_secs(10))));
 test!(
     read_timeout,
