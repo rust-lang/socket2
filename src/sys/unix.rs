@@ -1565,9 +1565,9 @@ impl crate::Socket {
 
     /// Gets the value of the `TCP_MAXSEG` option on this socket.
     ///
-    /// For more information about this option, see [`set_mss`].
+    /// For more information about this option, see [`set_tcp_mss`].
     ///
-    /// [`set_mss`]: crate::Socket::set_mss
+    /// [`set_tcp_mss`]: crate::Socket::set_tcp_mss
     #[cfg(all(feature = "all", not(target_os = "redox")))]
     pub fn tcp_mss(&self) -> io::Result<u32> {
         unsafe {
@@ -1690,9 +1690,9 @@ impl crate::Socket {
 
     /// Get the value of the `TCP_CORK` option on this socket.
     ///
-    /// For more information about this option, see [`set_cork`].
+    /// For more information about this option, see [`set_tcp_cork`].
     ///
-    /// [`set_cork`]: crate::Socket::set_cork
+    /// [`set_tcp_cork`]: crate::Socket::set_tcp_cork
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
@@ -1727,9 +1727,9 @@ impl crate::Socket {
 
     /// Get the value of the `TCP_QUICKACK` option on this socket.
     ///
-    /// For more information about this option, see [`set_quickack`].
+    /// For more information about this option, see [`set_tcp_quickack`].
     ///
-    /// [`set_quickack`]: crate::Socket::set_quickack
+    /// [`set_tcp_quickack`]: crate::Socket::set_tcp_quickack
     #[cfg(all(
         feature = "all",
         any(
@@ -1774,9 +1774,9 @@ impl crate::Socket {
 
     /// Get the value of the `TCP_THIN_LINEAR_TIMEOUTS` option on this socket.
     ///
-    /// For more information about this option, see [`set_thin_linear_timeouts`].
+    /// For more information about this option, see [`set_tcp_thin_linear_timeouts`].
     ///
-    /// [`set_thin_linear_timeouts`]: crate::Socket::set_thin_linear_timeouts
+    /// [`set_tcp_thin_linear_timeouts`]: crate::Socket::set_tcp_thin_linear_timeouts
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
