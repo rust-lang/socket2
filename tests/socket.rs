@@ -1420,7 +1420,7 @@ test!(
 );
 test!(keepalive, set_keepalive(true));
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
-test!(freebind, set_freebind(true));
+test!(freebind_v4, set_freebind_v4(true));
 #[cfg(all(feature = "all", target_os = "linux"))]
 test!(IPv6 freebind_ipv6, set_freebind_ipv6(true));
 

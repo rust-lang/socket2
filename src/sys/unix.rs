@@ -2160,14 +2160,14 @@ impl crate::Socket {
 
     /// Get the value of the `IP_FREEBIND` option on this socket.
     ///
-    /// For more information about this option, see [`set_freebind`].
+    /// For more information about this option, see [`set_freebind_v4`].
     ///
-    /// [`set_freebind`]: crate::Socket::set_freebind
+    /// [`set_freebind_v4`]: crate::Socket::set_freebind_v4
     #[cfg(all(
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn freebind(&self) -> io::Result<bool> {
+    pub fn freebind_v4(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_IP, libc::IP_FREEBIND)
                 .map(|freebind| freebind != 0)
@@ -2185,7 +2185,7 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn set_freebind(&self, freebind: bool) -> io::Result<()> {
+    pub fn set_freebind_v4(&self, freebind: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
@@ -2200,9 +2200,9 @@ impl crate::Socket {
     ///
     /// This is an IPv6 counterpart of `IP_FREEBIND` socket option on
     /// Android/Linux. For more information about this option, see
-    /// [`set_freebind`].
+    /// [`set_freebind_v4`].
     ///
-    /// [`set_freebind`]: crate::Socket::set_freebind
+    /// [`set_freebind_v4`]: crate::Socket::set_freebind_v4
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     pub fn freebind_ipv6(&self) -> io::Result<bool> {
         unsafe {
@@ -2215,9 +2215,9 @@ impl crate::Socket {
     ///
     /// This is an IPv6 counterpart of `IP_FREEBIND` socket option on
     /// Android/Linux. For more information about this option, see
-    /// [`set_freebind`].
+    /// [`set_freebind_v4`].
     ///
-    /// [`set_freebind`]: crate::Socket::set_freebind
+    /// [`set_freebind_v4`]: crate::Socket::set_freebind_v4
     ///
     /// # Examples
     ///
@@ -2229,7 +2229,7 @@ impl crate::Socket {
     ///
     /// fn enable_freebind(socket: &Socket) -> io::Result<()> {
     ///     match socket.domain()? {
-    ///         Domain::IPV4 => socket.set_freebind(true)?,
+    ///         Domain::IPV4 => socket.set_freebind_v4(true)?,
     ///         Domain::IPV6 => socket.set_freebind_ipv6(true)?,
     ///         _ => return Err(Error::new(ErrorKind::Other, "unsupported domain")),
     ///     };
