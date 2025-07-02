@@ -2204,7 +2204,7 @@ impl crate::Socket {
     ///
     /// [`set_freebind_v4`]: crate::Socket::set_freebind_v4
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-    pub fn freebind_ipv6(&self) -> io::Result<bool> {
+    pub fn freebind_v6(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::SOL_IPV6, libc::IPV6_FREEBIND)
                 .map(|freebind| freebind != 0)
@@ -2230,7 +2230,7 @@ impl crate::Socket {
     /// fn enable_freebind(socket: &Socket) -> io::Result<()> {
     ///     match socket.domain()? {
     ///         Domain::IPV4 => socket.set_freebind_v4(true)?,
-    ///         Domain::IPV6 => socket.set_freebind_ipv6(true)?,
+    ///         Domain::IPV6 => socket.set_freebind_v6(true)?,
     ///         _ => return Err(Error::new(ErrorKind::Other, "unsupported domain")),
     ///     };
     ///     Ok(())
@@ -2242,7 +2242,7 @@ impl crate::Socket {
     /// # }
     /// ```
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-    pub fn set_freebind_ipv6(&self, freebind: bool) -> io::Result<()> {
+    pub fn set_freebind_v6(&self, freebind: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
