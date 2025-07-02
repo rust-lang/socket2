@@ -2095,8 +2095,8 @@ impl Socket {
         feature = "all",
         any(target_os = "android", target_os = "linux", target_os = "windows")
     ))]
-    pub fn original_dst_ipv6(&self) -> io::Result<SockAddr> {
-        sys::original_dst_ipv6(self.as_raw())
+    pub fn original_dst_v6(&self) -> io::Result<SockAddr> {
+        sys::original_dst_v6(self.as_raw())
     }
 }
 

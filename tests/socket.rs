@@ -1678,7 +1678,7 @@ fn original_dst_v4() {
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-fn original_dst_ipv6() {
+fn original_dst_v6() {
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
     #[cfg(not(target_os = "windows"))]
     let expected = Some(libc::ENOENT);
@@ -1688,15 +1688,15 @@ fn original_dst_ipv6() {
     let expected_v4 = Some(libc::EOPNOTSUPP);
     #[cfg(target_os = "windows")]
     let expected_v4 = Some(windows_sys::Win32::Networking::WinSock::WSAEINVAL);
-    match socket.original_dst_ipv6() {
-        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+    match socket.original_dst_v6() {
+        Ok(_) => panic!("original_dst_v6 on non-redirected socket should fail"),
         Err(err) => assert_eq!(err.raw_os_error(), expected),
     }
 
     // Not supported on IPv4 socket.
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    match socket.original_dst_ipv6() {
-        Ok(_) => panic!("original_dst_ipv6 on non-redirected socket should fail"),
+    match socket.original_dst_v6() {
+        Ok(_) => panic!("original_dst_v6 on non-redirected socket should fail"),
         Err(err) => assert_eq!(err.raw_os_error(), expected_v4),
     }
 }
