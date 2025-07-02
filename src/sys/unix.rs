@@ -1187,7 +1187,7 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     feature = "all",
     not(any(target_os = "haiku", target_os = "openbsd", target_os = "vita"))
 ))]
-pub(crate) fn keepalive_time(fd: Socket) -> io::Result<Duration> {
+pub(crate) fn tcp_keepalive_time(fd: Socket) -> io::Result<Duration> {
     unsafe {
         getsockopt::<c_int>(fd, IPPROTO_TCP, KEEPALIVE_TIME)
             .map(|secs| Duration::from_secs(secs as u64))
@@ -1569,7 +1569,7 @@ impl crate::Socket {
     ///
     /// [`set_mss`]: crate::Socket::set_mss
     #[cfg(all(feature = "all", not(target_os = "redox")))]
-    pub fn mss(&self) -> io::Result<u32> {
+    pub fn tcp_mss(&self) -> io::Result<u32> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_MAXSEG)
                 .map(|mss| mss as u32)
@@ -1581,7 +1581,7 @@ impl crate::Socket {
     /// The `TCP_MAXSEG` option denotes the TCP Maximum Segment Size and is only
     /// available on TCP sockets.
     #[cfg(all(feature = "all", not(target_os = "redox")))]
-    pub fn set_mss(&self, mss: u32) -> io::Result<()> {
+    pub fn set_tcp_mss(&self, mss: u32) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
@@ -1697,7 +1697,7 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn cork(&self) -> io::Result<bool> {
+    pub fn tcp_cork(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_CORK)
                 .map(|cork| cork != 0)
@@ -1714,7 +1714,7 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn set_cork(&self, cork: bool) -> io::Result<()> {
+    pub fn set_tcp_cork(&self, cork: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
@@ -1739,7 +1739,7 @@ impl crate::Socket {
             target_os = "cygwin",
         )
     ))]
-    pub fn quickack(&self) -> io::Result<bool> {
+    pub fn tcp_quickack(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_QUICKACK)
                 .map(|quickack| quickack != 0)
@@ -1761,7 +1761,7 @@ impl crate::Socket {
             target_os = "cygwin",
         )
     ))]
-    pub fn set_quickack(&self, quickack: bool) -> io::Result<()> {
+    pub fn set_tcp_quickack(&self, quickack: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
@@ -1781,7 +1781,7 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn thin_linear_timeouts(&self) -> io::Result<bool> {
+    pub fn tcp_thin_linear_timeouts(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(
                 self.as_raw(),
@@ -1801,7 +1801,7 @@ impl crate::Socket {
         feature = "all",
         any(target_os = "android", target_os = "fuchsia", target_os = "linux")
     ))]
-    pub fn set_thin_linear_timeouts(&self, timeouts: bool) -> io::Result<()> {
+    pub fn set_tcp_thin_linear_timeouts(&self, timeouts: bool) -> io::Result<()> {
         unsafe {
             setsockopt(
                 self.as_raw(),
