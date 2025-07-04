@@ -1,3 +1,70 @@
+# 0.6.0
+
+## Breaking changes
+
+All IPv4 methods now have a `_v4` suffix, IPv6 uses `_v6`. TCP methods have a
+`tcp_` prefix (looked better than a suffix).
+
+Furthermore we removed all types from external libraries (i.e. libc or
+windows-sys) from the public API, allowing us to update those without breaking
+the API.
+
+* Renamed `Socket::freebind_ipv6` to `freebind_v6`
+  (https://github.com/rust-lang/socket2/pull/592).
+* Renamed `Socket::freebind` to `freebind_v4`
+  (https://github.com/rust-lang/socket2/pull/592).
+* Renamed `Socket::original_dst` to `original_dst_v4`
+  (https://github.com/rust-lang/socket2/pull/592).
+* Renamed `Socket::original_dst_ipv6` to `original_dst_v6`
+  (https://github.com/rust-lang/socket2/pull/592).
+* Bump MSRV to 1.70
+  (https://github.com/rust-lang/socket2/pull/597).
+* Use `c_int` from `std::ffi` instead of from libc
+  (https://github.com/rust-lang/socket2/pull/599,
+  https://github.com/rust-lang/socket2/pull/595).
+* `SockAddr`'s methods now accept/return `SockAddrStorage` instead of
+  `sockaddr_storage`/`SOCKADDR_STORAGE`
+  (https://github.com/rust-lang/socket2/pull/576):
+  * `new`
+  * `try_init`
+  * `as_ptr`
+  * `as_storage`
+* Add `SockFilter`, wrapper around `libc::sock_filter`, argument to
+  `Socket::attach_filter`
+  (https://github.com/rust-lang/socket2/pull/581).
+* Various renames of TCP methods on `Socket`
+  (https://github.com/rust-lang/socket2/pull/592):
+  * `keepalive_time` -> `tcp_keepalive_time`
+  * `keepalive_interval` -> `tcp_keepalive_interval`
+  * `keepalive_retries` -> `tcp_keepalive_retries`
+  * `nodelay` -> `tcp_nodelay`
+  * `set_nodelay` -> `tcp_set_nodelay`
+  * `tcp_mss` -> `mss`
+  * `tcp_set_mss` -> `set_mss`
+  * `tcp_cork` -> `cork`
+  * `tcp_set_cork` -> `set_cork`
+  * `tcp_quickack` -> `quickack`
+  * `tcp_set_quickack` -> `set_quickack`
+  * `thin_linear_timeouts` -> `tcp_thin_linear_timeouts`.
+
+## Non-breaking changes
+
+* Added `Socket::(set_)priority`
+  (https://github.com/rust-lang/socket2/pull/588).
+* Added TCP retries on Windows
+  (https://github.com/rust-lang/socket2/pull/557).
+* Added `SockAddrStorage`, wrapper around `sockaddr_storage`/`SOCKADDR_STORAGE`
+  for usage with `SockAddr` (instead of the types from libc/windows-sys)
+  (https://github.com/rust-lang/socket2/pull/576).
+* Implemented `Socket::bind_device_by_index_{v4,v6}` on Android and Linux
+  (https://github.com/rust-lang/socket2/pull/572).
+* Implemented `Copy` and `Clone` for `InterfaceIndexOrAddress`
+  (https://github.com/rust-lang/socket2/pull/571).
+* Updated to Windows-sys v0.59
+  (https://github.com/rust-lang/socket2/pull/579).
+* We now use `OwnedFd`/`OwnedSocket` internally for `Socket`
+  (https://github.com/rust-lang/socket2/pull/600).
+
 # 0.5.10
 
 * Add cygwin support
