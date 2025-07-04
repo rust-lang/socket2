@@ -103,7 +103,7 @@ impl SockAddr {
     /// let mut addr_storage = SockAddrStorage::zeroed();
     /// let mut len = addr_storage.size_of();
     ///
-    /// // The `getsockname(2)` system call will intiliase `storage` for
+    /// // The `getsockname(2)` system call will initialize `storage` for
     /// // us, setting `len` to the correct length.
     /// let res = unsafe {
     ///     libc::getsockname(
@@ -160,7 +160,7 @@ impl SockAddr {
     /// // Initialise a `SocketAddr` by calling `getsockname(2)`.
     /// let (_, address) = unsafe {
     ///     SockAddr::try_init(|addr_storage, len| {
-    ///         // The `getsockname(2)` system call will intiliase `storage` for
+    ///         // The `getsockname(2)` system call will initialize `storage` for
     ///         // us, setting `len` to the correct length.
     ///         if libc::getsockname(socket.as_raw_fd(), addr_storage.cast(), len) == -1 {
     ///             Err(io::Error::last_os_error())
