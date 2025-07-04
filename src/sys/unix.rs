@@ -2828,9 +2828,9 @@ impl crate::Socket {
 #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 #[repr(transparent)]
 pub struct SockFilter {
-    // For some reason Rust 1.63 thinks this field is unused, while it's clearly
+    // For some reason Rust 1.70 thinks this field is unused, while it's clearly
     // used in `SockFilter::new`. This issue seems fixed in later Rust versions,
-    // but we still need to support 1.63, adding allow(dead_code) ignores the
+    // but we still need to support 1.70, adding allow(dead_code) ignores the
     // issue.
     #[allow(dead_code)]
     filter: libc::sock_filter,
