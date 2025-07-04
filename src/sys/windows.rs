@@ -35,7 +35,7 @@ use windows_sys::Win32::System::Threading::INFINITE;
 use crate::{MsgHdr, RecvFlags, SockAddr, SockAddrStorage, TcpKeepalive, Type};
 
 #[allow(non_camel_case_types)]
-pub(crate) type c_int = std::os::raw::c_int;
+pub(crate) type c_int = std::ffi::c_int;
 
 /// Fake MSG_TRUNC flag for the [`RecvFlags`] struct.
 ///
