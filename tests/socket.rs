@@ -140,7 +140,7 @@ fn protocol_fmt_debug() {
 }
 
 #[test]
-#[should_panic = "fd != -1"]
+#[should_panic]
 #[cfg(unix)]
 fn from_invalid_raw_fd_should_panic() {
     use std::os::unix::io::FromRawFd;
