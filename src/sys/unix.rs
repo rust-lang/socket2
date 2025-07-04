@@ -859,17 +859,18 @@ impl SockAddr {
     }
 }
 
+pub(crate) type Socket = std::os::fd::OwnedFd;
 pub(crate) type RawSocket = c_int;
 
-pub(crate) unsafe fn socket_from_raw(socket: RawSocket) -> crate::socket::Inner {
-    crate::socket::Inner::from_raw_fd(socket)
+pub(crate) unsafe fn socket_from_raw(socket: RawSocket) -> Socket {
+    Socket::from_raw_fd(socket)
 }
 
-pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> RawSocket {
+pub(crate) fn socket_as_raw(socket: &Socket) -> RawSocket {
     socket.as_raw_fd()
 }
 
-pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> RawSocket {
+pub(crate) fn socket_into_raw(socket: Socket) -> RawSocket {
     socket.into_raw_fd()
 }
 

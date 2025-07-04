@@ -235,17 +235,18 @@ fn init() {
     });
 }
 
+pub(crate) type Socket = std::os::windows::io::OwnedSocket;
 pub(crate) type RawSocket = windows_sys::Win32::Networking::WinSock::SOCKET;
 
-pub(crate) unsafe fn socket_from_raw(socket: RawSocket) -> crate::socket::Inner {
-    crate::socket::Inner::from_raw_socket(socket as StdRawSocket)
+pub(crate) unsafe fn socket_from_raw(socket: RawSocket) -> Socket {
+    Socket::from_raw_socket(socket as StdRawSocket)
 }
 
-pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> RawSocket {
+pub(crate) fn socket_as_raw(socket: &Socket) -> RawSocket {
     socket.as_raw_socket() as RawSocket
 }
 
-pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> RawSocket {
+pub(crate) fn socket_into_raw(socket: Socket) -> RawSocket {
     socket.into_raw_socket() as RawSocket
 }
 
