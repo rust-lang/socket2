@@ -83,7 +83,7 @@ use crate::{Domain, Protocol, SockAddr, SockAddrStorage, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
-pub(crate) use libc::c_int;
+pub(crate) use core::os::raw::c_int;
 
 // Used in `Domain`.
 pub(crate) use libc::{AF_INET, AF_INET6, AF_UNIX};
@@ -730,7 +730,7 @@ pub(crate) fn set_msghdr_control(msg: &mut msghdr, ptr: *mut libc::c_void, len: 
 }
 
 #[cfg(not(target_os = "redox"))]
-pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: libc::c_int) {
+pub(crate) fn set_msghdr_flags(msg: &mut msghdr, flags: c_int) {
     msg.msg_flags = flags;
 }
 
@@ -1002,7 +1002,7 @@ pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
             fd,
             libc::SOL_SOCKET,
             libc::SO_NONBLOCK,
-            nonblocking as libc::c_int,
+            nonblocking as c_int,
         )
     }
 }
