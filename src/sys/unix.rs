@@ -859,35 +859,35 @@ impl SockAddr {
     }
 }
 
-pub(crate) type Socket = c_int;
+pub(crate) type RawSocket = c_int;
 
-pub(crate) unsafe fn socket_from_raw(socket: Socket) -> crate::socket::Inner {
+pub(crate) unsafe fn socket_from_raw(socket: RawSocket) -> crate::socket::Inner {
     crate::socket::Inner::from_raw_fd(socket)
 }
 
-pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> Socket {
+pub(crate) fn socket_as_raw(socket: &crate::socket::Inner) -> RawSocket {
     socket.as_raw_fd()
 }
 
-pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> Socket {
+pub(crate) fn socket_into_raw(socket: crate::socket::Inner) -> RawSocket {
     socket.into_raw_fd()
 }
 
-pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<Socket> {
+pub(crate) fn socket(family: c_int, ty: c_int, protocol: c_int) -> io::Result<RawSocket> {
     syscall!(socket(family, ty, protocol))
 }
 
 #[cfg(all(feature = "all", unix))]
-pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<[Socket; 2]> {
+pub(crate) fn socketpair(family: c_int, ty: c_int, protocol: c_int) -> io::Result<[RawSocket; 2]> {
     let mut fds = [0, 0];
     syscall!(socketpair(family, ty, protocol, fds.as_mut_ptr())).map(|_| fds)
 }
 
-pub(crate) fn bind(fd: Socket, addr: &SockAddr) -> io::Result<()> {
+pub(crate) fn bind(fd: RawSocket, addr: &SockAddr) -> io::Result<()> {
     syscall!(bind(fd, addr.as_ptr().cast::<sockaddr>(), addr.len() as _)).map(|_| ())
 }
 
-pub(crate) fn connect(fd: Socket, addr: &SockAddr) -> io::Result<()> {
+pub(crate) fn connect(fd: RawSocket, addr: &SockAddr) -> io::Result<()> {
     syscall!(connect(fd, addr.as_ptr().cast::<sockaddr>(), addr.len())).map(|_| ())
 }
 
@@ -933,46 +933,46 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
     }
 }
 
-pub(crate) fn listen(fd: Socket, backlog: c_int) -> io::Result<()> {
+pub(crate) fn listen(fd: RawSocket, backlog: c_int) -> io::Result<()> {
     syscall!(listen(fd, backlog)).map(|_| ())
 }
 
-pub(crate) fn accept(fd: Socket) -> io::Result<(Socket, SockAddr)> {
+pub(crate) fn accept(fd: RawSocket) -> io::Result<(RawSocket, SockAddr)> {
     // Safety: `accept` initialises the `SockAddr` for us.
     unsafe { SockAddr::try_init(|storage, len| syscall!(accept(fd, storage.cast(), len))) }
 }
 
-pub(crate) fn getsockname(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn getsockname(fd: RawSocket) -> io::Result<SockAddr> {
     // Safety: `accept` initialises the `SockAddr` for us.
     unsafe { SockAddr::try_init(|storage, len| syscall!(getsockname(fd, storage.cast(), len))) }
         .map(|(_, addr)| addr)
 }
 
-pub(crate) fn getpeername(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn getpeername(fd: RawSocket) -> io::Result<SockAddr> {
     // Safety: `accept` initialises the `SockAddr` for us.
     unsafe { SockAddr::try_init(|storage, len| syscall!(getpeername(fd, storage.cast(), len))) }
         .map(|(_, addr)| addr)
 }
 
-pub(crate) fn try_clone(fd: Socket) -> io::Result<Socket> {
+pub(crate) fn try_clone(fd: RawSocket) -> io::Result<RawSocket> {
     syscall!(fcntl(fd, libc::F_DUPFD_CLOEXEC, 0))
 }
 
 #[cfg(all(feature = "all", unix, not(target_os = "vita")))]
-pub(crate) fn nonblocking(fd: Socket) -> io::Result<bool> {
+pub(crate) fn nonblocking(fd: RawSocket) -> io::Result<bool> {
     let file_status_flags = fcntl_get(fd, libc::F_GETFL)?;
     Ok((file_status_flags & libc::O_NONBLOCK) != 0)
 }
 
 #[cfg(all(feature = "all", target_os = "vita"))]
-pub(crate) fn nonblocking(fd: Socket) -> io::Result<bool> {
+pub(crate) fn nonblocking(fd: RawSocket) -> io::Result<bool> {
     unsafe {
         getsockopt::<Bool>(fd, libc::SOL_SOCKET, libc::SO_NONBLOCK).map(|non_block| non_block != 0)
     }
 }
 
 #[cfg(not(target_os = "vita"))]
-pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
+pub(crate) fn set_nonblocking(fd: RawSocket, nonblocking: bool) -> io::Result<()> {
     if nonblocking {
         fcntl_add(fd, libc::F_GETFL, libc::F_SETFL, libc::O_NONBLOCK)
     } else {
@@ -981,7 +981,7 @@ pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
 }
 
 #[cfg(target_os = "vita")]
-pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
+pub(crate) fn set_nonblocking(fd: RawSocket, nonblocking: bool) -> io::Result<()> {
     unsafe {
         setsockopt(
             fd,
@@ -992,7 +992,7 @@ pub(crate) fn set_nonblocking(fd: Socket, nonblocking: bool) -> io::Result<()> {
     }
 }
 
-pub(crate) fn shutdown(fd: Socket, how: Shutdown) -> io::Result<()> {
+pub(crate) fn shutdown(fd: RawSocket, how: Shutdown) -> io::Result<()> {
     let how = match how {
         Shutdown::Write => libc::SHUT_WR,
         Shutdown::Read => libc::SHUT_RD,
@@ -1001,7 +1001,7 @@ pub(crate) fn shutdown(fd: Socket, how: Shutdown) -> io::Result<()> {
     syscall!(shutdown(fd, how)).map(|_| ())
 }
 
-pub(crate) fn recv(fd: Socket, buf: &mut [MaybeUninit<u8>], flags: c_int) -> io::Result<usize> {
+pub(crate) fn recv(fd: RawSocket, buf: &mut [MaybeUninit<u8>], flags: c_int) -> io::Result<usize> {
     syscall!(recv(
         fd,
         buf.as_mut_ptr().cast(),
@@ -1012,7 +1012,7 @@ pub(crate) fn recv(fd: Socket, buf: &mut [MaybeUninit<u8>], flags: c_int) -> io:
 }
 
 pub(crate) fn recv_from(
-    fd: Socket,
+    fd: RawSocket,
     buf: &mut [MaybeUninit<u8>],
     flags: c_int,
 ) -> io::Result<(usize, SockAddr)> {
@@ -1032,7 +1032,7 @@ pub(crate) fn recv_from(
     }
 }
 
-pub(crate) fn peek_sender(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn peek_sender(fd: RawSocket) -> io::Result<SockAddr> {
     // Unix-like platforms simply truncate the returned data, so this implementation is trivial.
     // However, for Windows this requires suppressing the `WSAEMSGSIZE` error,
     // so that requires a different approach.
@@ -1043,7 +1043,7 @@ pub(crate) fn peek_sender(fd: Socket) -> io::Result<SockAddr> {
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn recv_vectored(
-    fd: Socket,
+    fd: RawSocket,
     bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags)> {
@@ -1054,7 +1054,7 @@ pub(crate) fn recv_vectored(
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn recv_from_vectored(
-    fd: Socket,
+    fd: RawSocket,
     bufs: &mut [crate::MaybeUninitSlice<'_>],
     flags: c_int,
 ) -> io::Result<(usize, RecvFlags, SockAddr)> {
@@ -1076,14 +1076,14 @@ pub(crate) fn recv_from_vectored(
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn recvmsg(
-    fd: Socket,
+    fd: RawSocket,
     msg: &mut MsgHdrMut<'_, '_, '_>,
     flags: c_int,
 ) -> io::Result<usize> {
     syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
 }
 
-pub(crate) fn send(fd: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {
+pub(crate) fn send(fd: RawSocket, buf: &[u8], flags: c_int) -> io::Result<usize> {
     syscall!(send(
         fd,
         buf.as_ptr().cast(),
@@ -1094,12 +1094,21 @@ pub(crate) fn send(fd: Socket, buf: &[u8], flags: c_int) -> io::Result<usize> {
 }
 
 #[cfg(not(target_os = "redox"))]
-pub(crate) fn send_vectored(fd: Socket, bufs: &[IoSlice<'_>], flags: c_int) -> io::Result<usize> {
+pub(crate) fn send_vectored(
+    fd: RawSocket,
+    bufs: &[IoSlice<'_>],
+    flags: c_int,
+) -> io::Result<usize> {
     let msg = MsgHdr::new().with_buffers(bufs);
     sendmsg(fd, &msg, flags)
 }
 
-pub(crate) fn send_to(fd: Socket, buf: &[u8], addr: &SockAddr, flags: c_int) -> io::Result<usize> {
+pub(crate) fn send_to(
+    fd: RawSocket,
+    buf: &[u8],
+    addr: &SockAddr,
+    flags: c_int,
+) -> io::Result<usize> {
     syscall!(sendto(
         fd,
         buf.as_ptr().cast(),
@@ -1113,7 +1122,7 @@ pub(crate) fn send_to(fd: Socket, buf: &[u8], addr: &SockAddr, flags: c_int) -> 
 
 #[cfg(not(target_os = "redox"))]
 pub(crate) fn send_to_vectored(
-    fd: Socket,
+    fd: RawSocket,
     bufs: &[IoSlice<'_>],
     addr: &SockAddr,
     flags: c_int,
@@ -1123,12 +1132,12 @@ pub(crate) fn send_to_vectored(
 }
 
 #[cfg(not(target_os = "redox"))]
-pub(crate) fn sendmsg(fd: Socket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
+pub(crate) fn sendmsg(fd: RawSocket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> io::Result<usize> {
     syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
 }
 
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
-pub(crate) fn timeout_opt(fd: Socket, opt: c_int, val: c_int) -> io::Result<Option<Duration>> {
+pub(crate) fn timeout_opt(fd: RawSocket, opt: c_int, val: c_int) -> io::Result<Option<Duration>> {
     unsafe { getsockopt(fd, opt, val).map(from_timeval) }
 }
 
@@ -1144,7 +1153,7 @@ const fn from_timeval(duration: libc::timeval) -> Option<Duration> {
 
 /// Wrapper around `setsockopt` to deal with platform specific timeouts.
 pub(crate) fn set_timeout_opt(
-    fd: Socket,
+    fd: RawSocket,
     opt: c_int,
     val: c_int,
     duration: Option<Duration>,
@@ -1172,7 +1181,7 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     feature = "all",
     not(any(target_os = "haiku", target_os = "openbsd", target_os = "vita"))
 ))]
-pub(crate) fn tcp_keepalive_time(fd: Socket) -> io::Result<Duration> {
+pub(crate) fn tcp_keepalive_time(fd: RawSocket) -> io::Result<Duration> {
     unsafe {
         getsockopt::<c_int>(fd, IPPROTO_TCP, KEEPALIVE_TIME)
             .map(|secs| Duration::from_secs(secs as u64))
@@ -1180,7 +1189,7 @@ pub(crate) fn tcp_keepalive_time(fd: Socket) -> io::Result<Duration> {
 }
 
 #[allow(unused_variables)]
-pub(crate) fn set_tcp_keepalive(fd: Socket, keepalive: &TcpKeepalive) -> io::Result<()> {
+pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::Result<()> {
     #[cfg(not(any(
         target_os = "haiku",
         target_os = "openbsd",
@@ -1241,13 +1250,13 @@ fn into_secs(duration: Duration) -> c_int {
 
 /// Get the flags using `cmd`.
 #[cfg(not(target_os = "vita"))]
-fn fcntl_get(fd: Socket, cmd: c_int) -> io::Result<c_int> {
+fn fcntl_get(fd: RawSocket, cmd: c_int) -> io::Result<c_int> {
     syscall!(fcntl(fd, cmd))
 }
 
 /// Add `flag` to the current set flags of `F_GETFD`.
 #[cfg(not(target_os = "vita"))]
-fn fcntl_add(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
+fn fcntl_add(fd: RawSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
     let previous = fcntl_get(fd, get_cmd)?;
     let new = previous | flag;
     if new != previous {
@@ -1260,7 +1269,7 @@ fn fcntl_add(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Res
 
 /// Remove `flag` to the current set flags of `F_GETFD`.
 #[cfg(not(target_os = "vita"))]
-fn fcntl_remove(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
+fn fcntl_remove(fd: RawSocket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::Result<()> {
     let previous = fcntl_get(fd, get_cmd)?;
     let new = previous & !flag;
     if new != previous {
@@ -1272,7 +1281,7 @@ fn fcntl_remove(fd: Socket, get_cmd: c_int, set_cmd: c_int, flag: c_int) -> io::
 }
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
-pub(crate) unsafe fn getsockopt<T>(fd: Socket, opt: c_int, val: c_int) -> io::Result<T> {
+pub(crate) unsafe fn getsockopt<T>(fd: RawSocket, opt: c_int, val: c_int) -> io::Result<T> {
     let mut payload: MaybeUninit<T> = MaybeUninit::uninit();
     let mut len = size_of::<T>() as libc::socklen_t;
     syscall!(getsockopt(
@@ -1291,7 +1300,7 @@ pub(crate) unsafe fn getsockopt<T>(fd: Socket, opt: c_int, val: c_int) -> io::Re
 
 /// Caller must ensure `T` is the correct type for `opt` and `val`.
 pub(crate) unsafe fn setsockopt<T>(
-    fd: Socket,
+    fd: RawSocket,
     opt: c_int,
     val: c_int,
     payload: T,
@@ -1365,7 +1374,7 @@ pub(crate) const fn to_mreqn(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
-pub(crate) fn original_dst_v4(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn original_dst_v4(fd: RawSocket) -> io::Result<SockAddr> {
     // Safety: `getsockopt` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::try_init(|storage, len| {
@@ -1386,7 +1395,7 @@ pub(crate) fn original_dst_v4(fd: Socket) -> io::Result<SockAddr> {
 /// This value contains the original destination IPv6 address of the connection
 /// redirected using `ip6tables` `REDIRECT` or `TPROXY`.
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
-pub(crate) fn original_dst_v6(fd: Socket) -> io::Result<SockAddr> {
+pub(crate) fn original_dst_v6(fd: RawSocket) -> io::Result<SockAddr> {
     // Safety: `getsockopt` initialises the `SockAddr` for us.
     unsafe {
         SockAddr::try_init(|storage, len| {

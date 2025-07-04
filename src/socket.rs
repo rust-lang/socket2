@@ -86,7 +86,7 @@ impl Socket {
     /// this should really be marked `unsafe`, but this being an internal
     /// function, often passed as mapping function, it's makes it very
     /// inconvenient to mark it as `unsafe`.
-    pub(crate) fn from_raw(raw: sys::Socket) -> Socket {
+    pub(crate) fn from_raw(raw: sys::RawSocket) -> Socket {
         Socket {
             inner: unsafe {
                 // SAFETY: the caller must ensure that `raw` is a valid file
@@ -109,11 +109,11 @@ impl Socket {
         }
     }
 
-    pub(crate) fn as_raw(&self) -> sys::Socket {
+    pub(crate) fn as_raw(&self) -> sys::RawSocket {
         sys::socket_as_raw(&self.inner)
     }
 
-    pub(crate) fn into_raw(self) -> sys::Socket {
+    pub(crate) fn into_raw(self) -> sys::RawSocket {
         sys::socket_into_raw(self.inner)
     }
 
