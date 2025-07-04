@@ -140,7 +140,7 @@ fn protocol_fmt_debug() {
 }
 
 #[test]
-#[should_panic = "tried to create a `Socket` with an invalid fd"]
+#[should_panic = "fd != -1"]
 #[cfg(unix)]
 fn from_invalid_raw_fd_should_panic() {
     use std::os::unix::io::FromRawFd;
