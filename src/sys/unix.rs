@@ -44,23 +44,8 @@ use std::num::NonZeroU32;
     )
 ))]
 use std::num::NonZeroUsize;
+use std::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::os::unix::ffi::OsStrExt;
-#[cfg(all(
-    feature = "all",
-    any(
-        target_os = "aix",
-        target_os = "android",
-        target_os = "freebsd",
-        target_os = "ios",
-        target_os = "visionos",
-        target_os = "linux",
-        target_os = "macos",
-        target_os = "tvos",
-        target_os = "watchos",
-    )
-))]
-use std::os::unix::io::RawFd;
-use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd};
 #[cfg(feature = "all")]
 use std::os::unix::net::{UnixDatagram, UnixListener, UnixStream};
 use std::path::Path;
@@ -2880,7 +2865,7 @@ impl AsFd for crate::Socket {
 }
 
 impl AsRawFd for crate::Socket {
-    fn as_raw_fd(&self) -> c_int {
+    fn as_raw_fd(&self) -> RawFd {
         self.as_raw()
     }
 }

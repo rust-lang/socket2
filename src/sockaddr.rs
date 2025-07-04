@@ -93,7 +93,7 @@ impl SockAddr {
     /// # fn main() -> std::io::Result<()> {
     /// # #[cfg(unix)] {
     /// use std::io;
-    /// use std::os::unix::io::AsRawFd;
+    /// use std::os::fd::AsRawFd;
     ///
     /// use socket2::{SockAddr, SockAddrStorage, Socket, Domain, Type};
     ///
@@ -151,7 +151,7 @@ impl SockAddr {
     /// # fn main() -> std::io::Result<()> {
     /// # #[cfg(unix)] {
     /// use std::io;
-    /// use std::os::unix::io::AsRawFd;
+    /// use std::os::fd::AsRawFd;
     ///
     /// use socket2::{SockAddr, Socket, Domain, Type};
     ///
