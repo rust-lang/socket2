@@ -99,7 +99,7 @@ impl SockAddr {
     ///
     /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     ///
-    /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
+    /// // Initialise a `SocketAddr` by calling `getsockname(2)`.
     /// let mut addr_storage = SockAddrStorage::zeroed();
     /// let mut len = addr_storage.size_of();
     ///
@@ -157,7 +157,7 @@ impl SockAddr {
     ///
     /// let socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     ///
-    /// // Initialise a `SocketAddr` byte calling `getsockname(2)`.
+    /// // Initialise a `SocketAddr` by calling `getsockname(2)`.
     /// let (_, address) = unsafe {
     ///     SockAddr::try_init(|addr_storage, len| {
     ///         // The `getsockname(2)` system call will intiliase `storage` for
