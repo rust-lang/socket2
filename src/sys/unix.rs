@@ -2823,10 +2823,8 @@ impl crate::Socket {
 #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 #[repr(transparent)]
 pub struct SockFilter {
-    // For some reason Rust 1.70 thinks this field is unused, while it's clearly
-    // used in `SockFilter::new`. This issue seems fixed in later Rust versions,
-    // but we still need to support 1.70, adding allow(dead_code) ignores the
-    // issue.
+    // This field is only read indirectly by transmutes / pointer casts, so
+    // rustc emits a spurious warning saying that the field is never read.
     #[allow(dead_code)]
     filter: libc::sock_filter,
 }
