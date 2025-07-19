@@ -418,6 +418,48 @@ where
     );
 }
 
+#[cfg(all(feature = "all", windows))]
+#[test]
+fn type_registered_io() {
+    let ty = Type::DGRAM.registered_io();
+    let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
+    assert_registered_io(&socket);
+}
+
+/// Assert that registered I/O is enabled on `socket`.
+#[cfg(windows)]
+#[track_caller]
+pub fn assert_registered_io<S>(socket: &S)
+where
+    S: AsRawSocket,
+{
+    use std::ptr;
+    use windows_sys::core::GUID;
+    use windows_sys::Win32::Networking::WinSock;
+
+    let mut table = MaybeUninit::<WinSock::RIO_EXTENSION_FUNCTION_TABLE>::uninit();
+    let guid = WinSock::WSAID_MULTIPLE_RIO;
+    let mut bytes = 0;
+
+    let r = unsafe {
+        WinSock::WSAIoctl(
+            socket.as_raw_socket() as _,
+            WinSock::SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER,
+            (&guid as *const GUID) as *const _,
+            size_of_val(&guid) as u32,
+            table.as_mut_ptr() as *mut _,
+            size_of_val(&table) as u32,
+            (&mut bytes as *mut i32) as *mut _,
+            ptr::null_mut(),
+            None,
+        )
+    };
+    if r != 0 {
+        let err = io::Error::last_os_error();
+        panic!("unexpected error: {err}");
+    }
+}
+
 #[cfg(all(
     feature = "all",
     any(
