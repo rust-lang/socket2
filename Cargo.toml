@@ -65,6 +65,8 @@ features = [
 [features]
 # Enable all API, even ones not available on all OSs.
 all = []
+# Enable Windows Registered I/O support.
+registered-io = []
 
 [package.metadata.cargo_check_external_types]
 allowed_external_types = [
