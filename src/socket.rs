@@ -871,7 +871,7 @@ impl Socket {
     pub fn keepalive(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), sys::SOL_SOCKET, sys::SO_KEEPALIVE)
-                .map(|keepalive| keepalive != 0)
+                .map(|keepalive| keepalive != false as Bool)
         }
     }
 
@@ -2219,7 +2219,7 @@ impl Socket {
     pub fn tcp_nodelay(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_NODELAY)
-                .map(|nodelay| nodelay != 0)
+                .map(|nodelay| nodelay != false as Bool)
         }
     }
 

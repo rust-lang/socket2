@@ -93,9 +93,8 @@ pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SO
 /// NOTE: <https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-getsockopt>
 /// documents that options such as `TCP_NODELAY` and `SO_KEEPALIVE` expect a
 /// `BOOL` (alias for `c_int`, 4 bytes), however in practice this turns out to
-/// be false (or misleading) as a `BOOLEAN` (`c_uchar`, 1 byte) is returned by
-/// `getsockopt`.
-pub(crate) type Bool = windows_sys::Win32::Foundation::BOOLEAN;
+/// be false (or misleading) as a `bool` (1 byte) is returned by `getsockopt`.
+pub(crate) type Bool = bool;
 
 /// Maximum size of a buffer passed to system call like `recv` and `send`.
 const MAX_BUF_LEN: usize = c_int::MAX as usize;
