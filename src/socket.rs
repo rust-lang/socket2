@@ -381,6 +381,21 @@ impl Socket {
         sys::set_nonblocking(self.as_raw(), nonblocking)
     }
 
+    /// Sets the busy polling timeout in microseconds for blocking socket operations.
+    ///
+    /// When there is no data available, the socket will busy poll for the specified
+    /// duration (in microseconds) before falling back to blocking behavior.
+    ///
+    /// # Notes
+    ///
+    /// - Requires `CAP_NET_ADMIN` capability to increase the value
+    /// - Default value is controlled by `/proc/sys/net/core/busy_read`
+    /// - Available since Linux 3.11
+    #[cfg(target_os = "linux")]
+    pub fn set_busy_poll(&self, busy_poll: u16) -> io::Result<()> {
+        sys::set_busy_poll(self.as_raw(), busy_poll)
+    }
+
     /// Shuts down the read, write, or both halves of this connection.
     ///
     /// This function will cause all pending and future I/O on the specified

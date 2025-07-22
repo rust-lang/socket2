@@ -993,6 +993,11 @@ pub(crate) fn set_nonblocking(fd: RawSocket, nonblocking: bool) -> io::Result<()
     }
 }
 
+#[cfg(target_os = "linux")]
+pub(crate) fn set_busy_poll(fd: RawSocket, busy_poll: u16) -> io::Result<()> {
+    unsafe { setsockopt(fd, libc::SOL_SOCKET, libc::SO_BUSY_POLL, busy_poll as c_int) }
+}
+
 pub(crate) fn shutdown(fd: RawSocket, how: Shutdown) -> io::Result<()> {
     let how = match how {
         Shutdown::Write => libc::SHUT_WR,
