@@ -1827,3 +1827,16 @@ fn set_priority() {
         assert!(socket.priority().unwrap() == i);
     }
 }
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+#[test]
+fn set_busy_poll() {
+    let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
+    assert!(socket.busy_poll().unwrap() == 0);
+
+    // test busy poll values 0 .. 6; values above 6 require additional priviledges
+    for i in (0..=6).rev() {
+        socket.set_busy_poll(i).unwrap();
+        assert!(socket.busy_poll().unwrap() == i);
+    }
+}
