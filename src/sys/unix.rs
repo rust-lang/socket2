@@ -993,11 +993,6 @@ pub(crate) fn set_nonblocking(fd: RawSocket, nonblocking: bool) -> io::Result<()
     }
 }
 
-#[cfg(target_os = "linux")]
-pub(crate) fn set_busy_poll(fd: RawSocket, busy_poll: u16) -> io::Result<()> {
-    unsafe { setsockopt(fd, libc::SOL_SOCKET, libc::SO_BUSY_POLL, busy_poll as c_int) }
-}
-
 pub(crate) fn shutdown(fd: RawSocket, how: Shutdown) -> io::Result<()> {
     let how = match how {
         Shutdown::Write => libc::SHUT_WR,
@@ -2815,6 +2810,29 @@ impl crate::Socket {
                 self.as_raw(),
                 libc::SOL_DCCP,
                 libc::DCCP_SOCKOPT_GET_CUR_MPS,
+            )
+        }
+    }
+
+    /// Get the value for the `SO_BUSY_POLL` option on this socket.
+    ///
+    /// On Linux this function requires the `CAP_NET_ADMIN` capability.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn busy_poll(&self) -> io::Result<u32> {
+        unsafe { getsockopt(self.as_raw(), libc::SOL_SOCKET, libc::SO_BUSY_POLL) }
+    }
+
+    /// Set the value for the `SO_BUSY_POLL` option on this socket.
+    ///
+    /// On Linux this function requires the `CAP_NET_ADMIN` capability.
+    #[cfg(all(feature = "all", target_os = "linux"))]
+    pub fn set_busy_poll(&self, busy_poll: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::SOL_SOCKET,
+                libc::SO_BUSY_POLL,
+                busy_poll as c_int,
             )
         }
     }
