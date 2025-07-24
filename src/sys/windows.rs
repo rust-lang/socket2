@@ -25,7 +25,7 @@ use windows_sys::Win32::Networking::WinSock::{
     self, tcp_keepalive, FIONBIO, IN6_ADDR, IN6_ADDR_0, INVALID_SOCKET, IN_ADDR, IN_ADDR_0,
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
     SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
-    WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED,
+    WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED, WSA_FLAG_REGISTERED_IO,
 };
 #[cfg(feature = "all")]
 use windows_sys::Win32::Networking::WinSock::{
@@ -125,11 +125,19 @@ impl Type {
     /// Our custom flag to set `WSA_FLAG_NO_HANDLE_INHERIT` on socket creation.
     /// Trying to mimic `Type::cloexec` on windows.
     const NO_INHERIT: c_int = 1 << ((size_of::<c_int>() * 8) - 1); // Last bit.
+    /// Our custom flag to set `WSA_FLAG_REGISTERED_IO` on socket creation.
+    const REGISTERED_IO: c_int = 1 << ((size_of::<c_int>() * 8) - 2); // Second last bit.
 
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
     pub const fn no_inherit(self) -> Type {
         self._no_inherit()
+    }
+
+    /// Set `WSA_FLAG_REGISTERED_IO` on the socket.
+    #[cfg(feature = "all")]
+    pub const fn registered_io(self) -> Type {
+        Type(self.0 | Type::REGISTERED_IO)
     }
 
     pub(crate) const fn _no_inherit(self) -> Type {
@@ -252,12 +260,18 @@ pub(crate) fn socket_into_raw(socket: Socket) -> RawSocket {
 pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Result<RawSocket> {
     init();
 
-    // Check if we set our custom flag.
+    // Check if we set our custom flags.
     let flags = if ty & Type::NO_INHERIT != 0 {
         ty = ty & !Type::NO_INHERIT;
         WSA_FLAG_NO_HANDLE_INHERIT
     } else {
         0
+    };
+    let flags = if ty & Type::REGISTERED_IO != 0 {
+        ty = ty & !Type::REGISTERED_IO;
+        flags | WSA_FLAG_REGISTERED_IO
+    } else {
+        flags
     };
 
     syscall!(
