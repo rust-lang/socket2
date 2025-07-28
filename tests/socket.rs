@@ -1329,6 +1329,22 @@ macro_rules! test {
             test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $arg);
         }
     };
+    // Only test using a IPv6 socket and with attributes.
+    ($( #[ $attr: meta ] )* IPv6 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
+        #[test]
+        $( #[$attr] )*
+        fn $get_fn() {
+            test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $arg);
+        }
+    };
+    // Only test using a IPv4 socket with attributes.
+    ($( #[ $attr: meta ] )* IPv4 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
+        #[test]
+        $( #[$attr] )*
+        fn $get_fn() {
+            test!(__ Domain::IPV4, $get_fn, $set_fn($arg), $arg);
+        }
+    };
 
     // Internal to this macro.
     (__ $ty: expr, $get_fn: ident, $set_fn: ident ( $arg: expr ), $expected: expr ) => {
@@ -1392,7 +1408,7 @@ test!(
 #[cfg(all(feature = "all", target_os = "linux"))]
 test!(
     #[ignore = "setting `IP_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
-    ip_transparent_v4,
+    IPv4 ip_transparent_v4,
     set_ip_transparent_v4(true)
 );
 #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
@@ -1504,6 +1520,13 @@ test!(IPv6 tclass_v6, set_tclass_v6(96));
     target_os = "cygwin",
 )))]
 test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
+
+#[cfg(all(feature = "all", target_os = "linux"))]
+test!(
+    #[ignore = "setting `IPV6_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
+    IPv6 ip_transparent_v6,
+    set_ip_transparent_v6(true)
+);
 
 #[cfg(all(
     feature = "all",
