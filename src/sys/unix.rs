@@ -2855,7 +2855,7 @@ pub struct SockFilter {
 #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 impl SockFilter {
     /// Create new `SockFilter`.
-    pub fn new(code: u16, jt: u8, jf: u8, k: u32) -> SockFilter {
+    pub const fn new(code: u16, jt: u8, jf: u8, k: u32) -> SockFilter {
         SockFilter {
             filter: libc::sock_filter { code, jt, jf, k },
         }
