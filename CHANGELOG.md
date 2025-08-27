@@ -38,7 +38,7 @@ the API.
   * `keepalive_interval` -> `tcp_keepalive_interval`
   * `keepalive_retries` -> `tcp_keepalive_retries`
   * `nodelay` -> `tcp_nodelay`
-  * `set_nodelay` -> `tcp_set_nodelay`
+  * `set_nodelay` -> `set_tcp_nodelay`
   * `tcp_mss` -> `mss`
   * `tcp_set_mss` -> `set_mss`
   * `tcp_cork` -> `cork`
