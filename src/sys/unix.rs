@@ -1807,6 +1807,35 @@ impl crate::Socket {
         }
     }
 
+    /// Get the value of the `TCP_NOTSENT_LOWAT` option on this socket.
+    ///
+    /// For more information about this option, see [`set_tcp_notsent_lowat`].
+    ///
+    /// [`set_tcp_notsent_lowat`]: crate::Socket::set_tcp_notsent_lowat
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    pub fn tcp_notsent_lowat(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<Bool>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_NOTSENT_LOWAT)
+                .map(|lowat| lowat as u32)
+        }
+    }
+
+    /// Set the value of the `TCP_NOTSENT_LOWAT` option on this socket.
+    ///
+    /// If set the kernel will limit the amount of _unsent_ data in the sendbuffer.
+    /// This differs from `set_send_buffer_size` which limits the sum of unsent and unacknowledged data.
+    #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+    pub fn set_tcp_notsent_lowat(&self, lowat: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                libc::IPPROTO_TCP,
+                libc::TCP_NOTSENT_LOWAT,
+                lowat as c_int,
+            )
+        }
+    }
+
     /// Gets the value for the `SO_BINDTODEVICE` option on this socket.
     ///
     /// This value gets the socket binded device's interface name.
