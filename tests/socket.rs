@@ -1458,6 +1458,8 @@ test!(tcp_quickack, set_tcp_quickack(false));
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
 ))]
 test!(tcp_thin_linear_timeouts, set_tcp_thin_linear_timeouts(true));
+#[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
+test!(tcp_notsent_lowat, set_tcp_notsent_lowat(16 * 1024));
 test!(linger, set_linger(Some(Duration::from_secs(10))));
 test!(
     read_timeout,
