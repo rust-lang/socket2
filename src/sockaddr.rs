@@ -49,6 +49,22 @@ impl SockAddrStorage {
     /// # Safety
     ///
     /// The type `T` must be one of the `sockaddr_*` types defined by this platform.
+    ///
+    /// # Examples
+    /// ```
+    /// # #[allow(dead_code)]
+    /// # #[cfg(unix)] mod unix_example {
+    /// use libc::sockaddr_storage;
+    /// use socket2::{SockAddr, SockAddrStorage, socklen_t};
+    ///
+    /// fn from_sockaddr_storage(recv_address: &sockaddr_storage) -> SockAddr {
+    ///     let mut storage = SockAddrStorage::zeroed();
+    ///     let libc_address = unsafe { storage.view_as::<sockaddr_storage>() };
+    ///     *libc_address = *recv_address;
+    ///     unsafe { SockAddr::new(storage, size_of::<sockaddr_storage>() as socklen_t) }
+    /// }
+    /// # }
+    /// ```
     #[inline]
     pub unsafe fn view_as<T>(&mut self) -> &mut T {
         assert!(size_of::<T>() <= size_of::<Self>());
