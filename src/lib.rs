@@ -54,7 +54,7 @@
 
 #![deny(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 // Automatically generate required OS/features for docs.rs.
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 // Disallow warnings when running tests.
 #![cfg_attr(test, deny(warnings))]
 // Disallow warnings in examples.
