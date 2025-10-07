@@ -76,7 +76,8 @@ jobs:
           - arm-linux-androideabi
           - arm64_32-apple-watchos
           - armv7-linux-androideabi
-          - armv7-sony-vita-newlibeabihf
+          # Broken, see https://github.com/rust-lang/rust/issues/147437.
+          #- armv7-sony-vita-newlibeabihf
           - armv7-unknown-linux-ohos
           - i686-linux-android
           # Broken, see https://github.com/rust-lang/socket2/issues/539.
