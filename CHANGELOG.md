@@ -1,3 +1,21 @@
+# 0.6.1
+
+## Added
+
+* Added support for Windows Registered I/O (RIO)
+  (https://github.com/rust-lang/socket2/pull/604).
+* Added support for `TCP_NOTSENT_LOWAT` on Linux via `Socket::(set_)tcp_notsent_lowat`
+  (https://github.com/rust-lang/socket2/pull/611).
+* Added support for `SO_BUSY_POLL` on Linux via `Socket::set_busy_poll`
+  (https://github.com/rust-lang/socket2/pull/607).
+* `SockFilter::new` is now a const function
+  (https://github.com/rust-lang/socket2/pull/609).
+
+## Changed
+
+* Updated the windows-sys dependency to version 0.60
+  (https://github.com/rust-lang/socket2/pull/605).
+
 # 0.6.0
 
 ## Breaking changes
