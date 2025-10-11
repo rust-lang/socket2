@@ -54,6 +54,7 @@ impl SockAddrStorage {
     /// ```
     /// # #[allow(dead_code)]
     /// # #[cfg(unix)] mod unix_example {
+    /// # use core::mem::size_of;
     /// use libc::sockaddr_storage;
     /// use socket2::{SockAddr, SockAddrStorage, socklen_t};
     ///
