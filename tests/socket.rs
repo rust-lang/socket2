@@ -1769,23 +1769,29 @@ fn tcp_congestion() {
         "expected {origin_tcp_ca:?} but get {cur_tcp_ca:?}"
     );
     let cur_tcp_ca = cur_tcp_ca.splitn(2, |num| *num == 0).next().unwrap();
-    const OPTIONS: [&[u8]; 2] = [
-        b"cubic",
+    const OPTIONS: [&str; 2] = [
+        "cubic",
         #[cfg(target_os = "linux")]
-        b"reno",
+        "reno",
         #[cfg(target_os = "freebsd")]
-        b"newreno",
+        "newreno",
     ];
     // Set a new tcp ca
-    #[cfg(target_os = "linux")]
-    let new_tcp_ca = if cur_tcp_ca == OPTIONS[0] {
-        OPTIONS[1]
+    let new_tcp_ca = if cur_tcp_ca == OPTIONS[0].as_bytes() {
+        OPTIONS[1].as_bytes()
     } else {
-        OPTIONS[0]
+        OPTIONS[0].as_bytes()
     };
-    #[cfg(target_os = "freebsd")]
-    let new_tcp_ca = OPTIONS[1];
-    socket.set_tcp_congestion(new_tcp_ca).unwrap();
+    if let Err(e) = socket.set_tcp_congestion(new_tcp_ca) {
+        if e.raw_os_error() == Some(libc::ESRCH) {
+            panic!(
+                "Could not set the {:?} CC protocol.  Is the kernel module loaded?",
+                new_tcp_ca
+            );
+        } else {
+            panic!("set_tcp_congestion: {e}");
+        }
+    }
     // Check if new tcp ca is successfully set
     let cur_tcp_ca = socket.tcp_congestion().unwrap();
     assert_eq!(
