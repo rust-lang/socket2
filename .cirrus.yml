@@ -1,5 +1,5 @@
 freebsd_instance:
-  image: freebsd-13-2-release-amd64
+  image: freebsd-14-3-release-amd64-ufs
 
 env:
   RUST_BACKTRACE: full
@@ -9,6 +9,7 @@ task:
   setup_script:
     - fetch https://sh.rustup.rs -o rustup.sh
     - sh rustup.sh -y --profile minimal
+    - kldload cc_newreno  # For the tcp_congestion test
   cargo_cache:
     folder: $HOME/.cargo/registry
   build_script:
