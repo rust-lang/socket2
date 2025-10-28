@@ -1786,7 +1786,7 @@ fn tcp_congestion() {
         if e.raw_os_error() == Some(libc::ESRCH) {
             panic!(
                 "Could not set the {:?} CC protocol.  Is the kernel module loaded?",
-                OPTIONS[1]
+                new_tcp_ca
             );
         } else {
             panic!("set_tcp_congestion: {e}");
