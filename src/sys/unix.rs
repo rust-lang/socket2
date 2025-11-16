@@ -1815,7 +1815,7 @@ impl crate::Socket {
     #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
     pub fn tcp_notsent_lowat(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<Bool>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_NOTSENT_LOWAT)
+            getsockopt::<c_int>(self.as_raw(), libc::IPPROTO_TCP, libc::TCP_NOTSENT_LOWAT)
                 .map(|lowat| lowat as u32)
         }
     }
