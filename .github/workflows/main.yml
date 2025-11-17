@@ -62,8 +62,7 @@ jobs:
           - aarch64-apple-darwin
           - aarch64-apple-ios
           - aarch64-apple-tvos
-          # Broken, see https://github.com/rust-lang/socket2/issues/538.
-          #- aarch64-apple-visionos
+          - aarch64-apple-visionos
           - aarch64-apple-watchos
           - aarch64-linux-android
           - aarch64-unknown-freebsd
