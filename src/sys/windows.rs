@@ -124,9 +124,9 @@ impl_debug!(
 impl Type {
     /// Our custom flag to set `WSA_FLAG_NO_HANDLE_INHERIT` on socket creation.
     /// Trying to mimic `Type::cloexec` on windows.
-    const NO_INHERIT: c_int = 1 << ((size_of::<c_int>() * 8) - 1); // Last bit.
+    const NO_INHERIT: c_int = 1 << ((c_int::BITS as usize) - 1); // Last bit.
     /// Our custom flag to set `WSA_FLAG_REGISTERED_IO` on socket creation.
-    const REGISTERED_IO: c_int = 1 << ((size_of::<c_int>() * 8) - 2); // Second last bit.
+    const REGISTERED_IO: c_int = 1 << ((c_int::BITS as usize) - 2); // Second last bit.
 
     /// Set `WSA_FLAG_NO_HANDLE_INHERIT` on the socket.
     #[cfg(feature = "all")]
@@ -262,13 +262,13 @@ pub(crate) fn socket(family: c_int, mut ty: c_int, protocol: c_int) -> io::Resul
 
     // Check if we set our custom flags.
     let flags = if ty & Type::NO_INHERIT != 0 {
-        ty = ty & !Type::NO_INHERIT;
+        ty &= !Type::NO_INHERIT;
         WSA_FLAG_NO_HANDLE_INHERIT
     } else {
         0
     };
     let flags = if ty & Type::REGISTERED_IO != 0 {
-        ty = ty & !Type::REGISTERED_IO;
+        ty &= !Type::REGISTERED_IO;
         flags | WSA_FLAG_REGISTERED_IO
     } else {
         flags
@@ -311,7 +311,7 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
 
     let mut fd_array = WSAPOLLFD {
         fd: socket.as_raw(),
-        events: (POLLRDNORM | POLLWRNORM) as i16,
+        events: (POLLRDNORM | POLLWRNORM),
         revents: 0,
     };
 
@@ -332,8 +332,8 @@ pub(crate) fn poll_connect(socket: &crate::Socket, timeout: Duration) -> io::Res
             Ok(0) => return Err(io::ErrorKind::TimedOut.into()),
             Ok(_) => {
                 // Error or hang up indicates an error (or failure to connect).
-                if (fd_array.revents & POLLERR as i16) != 0
-                    || (fd_array.revents & POLLHUP as i16) != 0
+                if (fd_array.revents & POLLERR) != 0
+                    || (fd_array.revents & POLLHUP) != 0
                 {
                     match socket.take_error() {
                         Ok(Some(err)) => return Err(err),
@@ -449,7 +449,7 @@ pub(crate) fn shutdown(socket: RawSocket, how: Shutdown) -> io::Result<()> {
         Shutdown::Write => SD_SEND,
         Shutdown::Read => SD_RECEIVE,
         Shutdown::Both => SD_BOTH,
-    } as i32;
+    };
     syscall!(shutdown(socket, how), PartialEq::eq, SOCKET_ERROR).map(|_| ())
 }
 
@@ -470,7 +470,7 @@ pub(crate) fn recv(
     );
     match res {
         Ok(n) => Ok(n as usize),
-        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => Ok(0),
+        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => Ok(0),
         Err(err) => Err(err),
     }
 }
@@ -497,8 +497,8 @@ pub(crate) fn recv_vectored(
     );
     match res {
         Ok(_) => Ok((nread as usize, RecvFlags(0))),
-        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => Ok((0, RecvFlags(0))),
-        Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE as i32) => {
+        Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => Ok((0, RecvFlags(0))),
+        Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE) => {
             Ok((nread as usize, RecvFlags(MSG_TRUNC)))
         }
         Err(err) => Err(err),
@@ -527,7 +527,7 @@ pub(crate) fn recv_from(
             );
             match res {
                 Ok(n) => Ok(n as usize),
-                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => Ok(0),
+                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => Ok(0),
                 Err(err) => Err(err),
             }
         })
@@ -554,7 +554,7 @@ pub(crate) fn peek_sender(socket: RawSocket) -> io::Result<SockAddr> {
             match res {
                 Ok(_n) => Ok(()),
                 Err(e) => match e.raw_os_error() {
-                    Some(code) if code == (WSAESHUTDOWN as i32) || code == (WSAEMSGSIZE as i32) => {
+                    Some(code) if code == WSAESHUTDOWN || code == WSAEMSGSIZE => {
                         Ok(())
                     }
                     _ => Err(e),
@@ -593,10 +593,10 @@ pub(crate) fn recv_from_vectored(
             );
             match res {
                 Ok(_) => Ok((nread as usize, RecvFlags(0))),
-                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN as i32) => {
+                Err(ref err) if err.raw_os_error() == Some(WSAESHUTDOWN) => {
                     Ok((nread as usize, RecvFlags(0)))
                 }
-                Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE as i32) => {
+                Err(ref err) if err.raw_os_error() == Some(WSAEMSGSIZE) => {
                     Ok((nread as usize, RecvFlags(MSG_TRUNC)))
                 }
                 Err(err) => Err(err),
@@ -734,7 +734,7 @@ fn from_ms(duration: u32) -> Option<Duration> {
     } else {
         let secs = duration / 1000;
         let nsec = (duration % 1000) * 1000000;
-        Some(Duration::new(secs as u64, nsec as u32))
+        Some(Duration::new(secs as u64, nsec))
     }
 }
 
@@ -806,7 +806,7 @@ pub(crate) unsafe fn getsockopt<T>(socket: RawSocket, level: c_int, optname: i32
     syscall!(
         getsockopt(
             socket,
-            level as i32,
+            level,
             optname,
             optval.as_mut_ptr().cast(),
             &mut optlen,
@@ -832,7 +832,7 @@ pub(crate) unsafe fn setsockopt<T>(
     syscall!(
         setsockopt(
             socket,
-            level as i32,
+            level,
             optname,
             (&optval as *const T).cast(),
             mem::size_of::<T>() as c_int,
