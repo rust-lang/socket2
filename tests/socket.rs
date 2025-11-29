@@ -1723,7 +1723,7 @@ fn original_dst_v4() {
 #[test]
 #[cfg(all(
     feature = "all",
-    any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+    any(target_os = "android", target_os = "linux", target_os = "windows")
 ))]
 fn original_dst_v6() {
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
