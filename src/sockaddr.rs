@@ -249,7 +249,7 @@ impl SockAddr {
         &self.storage as *const sockaddr_storage as *const SockAddrStorage
     }
 
-    /// Retuns the address as the storage.
+    /// Returns the address as the storage.
     pub const fn as_storage(self) -> SockAddrStorage {
         SockAddrStorage {
             storage: self.storage,
@@ -326,7 +326,7 @@ impl SockAddr {
     /// Returns the initialised storage bytes.
     fn as_bytes(&self) -> &[u8] {
         // SAFETY: `self.storage` is a C struct which can always be treated a
-        // slice of bytes. Furthermore, we ensure we don't read any unitialised
+        // slice of bytes. Furthermore, we ensure we don't read any uninitialised
         // bytes by using `self.len`.
         unsafe { std::slice::from_raw_parts(self.as_ptr().cast(), self.len as usize) }
     }

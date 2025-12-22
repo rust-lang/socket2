@@ -780,7 +780,7 @@ impl SockAddr {
             .unwrap_or_default()
     }
 
-    /// Returns the underlying `sockaddr_un` object if this addres is from the `AF_UNIX` family,
+    /// Returns the underlying `sockaddr_un` object if this address is from the `AF_UNIX` family,
     /// otherwise returns `None`.
     pub(crate) fn as_sockaddr_un(&self) -> Option<&libc::sockaddr_un> {
         self.is_unix().then(|| {
