@@ -466,7 +466,7 @@ This release was broken for Windows.
   * `Protocol::tcp` => `Protocol::TCP`.
   * `Protocol::udp` => `Protocol::UDP`.
 * **BREAKING:** Changed the signature of `Socket::recv`, `Socket::recv_vectored`
-  and related methods to accept unitialised buffers. The `Read` implementation
+  and related methods to accept uninitialised buffers. The `Read` implementation
   can be used to read into initialised buffers.
 * **BREAKING:** Renamed `SockAddr::as_std` to `as_socket`.
 * **BREAKING:** Renamed `SockAddr::as_inet` to `as_socket_ipv4`.

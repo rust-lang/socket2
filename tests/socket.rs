@@ -1871,7 +1871,7 @@ fn set_priority() {
     let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
     assert!(socket.priority().unwrap() == 0);
 
-    // test priorities 6 .. 0; values above 6 require additional priviledges
+    // test priorities 6 .. 0; values above 6 require additional privileges
     for i in (0..=6).rev() {
         socket.set_priority(i).unwrap();
         assert!(socket.priority().unwrap() == i);
@@ -1884,7 +1884,7 @@ fn set_busy_poll() {
     let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
     assert!(socket.busy_poll().unwrap() == 0);
 
-    // test busy poll values 0 .. 6; values above 6 require additional priviledges
+    // test busy poll values 0 .. 6; values above 6 require additional privileges
     for i in (0..=6).rev() {
         socket.set_busy_poll(i).unwrap();
         assert!(socket.busy_poll().unwrap() == i);
