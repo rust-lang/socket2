@@ -6,16 +6,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[cfg(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "openbsd",
-    target_os = "netbsd",
-    target_os = "solaris",
-    target_os = "illumos",
-    target_os = "nto"
-))]
-use std::ffi::c_uchar;
 use std::fmt;
 use std::io::{self, Read, Write};
 #[cfg(not(target_os = "redox"))]
@@ -36,28 +26,6 @@ use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(target_os = "redox"))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
-
-#[cfg(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "openbsd",
-    target_os = "netbsd",
-    target_os = "solaris",
-    target_os = "illumos",
-    target_os = "nto"
-))]
-type IpV4MultiCastType = c_uchar;
-
-#[cfg(not(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "openbsd",
-    target_os = "netbsd",
-    target_os = "solaris",
-    target_os = "illumos",
-    target_os = "nto"
-)))]
-type IpV4MultiCastType = c_int;
 
 /// Owned wrapper around a system socket.
 ///
@@ -1546,7 +1514,7 @@ impl Socket {
     /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<IpV4MultiCastType>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
                 .map(|ttl| ttl as u32)
         }
     }
@@ -1564,7 +1532,7 @@ impl Socket {
                 self.as_raw(),
                 sys::IPPROTO_IP,
                 sys::IP_MULTICAST_TTL,
-                ttl as IpV4MultiCastType,
+                ttl as c_int,
             )
         }
     }
