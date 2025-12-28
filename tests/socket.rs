@@ -1352,29 +1352,36 @@ macro_rules! test {
         #[test]
         $( #[$attr] )*
         fn $get_fn() {
-            test!(__ Domain::IPV4, $get_fn, $set_fn($arg), $expected);
+            test!(__ Domain::IPV4, STREAM, $get_fn, $set_fn($arg), $expected);
             #[cfg(not(target_os = "vita"))]
-            test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $expected);
+            test!(__ Domain::IPV6, STREAM, $get_fn, $set_fn($arg), $expected);
+        }
+    };
+    // Only test using a IPv4 socket.
+    (IPv4:DGRAM $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
+        #[test]
+        fn $get_fn() {
+            test!(__ Domain::IPV4, DGRAM, $get_fn, $set_fn($arg), $arg);
         }
     };
     // Only test using a IPv4 socket.
     (IPv4 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
         #[test]
         fn $get_fn() {
-            test!(__ Domain::IPV4, $get_fn, $set_fn($arg), $arg);
+            test!(__ Domain::IPV4, STREAM, $get_fn, $set_fn($arg), $arg);
         }
     };
     // Only test using a IPv6 socket.
     (IPv6 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
         #[test]
         fn $get_fn() {
-            test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $arg);
+            test!(__ Domain::IPV6, STREAM, $get_fn, $set_fn($arg), $arg);
         }
     };
 
     // Internal to this macro.
-    (__ $ty: expr, $get_fn: ident, $set_fn: ident ( $arg: expr ), $expected: expr ) => {
-        let socket = Socket::new($ty, Type::STREAM, None).expect("failed to create `Socket`");
+    (__ $dom: expr, $ty: ident, $get_fn: ident, $set_fn: ident ( $arg: expr ), $expected: expr ) => {
+        let socket = Socket::new($dom, Type::$ty, None).expect("failed to create `Socket`");
 
         let initial = socket.$get_fn().expect("failed to get initial value");
         let arg = $arg;
@@ -1581,6 +1588,8 @@ test!(
 test!(IPv4 multicast_all_v4, set_multicast_all_v4(false));
 #[cfg(all(feature = "all", target_os = "linux"))]
 test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
+
+test!(IPv4:DGRAM multicast_ttl_v4, set_multicast_ttl_v4(40));
 
 #[test]
 #[cfg(not(any(
