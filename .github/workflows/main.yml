@@ -14,13 +14,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, 1.70.0, beta, nightly, macos, windows]
+        build: [stable, msrv-linux, msrv-windows, beta, nightly, macos, windows]
         include:
           - build: stable
             os: ubuntu-latest
             rust: stable
-          - build: 1.70.0
+          - build: msrv-linux
             os: ubuntu-latest
+            rust: 1.70.0
+          - build: msrv-windows
+            os: windows-latest
             rust: 1.70.0
           - build: beta
             os: ubuntu-latest
