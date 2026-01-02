@@ -605,7 +605,7 @@ fn unix() {
         return;
     }
     let mut path = env::temp_dir();
-    path.push("socket2");
+    path.push("socket2.unix");
     let _ = fs::remove_dir_all(&path);
     fs::create_dir_all(&path).unwrap();
     path.push("unix");
@@ -637,7 +637,7 @@ fn unix_accept() {
         return;
     }
     let mut path = env::temp_dir();
-    path.push("socket2");
+    path.push("socket2.unix_accept");
     let _ = fs::remove_dir_all(&path);
     fs::create_dir_all(&path).unwrap();
     path.push("unix_accept");
