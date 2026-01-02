@@ -285,7 +285,7 @@ impl Socket {
         )))]
         {
             let (socket, addr) = self.accept_raw()?;
-            let socket = set_common_flags(socket)?;
+            let socket = set_common_accept_flags(socket)?;
             // `set_common_flags` does not disable inheritance on Windows because `Socket::new`
             // unlike `accept` is able to create the socket with inheritance disabled.
             #[cfg(windows)]
@@ -762,8 +762,8 @@ const fn set_common_type(ty: Type) -> Type {
 }
 
 /// Set `FD_CLOEXEC` and `NOSIGPIPE` on the `socket` for platforms that need it.
-#[inline(always)]
-#[allow(clippy::unnecessary_wraps)]
+///
+/// Sockets created via `accept` should use `set_common_accept_flags` instead.
 fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
     #[cfg(all(
@@ -794,6 +794,46 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
         target_os = "watchos",
     ))]
     socket._set_nosigpipe(true)?;
+
+    Ok(socket)
+}
+
+/// Set `FD_CLOEXEC` on the `socket` for platforms that need it.
+///
+/// Unlike `set_common_flags` we don't set `NOSIGPIPE` as that is inherited from
+/// the listener. Furthermore, attempts to set it on a unix socket domain
+/// results in an error.
+#[cfg(not(any(
+    target_os = "android",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "illumos",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "cygwin",
+)))]
+fn set_common_accept_flags(socket: Socket) -> io::Result<Socket> {
+    // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
+    #[cfg(all(
+        unix,
+        not(any(
+            target_os = "android",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "fuchsia",
+            target_os = "hurd",
+            target_os = "illumos",
+            target_os = "linux",
+            target_os = "netbsd",
+            target_os = "openbsd",
+            target_os = "espidf",
+            target_os = "vita",
+            target_os = "cygwin",
+        ))
+    ))]
+    socket._set_cloexec(true)?;
 
     Ok(socket)
 }
