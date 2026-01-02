@@ -762,6 +762,8 @@ const fn set_common_type(ty: Type) -> Type {
 }
 
 /// Set `FD_CLOEXEC` and `NOSIGPIPE` on the `socket` for platforms that need it.
+///
+/// Sockets created via `accept` should use `set_common_accept_flags` instead.
 fn set_common_flags(socket: Socket) -> io::Result<Socket> {
     // On platforms that don't have `SOCK_CLOEXEC` use `FD_CLOEXEC`.
     #[cfg(all(
@@ -798,8 +800,9 @@ fn set_common_flags(socket: Socket) -> io::Result<Socket> {
 
 /// Set `FD_CLOEXEC` on the `socket` for platforms that need it.
 ///
-/// Unlike `set_common_flags` we don't set `NOSIGPIPE` as that is inherited.
-/// Furthermore attempts to set it on a unix socket domain results in an error.
+/// Unlike `set_common_flags` we don't set `NOSIGPIPE` as that is inherited from
+/// the listener. Furthermore, attempts to set it on a unix socket domain
+/// results in an error.
 #[cfg(not(any(
     target_os = "android",
     target_os = "dragonfly",
