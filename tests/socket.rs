@@ -1352,36 +1352,40 @@ macro_rules! test {
         #[test]
         $( #[$attr] )*
         fn $get_fn() {
-            test!(__ Domain::IPV4, STREAM, $get_fn, $set_fn($arg), $expected);
+            test!(__ Domain::IPV4, STREAM, None, $get_fn, $set_fn($arg), $expected);
             #[cfg(not(target_os = "vita"))]
-            test!(__ Domain::IPV6, STREAM, $get_fn, $set_fn($arg), $expected);
+            test!(__ Domain::IPV6, STREAM, None, $get_fn, $set_fn($arg), $expected);
         }
     };
     // Only test using a IPv4 socket.
     (IPv4:DGRAM $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
         #[test]
         fn $get_fn() {
-            test!(__ Domain::IPV4, DGRAM, $get_fn, $set_fn($arg), $arg);
+            test!(__ Domain::IPV4, DGRAM, Some("127.0.0.1:0"), $get_fn, $set_fn($arg), $arg);
         }
     };
     // Only test using a IPv4 socket.
     (IPv4 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
         #[test]
         fn $get_fn() {
-            test!(__ Domain::IPV4, STREAM, $get_fn, $set_fn($arg), $arg);
+            test!(__ Domain::IPV4, STREAM, None, $get_fn, $set_fn($arg), $arg);
         }
     };
     // Only test using a IPv6 socket.
     (IPv6 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
         #[test]
         fn $get_fn() {
-            test!(__ Domain::IPV6, STREAM, $get_fn, $set_fn($arg), $arg);
+            test!(__ Domain::IPV6, STREAM, None, $get_fn, $set_fn($arg), $arg);
         }
     };
 
     // Internal to this macro.
-    (__ $dom: expr, $ty: ident, $get_fn: ident, $set_fn: ident ( $arg: expr ), $expected: expr ) => {
+    (__ $dom: expr, $ty: ident, $bind_addr:expr, $get_fn: ident, $set_fn: ident ( $arg: expr ), $expected: expr ) => {
         let socket = Socket::new($dom, Type::$ty, None).expect("failed to create `Socket`");
+        if let Some(addr) = $bind_addr {
+            use std::str::FromStr as _;
+            socket.bind(&SocketAddr::from_str(addr).unwrap().into()).expect("Failed to bind");
+        }
 
         let initial = socket.$get_fn().expect("failed to get initial value");
         let arg = $arg;
