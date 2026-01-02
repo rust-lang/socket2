@@ -511,7 +511,7 @@ where
         panic!("unexpected error: {}", io::Error::last_os_error());
     }
     assert_eq!(length as usize, size_of::<libc::c_int>());
-    assert_eq!(flags, want as _, "non-blocking option");
+    assert_eq!(flags, want as _);
 }
 
 const DATA: &[u8] = b"hello world";
@@ -629,6 +629,30 @@ fn unix() {
     let n = b.read(&mut buf).unwrap();
     assert_eq!(n, DATA.len());
     assert_eq!(&buf[..n], DATA);
+}
+
+#[test]
+fn unix_accept() {
+    if !unix_sockets_supported() {
+        return;
+    }
+    let mut path = env::temp_dir();
+    path.push("socket2");
+    let _ = fs::remove_dir_all(&path);
+    fs::create_dir_all(&path).unwrap();
+    path.push("unix_accept");
+
+    let listener = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
+    listener.bind(&SockAddr::unix(&path).unwrap()).unwrap();
+    listener.listen(1).unwrap();
+
+    Socket::new(Domain::UNIX, Type::STREAM, None)
+        .unwrap()
+        .connect(&SockAddr::unix(path).unwrap())
+        .unwrap();
+
+    let (socket, _) = listener.accept().unwrap();
+    assert_common_flags(&socket, true);
 }
 
 #[test]
