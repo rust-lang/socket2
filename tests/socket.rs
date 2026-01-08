@@ -843,6 +843,120 @@ fn sendmsg() {
 }
 
 #[test]
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+fn sendmmsg() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+
+    const DATA1: &[u8] = b"Hello, ";
+    const DATA2: &[u8] = b"World!";
+
+    let bufs1 = &[IoSlice::new(DATA1)];
+    let bufs2 = &[IoSlice::new(DATA2)];
+    let addr_b = socket_b.local_addr().unwrap();
+    let mut msgs = Vec::new();
+    msgs.push(
+        socket2::MMsgHdr::new()
+            .with_addr(&addr_b)
+            .with_buffers(bufs1),
+    );
+    msgs.push(
+        socket2::MMsgHdr::new()
+            .with_addr(&addr_b)
+            .with_buffers(bufs2),
+    );
+    let sent = socket_a.sendmmsg(&mut msgs, 0).unwrap();
+    assert_eq!(sent, msgs.len());
+    assert_eq!(msgs[0].data_len(), DATA1.len());
+    assert_eq!(msgs[1].data_len(), DATA2.len());
+
+    let mut buf1 = Vec::with_capacity(DATA1.len() + 1);
+    let mut buf2 = Vec::with_capacity(DATA2.len() + 1);
+    let received1 = socket_b.recv(buf1.spare_capacity_mut()).unwrap();
+    let received2 = socket_b.recv(buf2.spare_capacity_mut()).unwrap();
+    assert_eq!(received1, DATA1.len());
+    // SAFETY: recv filled the buffer and received1 is not exceeding the capacity
+    unsafe {
+        buf1.set_len(received1);
+    }
+    assert_eq!(&buf1[..], DATA1);
+    assert_eq!(received2, DATA2.len());
+    // SAFETY: recv filled the buffer and received2 is not exceeding the capacity
+    unsafe {
+        buf2.set_len(received2);
+    }
+    assert_eq!(&buf2[..], DATA2);
+}
+
+#[test]
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+fn recvmmsg() {
+    let (socket_a, socket_b) = udp_pair_unconnected();
+
+    const DATA1: &[u8] = b"Hello, ";
+    const DATA2: &[u8] = b"World!";
+
+    let bufs1 = &[IoSlice::new(DATA1)];
+    let bufs2 = &[IoSlice::new(DATA2)];
+    let addr_b = socket_b.local_addr().unwrap();
+    let msg1 = socket2::MsgHdr::new()
+        .with_addr(&addr_b)
+        .with_buffers(bufs1);
+    let msg2 = socket2::MsgHdr::new()
+        .with_addr(&addr_b)
+        .with_buffers(bufs2);
+    let sent1 = socket_a.sendmsg(&msg1, 0).unwrap();
+    let sent2 = socket_a.sendmsg(&msg2, 0).unwrap();
+    assert_eq!(sent1, DATA1.len());
+    assert_eq!(sent2, DATA2.len());
+
+    let mut buf1 = Vec::with_capacity(DATA1.len() + 1);
+    let mut buf2 = Vec::with_capacity(DATA2.len() + 1);
+    let mut iov1 = [socket2::MaybeUninitSlice::new(buf1.spare_capacity_mut())];
+    let mut iov2 = [socket2::MaybeUninitSlice::new(buf2.spare_capacity_mut())];
+    let mut msgs = Vec::new();
+    msgs.push(socket2::MMsgHdrMut::new().with_buffers(&mut iov1[..]));
+    msgs.push(socket2::MMsgHdrMut::new().with_buffers(&mut iov2[..]));
+    let received = socket_b.recvmmsg(&mut msgs, 0, None).unwrap();
+    assert_eq!(received, msgs.len());
+    let received1 = msgs[0].data_len();
+    let received2 = msgs[1].data_len();
+    assert_eq!(received1, DATA1.len());
+    // SAFETY: recvmmsg filled the buffer and received1 is not exceeding the capacity
+    unsafe {
+        buf1.set_len(received1);
+    }
+    assert_eq!(received2, DATA2.len());
+    // SAFETY: recvmmsg filled the buffer and received1 is not exceeding the capacity
+    unsafe {
+        buf2.set_len(received2);
+    }
+    assert_eq!(&buf1[..], DATA1);
+    assert_eq!(&buf2[..], DATA2);
+}
+
+#[test]
 #[cfg(not(any(target_os = "redox", target_os = "vita")))]
 fn recv_vectored_truncated() {
     let (socket_a, socket_b) = udp_pair_connected();
