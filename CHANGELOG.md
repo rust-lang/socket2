@@ -1,3 +1,13 @@
+# 0.6.2
+
+* `MsgHdr` and `MsgHdrMut` are marked as transparent meaning both have the same
+  layout as `msghdr` on Unix and `WSAMSG` on Windows
+  (https://github.com/rust-lang/socket2/pull/635).
+* Don't set `SO_NOSIGPIPE` when accepting sockets, this is inherited from the
+  parent socket (https://github.com/rust-lang/socket2/pull/632).
+* Fixes `Socket::tcp_notsent_lowat` by using the correct argument type
+  (https://github.com/rust-lang/socket2/pull/622).
+
 # 0.6.1
 
 ## Added
