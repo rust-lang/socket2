@@ -26,6 +26,7 @@ use windows_sys::Win32::Networking::WinSock::{
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
     SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
     WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED, WSA_FLAG_REGISTERED_IO,
+    SIO_TCP_SET_ACK_FREQUENCY, TCP_ACK_FREQUENCY_PARAMETERS,
 };
 #[cfg(feature = "all")]
 use windows_sys::Win32::Networking::WinSock::{
@@ -796,6 +797,29 @@ pub(crate) fn set_tcp_keepalive(socket: RawSocket, keepalive: &TcpKeepalive) -> 
         }
     }
     Ok(())
+}
+
+pub(crate) fn set_tcp_ack_frequency(socket: RawSocket, frequency: u8) -> io::Result<()> {
+    let mut freq_params = TCP_ACK_FREQUENCY_PARAMETERS {
+        TcpDelayedAckFrequency: frequency,
+    };
+    
+    let mut out = 0;
+    syscall!(
+        WSAIoctl(
+            socket,
+            SIO_TCP_SET_ACK_FREQUENCY,
+            &mut freq_params as *mut _ as *mut _,
+            size_of::<TCP_ACK_FREQUENCY_PARAMETERS>() as _,
+            ptr::null_mut(),
+            0,
+            &mut out,
+            ptr::null_mut(),
+            None,
+        ),
+        PartialEq::eq,
+        SOCKET_ERROR
+    ).map(|_| ())
 }
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.

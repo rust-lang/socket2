@@ -2280,6 +2280,35 @@ impl Socket {
             )
         }
     }
+
+    /// Sets the number of TCP segments that must be received 
+    /// before the delayed ACK timer is ignored for this socket.
+    ///
+    /// Currently this is only controllable per socket on Windows. 
+    ///
+    /// # Notes
+    ///
+    /// * On Windows, this will invoke the `SIO_TCP_SET_ACK_FREQUENCY` IOCTL 
+    ///   on the socket.
+    /// * This can be used to achieve results similiar to `TCP_QUICKACK` on 
+    ///   Windows by setting frequency to 1, but on a permanent basis. 
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use socket2::{Socket, Domain, Type, Protocol};
+    ///
+    /// # fn main() -> std::io::Result<()> {
+    /// let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))?;
+    ///
+    /// socket.set_tcp_ack_frequency(1)?;
+    /// # Ok(()) }
+    /// ```
+    ///
+    #[cfg(all(feature = "all", windows))]
+    pub fn set_tcp_ack_frequency(&self, frequency: u8) -> io::Result<()> {
+        sys::set_tcp_ack_frequency(self.as_raw(), frequency)
+    }
 }
 
 impl Read for Socket {
