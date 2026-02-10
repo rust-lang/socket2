@@ -26,8 +26,13 @@ use windows_sys::Win32::Networking::WinSock::{
     POLLERR, POLLHUP, POLLRDNORM, POLLWRNORM, SD_BOTH, SD_RECEIVE, SD_SEND, SIO_KEEPALIVE_VALS,
     SOCKET_ERROR, WSABUF, WSAEMSGSIZE, WSAESHUTDOWN, WSAPOLLFD, WSAPROTOCOL_INFOW,
     WSA_FLAG_NO_HANDLE_INHERIT, WSA_FLAG_OVERLAPPED, WSA_FLAG_REGISTERED_IO,
+};
+
+#[cfg(feature = "all")]
+use windows_sys::Win32::Networking::WinSock::{
     SIO_TCP_SET_ACK_FREQUENCY, TCP_ACK_FREQUENCY_PARAMETERS,
 };
+
 #[cfg(feature = "all")]
 use windows_sys::Win32::Networking::WinSock::{
     IP6T_SO_ORIGINAL_DST, SOL_IP, SO_ORIGINAL_DST, SO_PROTOCOL_INFOW,
@@ -799,6 +804,7 @@ pub(crate) fn set_tcp_keepalive(socket: RawSocket, keepalive: &TcpKeepalive) -> 
     Ok(())
 }
 
+#[cfg(feature = "all")]
 pub(crate) fn set_tcp_ack_frequency(socket: RawSocket, frequency: u8) -> io::Result<()> {
     let mut freq_params = TCP_ACK_FREQUENCY_PARAMETERS {
         TcpDelayedAckFrequency: frequency,
