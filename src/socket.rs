@@ -2280,6 +2280,14 @@ impl Socket {
             )
         }
     }
+
+    /// On Windows this invokes the `SIO_TCP_SET_ACK_FREQUENCY` IOCTL which
+    /// configures the number of TCP segments that must be received before
+    /// the delayed ACK timer is ignored.
+    #[cfg(all(feature = "all", windows))]
+    pub fn set_tcp_ack_frequency(&self, frequency: u8) -> io::Result<()> {
+        sys::set_tcp_ack_frequency(self.as_raw(), frequency)
+    }
 }
 
 impl Read for Socket {
