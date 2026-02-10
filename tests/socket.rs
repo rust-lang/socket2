@@ -1829,14 +1829,17 @@ fn tcp_congestion() {
 fn tcp_set_ack_frequency() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
     match socket.set_tcp_ack_frequency(1) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => panic!("set_tcp_ack_frequency on tcp socket should succeed, error: {err}"),
     }
 
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
     match socket.set_tcp_ack_frequency(1) {
         Ok(_) => panic!("set_tcp_ack_frequency on udp socket should fail"),
-        Err(err) => assert_eq!(err.raw_os_error(), Some(windows_sys::Win32::Networking::WinSock::WSAEOPNOTSUPP)),
+        Err(err) => assert_eq!(
+            err.raw_os_error(),
+            Some(windows_sys::Win32::Networking::WinSock::WSAEOPNOTSUPP)
+        ),
     }
 }
 

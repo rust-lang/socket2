@@ -809,7 +809,7 @@ pub(crate) fn set_tcp_ack_frequency(socket: RawSocket, frequency: u8) -> io::Res
     let mut freq_params = TCP_ACK_FREQUENCY_PARAMETERS {
         TcpDelayedAckFrequency: frequency,
     };
-    
+
     let mut out = 0;
     syscall!(
         WSAIoctl(
@@ -825,7 +825,8 @@ pub(crate) fn set_tcp_ack_frequency(socket: RawSocket, frequency: u8) -> io::Res
         ),
         PartialEq::eq,
         SOCKET_ERROR
-    ).map(|_| ())
+    )
+    .map(|_| ())
 }
 
 /// Caller must ensure `T` is the correct type for `level` and `optname`.
