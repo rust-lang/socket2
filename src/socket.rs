@@ -1202,7 +1202,7 @@ impl Socket {
     /// For more information about this option, see [`set_ip_transparent_v4`].
     ///
     /// [`set_ip_transparent_v4`]: Socket::set_ip_transparent_v4
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     pub fn ip_transparent_v4(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, libc::IP_TRANSPARENT)
@@ -1225,7 +1225,7 @@ impl Socket {
     ///
     /// TProxy redirection with the iptables TPROXY target also
     /// requires that this option be set on the redirected socket.
-    #[cfg(all(feature = "all", target_os = "linux"))]
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
     pub fn set_ip_transparent_v4(&self, transparent: bool) -> io::Result<()> {
         unsafe {
             setsockopt(

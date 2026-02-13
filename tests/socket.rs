@@ -1391,7 +1391,7 @@ test!(
     tcp_mss,
     set_tcp_mss(256)
 );
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 test!(
     #[ignore = "setting `IP_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
     IPv4 ip_transparent_v4,
