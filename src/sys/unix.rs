@@ -65,6 +65,19 @@ use libc::ssize_t;
 use libc::{in6_addr, in_addr};
 
 use crate::{Domain, Protocol, SockAddr, SockAddrStorage, TcpKeepalive, Type};
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+use crate::{MMsgHdr, MMsgHdrMut};
 #[cfg(not(target_os = "redox"))]
 use crate::{MsgHdr, MsgHdrMut, RecvFlags};
 
@@ -729,6 +742,18 @@ pub(crate) fn msghdr_control_len(msg: &msghdr) -> usize {
     msg.msg_controllen as _
 }
 
+// Used in `MMsgHdr`.
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+pub(crate) use libc::mmsghdr;
+
 /// Unix only API.
 impl SockAddr {
     /// Constructs a `SockAddr` with the family `AF_VSOCK` and the provided CID/port.
@@ -1084,6 +1109,78 @@ pub(crate) fn recvmsg(
     syscall!(recvmsg(fd, &mut msg.inner, flags)).map(|n| n as usize)
 }
 
+// helper function for recvmmsg
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+fn into_timespec(duration: Duration) -> libc::timespec {
+    // https://github.com/rust-lang/libc/issues/1848
+    #[cfg_attr(any(target_env = "musl", target_env = "ohos"), allow(deprecated))]
+    libc::timespec {
+        tv_sec: min(duration.as_secs(), libc::time_t::MAX as u64) as libc::time_t,
+        tv_nsec: duration.subsec_nanos() as libc::c_long,
+    }
+}
+
+// type of the parameter specifying the number of mmsghdr elements in sendmmsg/recvmmsg syscalls
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+type MMsgHdrLen = libc::c_uint;
+#[cfg(all(feature = "all", target_os = "freebsd"))]
+type MMsgHdrLen = usize;
+
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+pub(crate) fn recvmmsg(
+    fd: RawSocket,
+    msgs: &mut [MMsgHdrMut<'_, '_, '_>],
+    flags: c_int,
+    timeout: Option<Duration>,
+) -> io::Result<usize> {
+    let mut ts: libc::timespec;
+    let tp = match timeout {
+        Some(d) => {
+            ts = into_timespec(d);
+            &mut ts
+        }
+        None => std::ptr::null_mut(),
+    };
+    // MMsgHdrMut only contains libc::mmsghdr and PhantomData
+    let mp = msgs.as_mut_ptr() as *mut libc::mmsghdr;
+    // flags is unsigned in musl and ohos libc
+    #[cfg(any(target_env = "musl", target_env = "ohos"))]
+    let flags = flags.cast_unsigned();
+    syscall!(recvmmsg(fd, mp, msgs.len() as MMsgHdrLen, flags, tp)).map(|n| n as usize)
+}
+
 pub(crate) fn send(fd: RawSocket, buf: &[u8], flags: c_int) -> io::Result<usize> {
     syscall!(send(
         fd,
@@ -1137,6 +1234,31 @@ pub(crate) fn sendmsg(fd: RawSocket, msg: &MsgHdr<'_, '_, '_>, flags: c_int) -> 
     syscall!(sendmsg(fd, &msg.inner, flags)).map(|n| n as usize)
 }
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "aix",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd",
+    )
+))]
+pub(crate) fn sendmmsg(
+    fd: RawSocket,
+    msgs: &mut [MMsgHdr<'_, '_, '_>],
+    flags: c_int,
+) -> io::Result<usize> {
+    // MMsgHdr only contains libc::mmsghdr and PhantomData
+    let mp = msgs.as_mut_ptr() as *mut libc::mmsghdr;
+    // flags is unsigned in musl and ohos libc
+    #[cfg(any(target_env = "musl", target_env = "ohos"))]
+    let flags = flags.cast_unsigned();
+    syscall!(sendmmsg(fd, mp, msgs.len() as MMsgHdrLen, flags)).map(|n| n as usize)
+}
+
 /// Wrapper around `getsockopt` to deal with platform specific timeouts.
 pub(crate) fn timeout_opt(fd: RawSocket, opt: c_int, val: c_int) -> io::Result<Option<Duration>> {
     unsafe { getsockopt(fd, opt, val).map(from_timeval) }
@@ -1166,7 +1288,7 @@ pub(crate) fn set_timeout_opt(
 fn into_timeval(duration: Option<Duration>) -> libc::timeval {
     match duration {
         // https://github.com/rust-lang/libc/issues/1848
-        #[cfg_attr(target_env = "musl", allow(deprecated))]
+        #[cfg_attr(any(target_env = "musl", target_env = "ohos"), allow(deprecated))]
         Some(duration) => libc::timeval {
             tv_sec: min(duration.as_secs(), libc::time_t::MAX as u64) as libc::time_t,
             tv_usec: duration.subsec_micros() as libc::suseconds_t,

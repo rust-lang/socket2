@@ -703,3 +703,232 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
         "MsgHdrMut".fmt(fmt)
     }
 }
+
+/// Configuration of a `sendmmsg(2)` system call.
+///
+/// This wraps `mmsghdr` on Unix. Also see [`MMsgHdrMut`] for the variant used by `recvmmsg(2)`.
+/// This API is not available on Windows.
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+pub struct MMsgHdr<'addr, 'bufs, 'control> {
+    inner: sys::mmsghdr,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(&'addr SockAddr, &'bufs IoSlice<'bufs>, &'control [u8])>,
+}
+
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+impl<'addr, 'bufs, 'control> MMsgHdr<'addr, 'bufs, 'control> {
+    /// Create a new `MMsgHdr` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MMsgHdr<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `mmsghdr`.
+        MMsgHdr {
+            inner: unsafe { mem::zeroed() },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Create a new `MMsgHdr` from a `MsgHdr`.
+    pub fn from_msghdr(msghdr: MsgHdr<'addr, 'bufs, 'control>) -> MMsgHdr<'addr, 'bufs, 'control> {
+        MMsgHdr {
+            inner: sys::mmsghdr {
+                msg_hdr: msghdr.inner,
+                msg_len: 0,
+            },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix.
+    pub fn with_addr(mut self, addr: &'addr SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner.msg_hdr, addr);
+        self
+    }
+
+    /// Set the buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix.
+    pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'_>]) -> Self {
+        let ptr = bufs.as_ptr() as *mut _;
+        sys::set_msghdr_iov(&mut self.inner.msg_hdr, ptr, bufs.len());
+        self
+    }
+
+    /// Set the control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix.
+    pub fn with_control(mut self, buf: &'control [u8]) -> Self {
+        let ptr = buf.as_ptr() as *mut _;
+        sys::set_msghdr_control(&mut self.inner.msg_hdr, ptr, buf.len());
+        self
+    }
+
+    /// Set the flags of the message.
+    ///
+    /// Corresponds to setting `msg_flags` on Unix.
+    pub fn with_flags(mut self, flags: sys::c_int) -> Self {
+        sys::set_msghdr_flags(&mut self.inner.msg_hdr, flags);
+        self
+    }
+
+    /// Gets the number of sent bytes.
+    ///
+    /// Corresponds to `msg_len` on Unix.
+    pub fn data_len(&self) -> usize {
+        self.inner.msg_len as usize
+    }
+}
+
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+impl<'name, 'bufs, 'control> fmt::Debug for MMsgHdr<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MMsgHdr".fmt(fmt)
+    }
+}
+
+/// Configuration of a `recvmmsg(2)` system call.
+///
+/// This wraps `mmsghdr` on Unix. Also see [`MMsgHdr`] for the variant used by `sendmmsg(2)`.
+/// This API is not available on Windows.
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+pub struct MMsgHdrMut<'addr, 'bufs, 'control> {
+    inner: sys::mmsghdr,
+    #[allow(clippy::type_complexity)]
+    _lifetimes: PhantomData<(
+        &'addr mut SockAddr,
+        &'bufs mut MaybeUninitSlice<'bufs>,
+        &'control mut [u8],
+    )>,
+}
+
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+impl<'addr, 'bufs, 'control> MMsgHdrMut<'addr, 'bufs, 'control> {
+    /// Create a new `MMsgHdrMut` with all empty/zero fields.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> MMsgHdrMut<'addr, 'bufs, 'control> {
+        // SAFETY: all zero is valid for `mmsghdr`.
+        MMsgHdrMut {
+            inner: unsafe { mem::zeroed() },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Create a new `MMsgHdrMut` from a `MsgHdrMut`.
+    pub fn from_msghdrmut(
+        msghdrmut: MsgHdrMut<'addr, 'bufs, 'control>,
+    ) -> MMsgHdrMut<'addr, 'bufs, 'control> {
+        MMsgHdrMut {
+            inner: sys::mmsghdr {
+                msg_hdr: msghdrmut.inner,
+                msg_len: 0,
+            },
+            _lifetimes: PhantomData,
+        }
+    }
+
+    /// Set the mutable address (name) of the message.
+    ///
+    /// Corresponds to setting `msg_name` and `msg_namelen` on Unix.
+    #[allow(clippy::needless_pass_by_ref_mut)]
+    pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
+        sys::set_msghdr_name(&mut self.inner.msg_hdr, addr);
+        self
+    }
+
+    /// Set the mutable buffer(s) of the message.
+    ///
+    /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix.
+    pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'_>]) -> Self {
+        sys::set_msghdr_iov(
+            &mut self.inner.msg_hdr,
+            bufs.as_mut_ptr().cast(),
+            bufs.len(),
+        );
+        self
+    }
+
+    /// Set the mutable control buffer of the message.
+    ///
+    /// Corresponds to setting `msg_control` and `msg_controllen` on Unix.
+    pub fn with_control(mut self, buf: &'control mut [MaybeUninit<u8>]) -> Self {
+        sys::set_msghdr_control(&mut self.inner.msg_hdr, buf.as_mut_ptr().cast(), buf.len());
+        self
+    }
+
+    /// Returns the flags of the message.
+    pub fn flags(&self) -> RecvFlags {
+        sys::msghdr_flags(&self.inner.msg_hdr)
+    }
+
+    /// Gets the length of the control buffer.
+    ///
+    /// Can be used to determine how much, if any, of the control buffer was filled by `recvmsg`.
+    ///
+    /// Corresponds to `msg_controllen` on Unix.
+    pub fn control_len(&self) -> usize {
+        sys::msghdr_control_len(&self.inner.msg_hdr)
+    }
+
+    /// Gets the number of received bytes.
+    ///
+    /// Corresponds to `msg_len` on Unix.
+    pub fn data_len(&self) -> usize {
+        self.inner.msg_len as usize
+    }
+}
+
+#[cfg(any(
+    target_os = "aix",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "fuchsia",
+    target_os = "linux",
+    target_os = "netbsd",
+    target_os = "openbsd",
+))]
+impl<'name, 'bufs, 'control> fmt::Debug for MMsgHdrMut<'name, 'bufs, 'control> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        "MMsgHdrMut".fmt(fmt)
+    }
+}
