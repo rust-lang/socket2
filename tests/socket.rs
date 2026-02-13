@@ -14,7 +14,7 @@
 ))]
 use std::fs::File;
 use std::io;
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 use std::io::IoSlice;
 use std::io::Read;
 use std::io::Write;
@@ -38,6 +38,8 @@ use std::net::{Ipv6Addr, SocketAddrV6};
     )
 ))]
 use std::num::NonZeroUsize;
+#[cfg(target_os = "wasi")]
+use std::os::fd::AsRawFd;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
@@ -53,7 +55,7 @@ use std::{env, fs};
 #[cfg(windows)]
 use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
 
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 use socket2::MaybeUninitSlice;
 #[cfg(not(target_os = "vita"))]
 use socket2::TcpKeepalive;
@@ -75,6 +77,7 @@ fn domain_fmt_debug() {
     let tests = &[
         (Domain::IPV4, "AF_INET"),
         (Domain::IPV6, "AF_INET6"),
+        #[cfg(not(target_os = "wasi"))]
         (Domain::UNIX, "AF_UNIX"),
         #[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
         (Domain::PACKET, "AF_PACKET"),
@@ -98,9 +101,9 @@ fn type_fmt_debug() {
     let tests = &[
         (Type::STREAM, "SOCK_STREAM"),
         (Type::DGRAM, "SOCK_DGRAM"),
-        #[cfg(feature = "all")]
+        #[cfg(all(feature = "all", not(target_os = "wasi")))]
         (Type::SEQPACKET, "SOCK_SEQPACKET"),
-        #[cfg(all(feature = "all", not(target_os = "redox")))]
+        #[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "wasi"))))]
         (Type::RAW, "SOCK_RAW"),
         (500.into(), "500"),
     ];
@@ -117,7 +120,9 @@ fn type_fmt_debug() {
 #[test]
 fn protocol_fmt_debug() {
     let tests = &[
+        #[cfg(not(target_os = "wasi"))]
         (Protocol::ICMPV4, "IPPROTO_ICMP"),
+        #[cfg(not(target_os = "wasi"))]
         (Protocol::ICMPV6, "IPPROTO_ICMPV6"),
         (Protocol::TCP, "IPPROTO_TCP"),
         (Protocol::UDP, "IPPROTO_UDP"),
@@ -148,6 +153,7 @@ fn from_invalid_raw_fd_should_panic() {
 }
 
 #[test]
+#[cfg(not(target_os = "wasi"))]
 fn socket_address_unix() {
     let string = "/tmp/socket";
     let addr = SockAddr::unix(string).unwrap();
@@ -168,6 +174,7 @@ fn socket_address_unix() {
 }
 
 #[test]
+#[cfg(not(target_os = "wasi"))]
 fn socket_address_unix_unnamed() {
     let addr = SockAddr::unix("").unwrap();
     assert!(addr.as_socket_ipv4().is_none());
@@ -214,6 +221,7 @@ fn socket_address_vsock() {
 }
 
 #[test]
+#[cfg(not(target_os = "wasi"))] // All WASI sockets are always non-blocking by design.
 fn set_nonblocking() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_nonblocking(&socket, false);
@@ -297,13 +305,16 @@ fn type_nonblocking() {
 }
 
 /// Assert that `NONBLOCK` is set on `socket`.
-#[cfg(unix)]
+#[cfg(any(unix, target_os = "wasi"))]
 #[track_caller]
 pub fn assert_nonblocking(socket: &Socket, want: bool) {
-    #[cfg(all(feature = "all", unix))]
+    #[cfg(all(feature = "all", any(unix, target_os = "wasi")))]
     assert_eq!(socket.nonblocking().unwrap(), want, "non-blocking option");
 
-    #[cfg(not(any(all(feature = "all", unix), target_os = "vita")))]
+    #[cfg(not(any(
+        all(feature = "all", any(unix, target_os = "wasi")),
+        target_os = "vita"
+    )))]
     {
         let flags = unsafe { libc::fcntl(socket.as_raw_fd(), libc::F_GETFL) };
         assert_eq!(flags & libc::O_NONBLOCK != 0, want, "non-blocking option");
@@ -517,6 +528,7 @@ where
 const DATA: &[u8] = b"hello world";
 
 #[test]
+#[cfg(not(target_os = "wasi"))] // WASI uses start-connect/finish-connect, no connect_timeout.
 fn connect_timeout_unrouteable() {
     // This IP is unroutable, so connections should always time out.
     let addr = "10.255.255.1:80".parse::<SocketAddr>().unwrap().into();
@@ -530,7 +542,9 @@ fn connect_timeout_unrouteable() {
 }
 
 #[test]
-#[cfg(not(target_os = "vita"))] // Loopback has special behavior on vita
+// Loopback has special behavior on vita.
+// WASI uses start-connect/finish-connect, no connect_timeout.
+#[cfg(not(any(target_os = "vita", target_os = "wasi")))]
 fn connect_timeout_unbound() {
     // Bind and drop a socket to track down a "probably unassigned" port.
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
@@ -550,6 +564,7 @@ fn connect_timeout_unbound() {
 }
 
 #[test]
+#[cfg(not(target_os = "wasi"))] // WASI uses start-connect/finish-connect, no connect_timeout.
 fn connect_timeout_valid() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     socket
@@ -576,6 +591,7 @@ fn pair() {
     assert_eq!(&buf[..n], DATA);
 }
 
+#[cfg(not(target_os = "wasi"))]
 fn unix_sockets_supported() -> bool {
     #[cfg(windows)]
     {
@@ -600,6 +616,7 @@ fn unix_sockets_supported() -> bool {
 }
 
 #[test]
+#[cfg(not(target_os = "wasi"))]
 fn unix() {
     if !unix_sockets_supported() {
         return;
@@ -632,6 +649,7 @@ fn unix() {
 }
 
 #[test]
+#[cfg(not(target_os = "wasi"))]
 fn unix_accept() {
     if !unix_sockets_supported() {
         return;
@@ -679,7 +697,7 @@ fn vsock() {
 }
 
 #[test]
-#[cfg(not(target_os = "vita"))] // Vita does not support OOB
+#[cfg(not(any(target_os = "vita", target_os = "wasi")))] // Vita and WASI do not support OOB
 fn out_of_band() {
     let listener = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     listener.bind(&any_ipv4()).unwrap();
@@ -710,7 +728,7 @@ fn out_of_band() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))] // WASI: SO_RCVTIMEO excluded, used in test setup.
 fn udp_peek_sender() {
     let (socket_a, socket_b) = udp_pair_unconnected();
 
@@ -725,7 +743,7 @@ fn udp_peek_sender() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 fn send_recv_vectored() {
     let (socket_a, socket_b) = udp_pair_connected();
 
@@ -772,7 +790,7 @@ fn send_recv_vectored() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 fn send_from_recv_to_vectored() {
     let (socket_a, socket_b) = udp_pair_unconnected();
     let addr_a = socket_a.local_addr().unwrap();
@@ -825,7 +843,7 @@ fn send_from_recv_to_vectored() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 fn sendmsg() {
     let (socket_a, socket_b) = udp_pair_unconnected();
 
@@ -843,7 +861,7 @@ fn sendmsg() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 fn recv_vectored_truncated() {
     let (socket_a, socket_b) = udp_pair_connected();
 
@@ -863,7 +881,7 @@ fn recv_vectored_truncated() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "redox", target_os = "vita")))]
+#[cfg(not(any(target_os = "redox", target_os = "vita", target_os = "wasi")))]
 fn recv_from_vectored_truncated() {
     let (socket_a, socket_b) = udp_pair_unconnected();
     let addr_a = socket_a.local_addr().unwrap();
@@ -1432,7 +1450,7 @@ test!(
     set_send_buffer_size(SET_BUF_SIZE),
     GET_BUF_SIZE
 );
-#[cfg(not(target_os = "redox"))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 test!(out_of_band_inline, set_out_of_band_inline(true));
 test!(reuse_address, set_reuse_address(true));
 #[cfg(all(
@@ -1442,6 +1460,7 @@ test!(reuse_address, set_reuse_address(true));
         target_os = "solaris",
         target_os = "illumos",
         target_os = "cygwin",
+        target_os = "wasi",
     ))
 ))]
 test!(reuse_port, set_reuse_port(true));
@@ -1486,6 +1505,7 @@ test!(tcp_quickack, set_tcp_quickack(false));
 test!(tcp_thin_linear_timeouts, set_tcp_thin_linear_timeouts(true));
 #[cfg(all(feature = "all", any(target_os = "android", target_os = "linux")))]
 test!(tcp_notsent_lowat, set_tcp_notsent_lowat(16 * 1024));
+#[cfg(not(target_os = "wasi"))] // WASI: SO_LINGER not yet included (https://github.com/WebAssembly/WASI/issues/709).
 test!(linger, set_linger(Some(Duration::from_secs(10))));
 test!(
     read_timeout,
@@ -1506,6 +1526,7 @@ test!(IPv4 ttl_v4, set_ttl_v4(40));
     target_os = "illumos",
     target_os = "haiku",
     target_os = "cygwin",
+    target_os = "wasi",
 )))]
 test!(IPv4 tos_v4, set_tos_v4(96));
 
@@ -1522,10 +1543,11 @@ test!(IPv4 tos_v4, set_tos_v4(96));
     target_os = "vita",
     target_os = "haiku",
     target_os = "cygwin",
+    target_os = "wasi",
 )))]
 test!(IPv4 recv_tos_v4, set_recv_tos_v4(true));
 
-#[cfg(not(any(windows, target_os = "cygwin")))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows.
+#[cfg(not(any(windows, target_os = "cygwin", target_os = "wasi")))] // TODO: returns `WSAENOPROTOOPT` (10042) on Windows. WASI: SO_BROADCAST not yet included (https://github.com/WebAssembly/WASI/issues/721).
 test!(IPv4 broadcast, set_broadcast(true));
 
 #[cfg(not(target_os = "vita"))]
@@ -1538,6 +1560,7 @@ test!(IPv6 unicast_hops_v6, set_unicast_hops_v6(20));
     target_os = "openbsd",
     target_os = "vita",
     target_os = "cygwin",
+    target_os = "wasi", // IPV6_V6ONLY always true in WASI, setter not exposed (https://github.com/WebAssembly/WASI/issues/747).
 )))]
 test!(IPv6 only_v6, set_only_v6(true));
 // IPv6 socket are already IPv6 only on FreeBSD and Windows.
@@ -1572,6 +1595,7 @@ test!(IPv6 tclass_v6, set_tclass_v6(96));
     target_os = "vita",
     target_os = "haiku",
     target_os = "cygwin",
+    target_os = "wasi",
 )))]
 test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
 
@@ -1597,6 +1621,7 @@ test!(
         target_os = "vita",
         target_os = "haiku",
         target_os = "cygwin",
+        target_os = "wasi",
     ))
 ))]
 test!(IPv6 recv_hoplimit_v6, set_recv_hoplimit_v6(true));
@@ -1625,6 +1650,7 @@ test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
     target_os = "solaris",
     target_os = "vita",
     target_os = "cygwin",
+    target_os = "wasi",
 )))]
 fn join_leave_multicast_v4_n() {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
@@ -1656,6 +1682,7 @@ fn join_leave_multicast_v4_n() {
     target_os = "redox",
     target_os = "fuchsia",
     target_os = "vita",
+    target_os = "wasi",
 )))]
 fn join_leave_ssm_v4() {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
@@ -1667,7 +1694,7 @@ fn join_leave_ssm_v4() {
 }
 
 #[test]
-#[cfg(all(feature = "all", not(target_os = "redox")))]
+#[cfg(all(feature = "all", not(any(target_os = "redox", target_os = "wasi"))))]
 fn header_included() {
     let socket = match Socket::new(Domain::IPV4, Type::RAW, None) {
         Ok(socket) => socket,
@@ -1699,7 +1726,8 @@ fn header_included() {
         target_os = "openbsd",
         target_os = "freebsd",
         target_os = "dragonfly",
-        target_os = "netbsd"
+        target_os = "netbsd",
+        target_os = "wasi",
     ))
 ))]
 fn header_included_ipv6() {
