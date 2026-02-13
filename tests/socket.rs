@@ -1316,33 +1316,19 @@ macro_rules! test {
         }
     };
     // Only test using a IPv4 socket.
-    (IPv4 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
-        #[test]
-        fn $get_fn() {
-            test!(__ Domain::IPV4, $get_fn, $set_fn($arg), $arg);
-        }
-    };
-    // Only test using a IPv6 socket.
-    (IPv6 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
-        #[test]
-        fn $get_fn() {
-            test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $arg);
-        }
-    };
-    // Only test using a IPv6 socket and with attributes.
-    ($( #[ $attr: meta ] )* IPv6 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
-        #[test]
-        $( #[$attr] )*
-        fn $get_fn() {
-            test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $arg);
-        }
-    };
-    // Only test using a IPv4 socket with attributes.
     ($( #[ $attr: meta ] )* IPv4 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
         #[test]
         $( #[$attr] )*
         fn $get_fn() {
             test!(__ Domain::IPV4, $get_fn, $set_fn($arg), $arg);
+        }
+    };
+    // Only test using a IPv6 socket.
+    ($( #[ $attr: meta ] )* IPv6 $get_fn: ident, $set_fn: ident ( $arg: expr ) ) => {
+        #[test]
+        $( #[$attr] )*
+        fn $get_fn() {
+            test!(__ Domain::IPV6, $get_fn, $set_fn($arg), $arg);
         }
     };
 
@@ -1521,7 +1507,7 @@ test!(IPv6 tclass_v6, set_tclass_v6(96));
 )))]
 test!(IPv6 recv_tclass_v6, set_recv_tclass_v6(true));
 
-#[cfg(all(feature = "all", target_os = "linux"))]
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "android")))]
 test!(
     #[ignore = "setting `IPV6_TRANSPARENT` requires the `CAP_NET_ADMIN` capability (works when running as root)"]
     IPv6 ip_transparent_v6,
