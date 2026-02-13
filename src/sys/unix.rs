@@ -289,8 +289,8 @@ pub(crate) use libc::{IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IP_MULTICAST_IF, M
         target_os = "netbsd",
         target_os = "tvos",
         target_os = "watchos",
-        all(target_os = "wasi", not(target_env = "p1")),
         target_os = "cygwin",
+        all(target_os = "wasi", not(target_env = "p1")),
     )
 ))]
 pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
@@ -450,8 +450,8 @@ impl Type {
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
-            all(target_os = "wasi", not(target_env = "p1")),
             target_os = "cygwin",
+            all(target_os = "wasi", not(target_env = "p1")),
         )
     ))]
     pub const fn nonblocking(self) -> Type {
@@ -1261,8 +1261,8 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
         target_os = "netbsd",
         target_os = "tvos",
         target_os = "watchos",
-        all(target_os = "wasi", not(target_env = "p1")),
         target_os = "cygwin",
+        all(target_os = "wasi", not(target_env = "p1")),
     ))]
     {
         if let Some(interval) = keepalive.interval {

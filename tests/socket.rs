@@ -542,7 +542,9 @@ fn connect_timeout_unrouteable() {
 }
 
 #[test]
-#[cfg(not(any(target_os = "vita", target_os = "wasi")))] // WASI uses start-connect/finish-connect, no connect_timeout.
+// Loopback has special behavior on vita.
+// WASI uses start-connect/finish-connect, no connect_timeout.
+#[cfg(not(any(target_os = "vita", target_os = "wasi")))]
 fn connect_timeout_unbound() {
     // Bind and drop a socket to track down a "probably unassigned" port.
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
