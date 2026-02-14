@@ -43,6 +43,9 @@ jobs:
       with:
         toolchain: ${{ matrix.rust }}
     - uses: taiki-e/install-action@cargo-hack
+    - name: Pin windows-sys for MSRV compatibility
+      if: matrix.os == 'windows-latest' && matrix.rust == '1.70.0'
+      run: cargo update -p windows-sys --precise 0.60.2
     - name: Run tests
       run: cargo hack test --feature-powerset && cargo hack test --feature-powerset --release
   Rustfmt:
