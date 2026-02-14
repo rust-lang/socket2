@@ -53,6 +53,7 @@ features = ["all"]
 libc = "0.2.172"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
+# when changing this range, adjust the CI matrix so all supported versions are tested
 version = ">=0.60, <0.62"
 features = [
   "Win32_Foundation",

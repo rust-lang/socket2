@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [stable, msrv-linux, msrv-windows, beta, nightly, macos, windows]
+        build: [stable, msrv-linux, msrv-windows, beta, nightly, macos, windows, windows-sys-0.60, windows-sys-0.61]
         include:
           - build: stable
             os: ubuntu-latest
@@ -25,6 +25,7 @@ jobs:
           - build: msrv-windows
             os: windows-latest
             rust: 1.70.0
+            pin-windows-sys: '0.60.2'
           - build: beta
             os: ubuntu-latest
             rust: beta
@@ -37,11 +38,22 @@ jobs:
           - build: windows
             os: windows-latest
             rust: stable
+            pin-windows-sys: '' # test latest compatible windows-sys version
+          - build: windows-sys-0.61
+            os: windows-latest
+            rust: stable
+            pin-windows-sys: '0.61.2'
+          - build: windows-sys-0.60
+            os: windows-latest
+            rust: stable
+            pin-windows-sys: '0.60.2'
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
+    - if: ${{ matrix.pin-windows-sys != '' }}
+      run: cargo update -p windows-sys --precise ${{ matrix.pin-windows-sys }}
     - uses: taiki-e/install-action@cargo-hack
     - name: Run tests
       run: cargo hack test --feature-powerset && cargo hack test --feature-powerset --release
