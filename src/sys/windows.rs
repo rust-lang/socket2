@@ -936,6 +936,26 @@ pub(crate) fn to_mreqn(
     }
 }
 
+pub(crate) fn only_v6(socket: RawSocket) -> io::Result<bool> {
+    let mut optval: c_int = 0; // input must be 4 bytes (DWORD)
+    let mut optlen = mem::size_of_val(&optval) as c_int;
+    syscall!(
+        getsockopt(
+            socket,
+            IPPROTO_IPV6 as i32,
+            IPV6_V6ONLY,
+            ptr::from_mut(&mut optval).cast(),
+            &mut optlen,
+        ),
+        PartialEq::eq,
+        SOCKET_ERROR
+    )
+    .map(|_| {
+        // optlen may be 1, which won't match the input size of optval
+        optval != 0
+    })
+}
+
 #[cfg(feature = "all")]
 pub(crate) fn original_dst_v4(socket: RawSocket) -> io::Result<SockAddr> {
     unsafe {
