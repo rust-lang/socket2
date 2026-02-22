@@ -851,7 +851,6 @@ fn set_common_accept_flags(socket: Socket) -> io::Result<Socket> {
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "illumos",
-    target_os = "netbsd",
     target_os = "redox",
     target_os = "solaris",
     target_os = "wasi",
@@ -1536,6 +1535,66 @@ impl Socket {
                 sys::IP_MULTICAST_IF,
                 interface,
             )
+        }
+    }
+
+    /// Set the value of the `IP_MULTICAST_IF` option for this socket.
+    ///
+    /// Specifies the interface to use for routing multicast packets.
+    /// See [`InterfaceIndexOrAddress`].
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "linux",
+            target_os = "android",
+            target_os = "fuchsia",
+        )
+    ))]
+    pub fn set_multicast_if_v4_n(&self, interface: &InterfaceIndexOrAddress) -> io::Result<()> {
+        #[cfg(any(
+            target_os = "freebsd",
+            target_os = "linux",
+            target_os = "android",
+            target_os = "fuchsia"
+        ))]
+        {
+            // IP_MULTICAST_IF supports struct mreqn to set the interface
+            let mreqn = sys::to_mreqn(&Ipv4Addr::UNSPECIFIED, interface);
+            unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_IF, mreqn) }
+        }
+
+        #[cfg(target_os = "netbsd")]
+        {
+            // IP_MULTICAST_IF only supports struct in_addr to set the interface, but passing an
+            // address in the 0.0.0.0/8 range is interpreted as an interface index (in network
+            // byte order), see ip_multicast_if() in
+            // https://github.com/NetBSD/src/blob/trunk/sys/netinet/ip_output.c; alternatively, as
+            // shown in the example code in https://man.netbsd.org/NetBSD-7.0/ip.4, the interface
+            // index can be passed as uint32_t in network byte order
+            match interface {
+                InterfaceIndexOrAddress::Index(index) => {
+                    if *index >= 0x0100_0000 {
+                        return Err(io::Error::new(
+                            io::ErrorKind::AddrNotAvailable,
+                            "Interface index out of bounds",
+                        ));
+                    }
+                    let index_be = (*index as u32).to_be();
+                    unsafe {
+                        setsockopt(
+                            self.as_raw(),
+                            sys::IPPROTO_IP,
+                            sys::IP_MULTICAST_IF,
+                            index_be,
+                        )
+                    }
+                }
+                InterfaceIndexOrAddress::Address(a) => unsafe {
+                    setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_IF, *a)
+                },
+            }
         }
     }
 

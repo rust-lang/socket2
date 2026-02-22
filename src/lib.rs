@@ -192,7 +192,6 @@ pub use sockaddr::{sa_family_t, socklen_t, SockAddr, SockAddrStorage};
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "illumos",
-    target_os = "netbsd",
     target_os = "redox",
     target_os = "solaris",
     target_os = "wasi",
