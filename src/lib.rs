@@ -172,6 +172,11 @@ macro_rules! man_links {
     };
 }
 
+#[cfg(all(
+    unix,
+    not(any(target_os = "redox", target_os = "vita", target_os = "wasi"))
+))]
+mod cmsg;
 mod sockaddr;
 mod socket;
 mod sockref;
@@ -188,6 +193,11 @@ compile_error!("Socket2 doesn't support the compile target");
 
 use sys::c_int;
 
+#[cfg(all(
+    unix,
+    not(any(target_os = "redox", target_os = "vita", target_os = "wasi"))
+))]
+pub use cmsg::{cmsg_space, ControlMessage, ControlMessageEncoder, ControlMessages};
 pub use sockaddr::{sa_family_t, socklen_t, SockAddr, SockAddrStorage};
 #[cfg(not(any(
     target_os = "haiku",
