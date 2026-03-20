@@ -1970,3 +1970,183 @@ fn set_busy_poll() {
         assert!(socket.busy_poll().unwrap() == i);
     }
 }
+
+#[cfg(all(
+    unix,
+    not(any(target_os = "redox", target_os = "vita", target_os = "wasi"))
+))]
+#[test]
+fn cmsg_space_nonzero() {
+    // cmsg_space(0) must be at least sizeof(cmsghdr); any positive data length
+    // must produce a larger result.
+    let space0 = socket2::cmsg_space(0).expect("cmsg_space(0) should be Some");
+    let space4 = socket2::cmsg_space(4).expect("cmsg_space(4) should be Some");
+    assert!(space0 > 0, "cmsg_space(0) should cover the cmsghdr header");
+    assert!(
+        space4 > space0,
+        "cmsg_space(4) should be larger than cmsg_space(0)"
+    );
+    // Overflow path: data_len > c_uint::MAX must return None.
+    #[cfg(target_pointer_width = "64")]
+    assert!(
+        socket2::cmsg_space(usize::MAX).is_none(),
+        "cmsg_space(usize::MAX) should return None"
+    );
+}
+
+#[cfg(all(
+    unix,
+    not(any(target_os = "redox", target_os = "vita", target_os = "wasi"))
+))]
+#[test]
+fn control_message_encoder_roundtrip() {
+    use socket2::{cmsg_space, ControlMessageEncoder, ControlMessages};
+
+    let level: libc::c_int = libc::SOL_SOCKET;
+    let ty: libc::c_int = 0x1234; // arbitrary type for the test
+    let payload: &[u8] = &[1u8, 2, 3, 4];
+
+    let space = cmsg_space(payload.len()).expect("payload fits in c_uint");
+    let mut buf = vec![0u8; space];
+    let mut enc = ControlMessageEncoder::new(&mut buf);
+    assert!(enc.is_empty());
+    enc.push(level, ty, payload).expect("push should succeed");
+    assert!(!enc.is_empty());
+    assert_eq!(enc.len(), space);
+
+    // Decode what we encoded.
+    let msgs: Vec<_> = ControlMessages::new(enc.as_bytes()).collect();
+    assert_eq!(msgs.len(), 1);
+    assert_eq!(msgs[0].cmsg_level(), level);
+    assert_eq!(msgs[0].cmsg_type(), ty);
+    assert_eq!(msgs[0].data(), payload);
+}
+
+#[cfg(all(
+    unix,
+    not(any(target_os = "redox", target_os = "vita", target_os = "wasi"))
+))]
+#[test]
+fn control_message_encoder_multiple() {
+    use socket2::{cmsg_space, ControlMessageEncoder, ControlMessages};
+
+    let entries: &[(libc::c_int, libc::c_int, &[u8])] = &[
+        (libc::SOL_SOCKET, 1, &[0xAA, 0xBB]),
+        (libc::SOL_SOCKET, 2, &[0x11, 0x22, 0x33, 0x44]),
+        (libc::IPPROTO_IP, 3, &[0xFF]),
+    ];
+
+    let total: usize = entries
+        .iter()
+        .map(|(_, _, d)| cmsg_space(d.len()).expect("payload fits in c_uint"))
+        .sum();
+    let mut buf = vec![0u8; total];
+    let mut enc = ControlMessageEncoder::new(&mut buf);
+
+    for (lvl, ty, data) in entries {
+        enc.push(*lvl, *ty, data).expect("push should succeed");
+    }
+
+    let msgs: Vec<_> = ControlMessages::new(enc.as_bytes()).collect();
+    assert_eq!(msgs.len(), entries.len());
+    for (i, (lvl, ty, data)) in entries.iter().enumerate() {
+        assert_eq!(msgs[i].cmsg_level(), *lvl);
+        assert_eq!(msgs[i].cmsg_type(), *ty);
+        assert_eq!(msgs[i].data(), *data);
+    }
+}
+
+#[cfg(all(
+    unix,
+    not(any(target_os = "redox", target_os = "vita", target_os = "wasi"))
+))]
+#[test]
+fn control_message_encoder_overflow() {
+    use socket2::{cmsg_space, ControlMessageEncoder};
+
+    let payload: &[u8] = &[1, 2, 3, 4];
+    // Allocate space for only one message, then try to push two.
+    let mut buf = vec![0u8; cmsg_space(payload.len()).unwrap()];
+    let mut enc = ControlMessageEncoder::new(&mut buf);
+    enc.push(libc::SOL_SOCKET, 1, payload)
+        .expect("first push ok");
+    let result = enc.push(libc::SOL_SOCKET, 2, payload);
+    assert!(
+        result.is_err(),
+        "second push should fail — buffer too small"
+    );
+}
+
+/// End-to-end test: send a byte plus SCM_CREDENTIALS over a Unix socket pair,
+/// then receive and verify the credential ancillary data.
+#[cfg(target_os = "linux")]
+#[test]
+fn sendmsg_recvmsg_scm_credentials() {
+    use socket2::{
+        cmsg_space, ControlMessageEncoder, ControlMessages, Domain, MaybeUninitSlice, MsgHdr,
+        MsgHdrMut, Socket, Type,
+    };
+    use std::mem::MaybeUninit;
+
+    // Enable SO_PASSCRED so the kernel attaches credentials.
+    let receiver = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
+    receiver.set_passcred(true).unwrap();
+    let path = std::env::temp_dir().join(format!("socket2_test_{}", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let addr = socket2::SockAddr::unix(&path).unwrap();
+    receiver.bind(&addr).unwrap();
+
+    let sender = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
+
+    // Build a sendmsg with one byte of data and an SCM_CREDENTIALS cmsg.
+    let cred = libc::ucred {
+        pid: unsafe { libc::getpid() },
+        uid: unsafe { libc::getuid() },
+        gid: unsafe { libc::getgid() },
+    };
+    let cred_bytes = unsafe {
+        std::slice::from_raw_parts(
+            &cred as *const libc::ucred as *const u8,
+            std::mem::size_of::<libc::ucred>(),
+        )
+    };
+
+    let mut ctrl_buf = vec![0u8; cmsg_space(cred_bytes.len()).unwrap()];
+    let mut enc = ControlMessageEncoder::new(&mut ctrl_buf);
+    enc.push(libc::SOL_SOCKET, libc::SCM_CREDENTIALS, cred_bytes)
+        .unwrap();
+
+    let data = b"x";
+    let send_bufs = [std::io::IoSlice::new(data)];
+    let msg = MsgHdr::new()
+        .with_addr(&addr)
+        .with_buffers(&send_bufs)
+        .with_control(enc.as_bytes());
+    sender.sendmsg(&msg, 0).unwrap();
+
+    // Receive with a large enough control buffer.
+    let mut recv_data = [MaybeUninit::uninit(); 16];
+    let ctrl_cap = cmsg_space(std::mem::size_of::<libc::ucred>()).unwrap();
+    let mut recv_ctrl = vec![MaybeUninit::<u8>::uninit(); ctrl_cap];
+    let mut recv_bufs = [MaybeUninitSlice::new(&mut recv_data)];
+
+    let mut recv_msg = MsgHdrMut::new()
+        .with_buffers(&mut recv_bufs)
+        .with_control(&mut recv_ctrl);
+
+    let n = receiver.recvmsg(&mut recv_msg, 0).unwrap();
+    assert_eq!(n, 1);
+
+    let ctrl_len = recv_msg.control_len();
+    let filled = unsafe { std::slice::from_raw_parts(recv_ctrl.as_ptr() as *const u8, ctrl_len) };
+
+    let msgs: Vec<_> = ControlMessages::new(filled).collect();
+    assert!(!msgs.is_empty(), "expected at least one control message");
+
+    let found = msgs
+        .iter()
+        .any(|m| m.cmsg_level() == libc::SOL_SOCKET && m.cmsg_type() == libc::SCM_CREDENTIALS);
+    assert!(found, "SCM_CREDENTIALS cmsg not found");
+
+    let _ = std::fs::remove_file(&path);
+}

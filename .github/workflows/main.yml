@@ -38,7 +38,7 @@ jobs:
             os: windows-latest
             rust: stable
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
@@ -52,7 +52,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt
@@ -110,7 +110,7 @@ jobs:
           - x86_64-unknown-redox
           - wasm32-wasip2
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@nightly
       with:
         components: rust-src
@@ -119,11 +119,44 @@ jobs:
       run: cargo hack check -Z build-std=std,panic_abort --feature-powerset --target ${{ matrix.target }}
     - name: Check docs
       run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc -Z build-std=std,panic_abort --no-deps --all-features --target ${{ matrix.target }}
+  Cross:
+    name: Cross-test (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 32-bit Linux: size_t=4 → cmsg_len is 4 bytes, CMSG_ALIGN factor=4.
+          # Exercises a different CMSG_* layout than x86_64 (factor=8).
+          - target: i686-unknown-linux-gnu
+            rust: stable
+          # 64-bit ARM Linux: same CMSG_ALIGN factor as x86_64 but different ABI.
+          - target: aarch64-unknown-linux-gnu
+            rust: stable
+          # 32-bit ARM Linux: like i686 but a distinct architecture.
+          - target: armv7-unknown-linux-gnueabihf
+            rust: stable
+    steps:
+    - uses: actions/checkout@v6
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        targets: ${{ matrix.target }}
+    - uses: taiki-e/install-action@cross
+    - name: Run cmsg tests (cross + QEMU)
+      run: |
+        cross test --target ${{ matrix.target }} --all-features -- cmsg
+        cross test --target ${{ matrix.target }} --all-features -- control_message
+    - name: Run cmsg tests release (cross + QEMU)
+      run: |
+        cross test --target ${{ matrix.target }} --all-features --release -- cmsg
+        cross test --target ${{ matrix.target }} --all-features --release -- control_message
+
   Clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy
@@ -144,7 +177,7 @@ jobs:
           # the README for details: https://github.com/awslabs/cargo-check-external-types
           - nightly-2024-06-30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Rust ${{ matrix.rust }}
         uses: dtolnay/rust-toolchain@stable
         with:
