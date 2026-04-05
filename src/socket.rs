@@ -16,6 +16,16 @@ use std::net::Ipv6Addr;
 use std::net::{self, Ipv4Addr, Shutdown};
 #[cfg(any(unix, all(target_os = "wasi", not(target_env = "p1"))))]
 use std::os::fd::{FromRawFd, IntoRawFd};
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+use std::os::raw::c_uchar;
 #[cfg(windows)]
 use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
@@ -26,6 +36,30 @@ use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 use crate::{MaybeUninitSlice, MsgHdr, RecvFlags};
+
+// Match the system headers for these IPv4 multicast socket options. These
+// targets declare `unsigned char` rather than `int`.
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+type IpV4MultiCastType = c_uchar;
+
+#[cfg(not(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+)))]
+type IpV4MultiCastType = c_int;
 
 /// Owned wrapper around a system socket.
 ///
@@ -1546,7 +1580,7 @@ impl Socket {
     /// [`set_multicast_loop_v4`]: Socket::set_multicast_loop_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
+            getsockopt::<IpV4MultiCastType>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
                 .map(|loop_v4| loop_v4 != 0)
         }
     }
@@ -1561,7 +1595,7 @@ impl Socket {
                 self.as_raw(),
                 sys::IPPROTO_IP,
                 sys::IP_MULTICAST_LOOP,
-                loop_v4 as c_int,
+                loop_v4 as IpV4MultiCastType,
             )
         }
     }
@@ -1573,7 +1607,7 @@ impl Socket {
     /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
+            getsockopt::<IpV4MultiCastType>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
                 .map(|ttl| ttl as u32)
         }
     }
@@ -1591,7 +1625,7 @@ impl Socket {
                 self.as_raw(),
                 sys::IPPROTO_IP,
                 sys::IP_MULTICAST_TTL,
-                ttl as c_int,
+                ttl as IpV4MultiCastType,
             )
         }
     }
