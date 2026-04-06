@@ -2479,23 +2479,3 @@ from!(net::UdpSocket, Socket);
 from!(Socket, net::TcpStream);
 from!(Socket, net::TcpListener);
 from!(Socket, net::UdpSocket);
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    #[cfg(target_os = "freebsd")]
-    fn set_multicast_ttl_v4_matches_std_for_values_above_u8_range() {
-        use super::Socket;
-        use crate::{Domain, Protocol, Type};
-        use std::net::{Ipv4Addr, UdpSocket};
-
-        let std_socket = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
-        std_socket.set_multicast_ttl_v4(258).unwrap();
-        let std_ttl = std_socket.multicast_ttl_v4().unwrap();
-        assert_eq!(std_ttl, 2);
-
-        let socket2_socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
-        socket2_socket.set_multicast_ttl_v4(258).unwrap();
-        assert_eq!(socket2_socket.multicast_ttl_v4().unwrap(), std_ttl);
-    }
-}

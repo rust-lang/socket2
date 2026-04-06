@@ -1,4 +1,14 @@
 #![allow(clippy::bool_assert_comparison)]
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+use std::ffi::c_uchar;
 #[cfg(all(
     feature = "all",
     any(
@@ -21,6 +31,16 @@ use std::io::Write;
 #[cfg(not(target_os = "vita"))]
 use std::mem::MaybeUninit;
 use std::mem::{self};
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+use std::net::UdpSocket;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream};
 #[cfg(not(any(target_os = "redox", target_os = "vita")))]
 use std::net::{Ipv6Addr, SocketAddrV6};
@@ -1969,4 +1989,89 @@ fn set_busy_poll() {
         socket.set_busy_poll(i).unwrap();
         assert!(socket.busy_poll().unwrap() == i);
     }
+}
+
+/// A helper type to allow testing socket options on both `Socket` and `UdpSocket`.
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+pub enum SocketRef<'a> {
+    Socket(&'a Socket),
+    UdpSocket(&'a UdpSocket),
+}
+
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+impl<'a> From<&'a Socket> for SocketRef<'a> {
+    fn from(socket: &'a Socket) -> Self {
+        SocketRef::Socket(socket)
+    }
+}
+
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+impl<'a> From<&'a UdpSocket> for SocketRef<'a> {
+    fn from(socket: &'a UdpSocket) -> Self {
+        SocketRef::UdpSocket(socket)
+    }
+}
+
+/// Assert that `multicast_ttl_v4` is set to a given value on `socket`.
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+#[track_caller]
+pub fn assert_multicast_ttl_v4<'a>(socket: impl Into<SocketRef<'a>>, want: c_uchar) {
+    let socket = socket.into();
+    let ttl = match socket {
+        SocketRef::Socket(socket) => socket.multicast_ttl_v4().unwrap(),
+        SocketRef::UdpSocket(socket) => socket.multicast_ttl_v4().unwrap(),
+    };
+    assert_eq!(ttl, u32::from(want), "multicast_ttl_v4 option");
+}
+
+#[cfg(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "nto",
+))]
+#[test]
+fn multicast_v4_bsd_abi() {
+    let socket = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    socket.set_multicast_ttl_v4(258).unwrap();
+    assert_multicast_ttl_v4(&socket, 2);
+
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
+    socket.set_multicast_ttl_v4(258).unwrap();
+    assert_multicast_ttl_v4(&socket, 2);
 }
