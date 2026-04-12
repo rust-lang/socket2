@@ -638,6 +638,9 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdr<'name, 'bufs, 'control> {
     }
 }
 
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+unsafe impl Send for MsgHdr<'_, '_, '_> {}
+
 /// Configuration of a `recvmsg(2)` system call.
 ///
 /// This wraps `msghdr` on Unix and `WSAMSG` on Windows. Also see [`MsgHdr`] for
@@ -715,3 +718,6 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
         "MsgHdrMut".fmt(fmt)
     }
 }
+
+#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+unsafe impl Send for MsgHdrMut<'_, '_, '_> {}
