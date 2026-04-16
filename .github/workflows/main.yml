@@ -156,3 +156,31 @@ jobs:
           locked: true
       - name: check-external-types
         run: cargo check-external-types --all-features
+  vmactions:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-freebsd
+            arch: x86_64
+          - target: i686-unknown-freebsd
+            arch: i686
+    name: FreeBSD/${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test on FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14.4"
+          usesh: true
+          prepare: |
+            pkg install -y curl cargo-hack
+            kldload cc_newreno  # For the tcp_congestion test
+            fetch https://sh.rustup.rs -o rustup.sh
+            sh rustup.sh -y --profile=minimal
+            . $HOME/.cargo/env
+            rustup target add ${{ matrix.target }}
+          run: |
+            . $HOME/.cargo/env
+            cargo hack test --target ${{ matrix.target }} --feature-powerset
