@@ -1549,6 +1549,7 @@ impl crate::Socket {
             target_os = "tvos",
             target_os = "watchos",
             target_os = "wasi",
+            target_os = "horizon"
         ),
         allow(rustdoc::broken_intra_doc_links)
     )]
