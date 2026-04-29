@@ -9,7 +9,7 @@
 use std::cmp::min;
 #[cfg(not(target_os = "wasi"))]
 use std::ffi::OsStr;
-#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
 use std::io::IoSlice;
 use std::marker::PhantomData;
 use std::mem::{self, size_of, MaybeUninit};
@@ -84,10 +84,18 @@ pub(crate) use libc::{AF_INET, AF_INET6};
 pub(crate) use libc::SOCK_DCCP;
 #[cfg(all(
     feature = "all",
-    not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+    not(any(
+        target_os = "redox",
+        target_os = "espidf",
+        target_os = "wasi",
+        target_os = "horizon"
+    ))
 ))]
 pub(crate) use libc::SOCK_RAW;
-#[cfg(all(feature = "all", not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon"))))]
+#[cfg(all(
+    feature = "all",
+    not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+))]
 pub(crate) use libc::SOCK_SEQPACKET;
 pub(crate) use libc::{SOCK_DGRAM, SOCK_STREAM};
 // Used in `Protocol`.
@@ -117,7 +125,12 @@ pub(crate) use libc::{
     sa_family_t, sockaddr, sockaddr_in, sockaddr_in6, sockaddr_storage, socklen_t,
 };
 // Used in `RecvFlags`.
-#[cfg(not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon")))]
+#[cfg(not(any(
+    target_os = "redox",
+    target_os = "espidf",
+    target_os = "wasi",
+    target_os = "horizon"
+)))]
 pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 pub(crate) use libc::SO_OOBINLINE;
@@ -164,7 +177,12 @@ pub(crate) use libc::IPV6_RECVHOPLIMIT;
 pub(crate) use libc::IPV6_RECVTCLASS;
 #[cfg(all(
     feature = "all",
-    not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+    not(any(
+        target_os = "redox",
+        target_os = "espidf",
+        target_os = "wasi",
+        target_os = "horizon"
+    ))
 ))]
 pub(crate) use libc::IP_HDRINCL;
 #[cfg(not(any(
@@ -509,7 +527,12 @@ impl_debug!(
     libc::SOCK_DGRAM,
     #[cfg(all(feature = "all", target_os = "linux"))]
     libc::SOCK_DCCP,
-    #[cfg(not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon")))]
+    #[cfg(not(any(
+        target_os = "redox",
+        target_os = "espidf",
+        target_os = "wasi",
+        target_os = "horizon"
+    )))]
     libc::SOCK_RAW,
     #[cfg(not(any(
         target_os = "redox",

@@ -8,7 +8,7 @@
 
 use std::fmt;
 use std::io::{self, Read, Write};
-#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
 use std::io::{IoSlice, IoSliceMut};
 use std::mem::MaybeUninit;
 #[cfg(not(target_os = "nto"))]
@@ -21,7 +21,7 @@ use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
 use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
-#[cfg(all(unix, not(any(target_os = "horizon", target_os = "redox"))))]
+#[cfg(all(unix, not(any(target_os = "redox", target_os = "horizon"))))]
 use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
 #[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
@@ -632,7 +632,7 @@ impl Socket {
     /// <https://github.com/microsoft/Windows-classic-samples/blob/7cbd99ac1d2b4a0beffbaba29ea63d024ceff700/Samples/Win7Samples/netds/winsock/recvmsg/rmmc.cpp>
     /// for an example (in C++).
     #[doc = man_links!(recvmsg(2))]
-    #[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+    #[cfg(all(unix, not(any(target_os = "redox", target_os = "horizon"))))]
     pub fn recvmsg(&self, msg: &mut MsgHdrMut<'_, '_, '_>, flags: sys::c_int) -> io::Result<usize> {
         sys::recvmsg(self.as_raw(), msg, flags)
     }
@@ -1211,7 +1211,12 @@ impl Socket {
     /// [`set_header_included_v4`]: Socket::set_header_included_v4
     #[cfg(all(
         feature = "all",
-        not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "wasi",
+            target_os = "horizon"
+        ))
     ))]
     pub fn header_included_v4(&self) -> io::Result<bool> {
         unsafe {
@@ -1237,7 +1242,12 @@ impl Socket {
     )]
     #[cfg(all(
         feature = "all",
-        not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "wasi",
+            target_os = "horizon"
+        ))
     ))]
     pub fn set_header_included_v4(&self, included: bool) -> io::Result<()> {
         unsafe {

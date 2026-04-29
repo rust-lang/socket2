@@ -61,11 +61,11 @@
 #![doc(test(attr(deny(warnings))))]
 
 use std::fmt;
-#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
 use std::io::IoSlice;
-#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
 use std::marker::PhantomData;
-#[cfg(not(any(target_os = "redox", target_os = "wasi")))]
+#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
 use std::mem;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
@@ -279,13 +279,21 @@ impl Type {
     pub const DCCP: Type = Type(sys::SOCK_DCCP);
 
     /// Type corresponding to `SOCK_SEQPACKET`.
-    #[cfg(all(feature = "all", not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon"))))]
+    #[cfg(all(
+        feature = "all",
+        not(any(target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+    ))]
     pub const SEQPACKET: Type = Type(sys::SOCK_SEQPACKET);
 
     /// Type corresponding to `SOCK_RAW`.
     #[cfg(all(
         feature = "all",
-        not(any(target_os = "redox", target_os = "espidf", target_os = "wasi", target_os = "horizon"))
+        not(any(
+            target_os = "redox",
+            target_os = "espidf",
+            target_os = "wasi",
+            target_os = "horizon"
+        ))
     ))]
     pub const RAW: Type = Type(sys::SOCK_RAW);
 }
@@ -384,7 +392,7 @@ impl RecvFlags {
     ///
     /// On Unix this corresponds to the `MSG_TRUNC` flag.
     /// On Windows this corresponds to the `WSAEMSGSIZE` error code.
-    #[cfg(not(any(target_os = "espidf")))]
+    #[cfg(not(target_os = "espidf"))]
     pub const fn is_truncated(self) -> bool {
         self.0 & sys::MSG_TRUNC != 0
     }
@@ -445,6 +453,7 @@ pub struct TcpKeepalive {
         target_os = "espidf",
         target_os = "vita",
         target_os = "haiku",
+        target_os = "horizon"
     )))]
     interval: Option<Duration>,
     #[cfg(not(any(
@@ -455,6 +464,7 @@ pub struct TcpKeepalive {
         target_os = "espidf",
         target_os = "vita",
         target_os = "haiku",
+        target_os = "horizon"
     )))]
     retries: Option<u32>,
 }
@@ -473,6 +483,7 @@ impl TcpKeepalive {
                 target_os = "espidf",
                 target_os = "vita",
                 target_os = "haiku",
+                target_os = "horizon"
             )))]
             interval: None,
             #[cfg(not(any(
@@ -483,6 +494,7 @@ impl TcpKeepalive {
                 target_os = "espidf",
                 target_os = "vita",
                 target_os = "haiku",
+                target_os = "horizon"
             )))]
             retries: None,
         }
