@@ -298,11 +298,17 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
+// QNX legacy io-pkt stack (nto70, nto71) exposes TCP_KEEPALIVE.
+// The newer io-sock stack (nto71_iosock, nto80) replaced it with the
+// BSD-style TCP_KEEPIDLE — handle both branches below.
 #[cfg(any(
     target_os = "ios",
     target_os = "visionos",
     target_os = "macos",
-    target_os = "nto",
+    all(
+        target_os = "nto",
+        any(target_env = "nto70", target_env = "nto71"),
+    ),
     target_os = "tvos",
     target_os = "watchos",
 ))]
@@ -312,7 +318,10 @@ use libc::TCP_KEEPALIVE as KEEPALIVE_TIME;
     target_os = "ios",
     target_os = "visionos",
     target_os = "macos",
-    target_os = "nto",
+    all(
+        target_os = "nto",
+        any(target_env = "nto70", target_env = "nto71"),
+    ),
     target_os = "openbsd",
     target_os = "tvos",
     target_os = "watchos",
