@@ -298,9 +298,6 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 // See this type in the Windows file.
 pub(crate) type Bool = c_int;
 
-// QNX legacy io-pkt stack (nto70, nto71) exposes TCP_KEEPALIVE.
-// The newer io-sock stack (nto71_iosock, nto80) replaced it with the
-// BSD-style TCP_KEEPIDLE — handle both branches below.
 #[cfg(any(
     target_os = "ios",
     target_os = "visionos",
