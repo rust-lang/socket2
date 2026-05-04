@@ -80,6 +80,7 @@ jobs:
           - aarch64-unknown-redox
           - arm-linux-androideabi
           - arm64_32-apple-watchos
+          - armv6k-nintendo-3ds
           - armv7-linux-androideabi
           - armv7-sony-vita-newlibeabihf
           - armv7-unknown-linux-ohos
