@@ -918,7 +918,7 @@ impl Socket {
     pub fn keepalive(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), sys::SOL_SOCKET, sys::SO_KEEPALIVE)
-                .map(|keepalive| keepalive != false as Bool)
+                .map(|keepalive| keepalive != 0)
         }
     }
 
@@ -2060,7 +2060,7 @@ impl Socket {
     /// [`set_only_v6`]: Socket::set_only_v6
     pub fn only_v6(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
+            getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_V6ONLY)
                 .map(|only_v6| only_v6 != 0)
         }
     }
@@ -2356,7 +2356,7 @@ impl Socket {
     pub fn tcp_nodelay(&self) -> io::Result<bool> {
         unsafe {
             getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_TCP, sys::TCP_NODELAY)
-                .map(|nodelay| nodelay != false as Bool)
+                .map(|nodelay| nodelay != 0)
         }
     }
 
