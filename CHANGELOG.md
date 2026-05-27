@@ -1,3 +1,15 @@
+# 0.6.4
+
+* Implement Send for `MsgHdr`(`Mut`)
+  (https://github.com/rust-lang/socket2/pull/650).
+* Add support for horizonOS/n3ds
+  (https://github.com/rust-lang/socket2/pull/653).
+* Switch QNX 8.0 and 7.1 to use `TCP_KEEPIDLE` instead of `TCP_KEEPALIVE`
+  (https://github.com/rust-lang/socket2/pull/654).
+* Fixed an issue on Windows where for `Socket::only_v6` sometimes booleans are 1
+  byte other times it's 4 bytes
+  (https://github.com/rust-lang/socket2/pull/655).
+
 # 0.6.3
 
 * Added support for wasm32-wasip2.
