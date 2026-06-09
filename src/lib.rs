@@ -528,6 +528,7 @@ impl TcpKeepalive {
     #[cfg(any(
         target_os = "android",
         target_os = "dragonfly",
+        target_os = "emscripten",
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "illumos",
@@ -558,6 +559,7 @@ impl TcpKeepalive {
         any(
             target_os = "android",
             target_os = "dragonfly",
+            target_os = "emscripten",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
