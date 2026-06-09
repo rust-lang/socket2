@@ -1,3 +1,7 @@
+# Unreleased
+
+* Added support for wasm32-unknown-emscripten.
+
 # 0.6.4
 
 * Implement Send for `MsgHdr`(`Mut`)

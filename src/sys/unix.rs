@@ -301,6 +301,7 @@ pub(crate) use libc::{IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IP_MULTICAST_IF, M
     any(
         target_os = "android",
         target_os = "dragonfly",
+        target_os = "emscripten",
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "illumos",
@@ -411,6 +412,7 @@ type IovLen = usize;
     ),
     target_os = "aix",
     target_os = "dragonfly",
+    target_os = "emscripten",
     target_os = "freebsd",
     target_os = "fuchsia",
     target_os = "haiku",
@@ -466,6 +468,7 @@ impl Type {
         any(
             target_os = "android",
             target_os = "dragonfly",
+            target_os = "emscripten",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
@@ -486,6 +489,7 @@ impl Type {
         any(
             target_os = "android",
             target_os = "dragonfly",
+            target_os = "emscripten",
             target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "hurd",
@@ -505,6 +509,7 @@ impl Type {
     #[cfg(any(
         target_os = "android",
         target_os = "dragonfly",
+        target_os = "emscripten",
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "hurd",
@@ -1278,6 +1283,7 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
         target_os = "aix",
         target_os = "android",
         target_os = "dragonfly",
+        target_os = "emscripten",
         target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "hurd",
