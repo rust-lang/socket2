@@ -312,6 +312,7 @@ pub(crate) use libc::{IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IP_MULTICAST_IF, M
         target_os = "tvos",
         target_os = "watchos",
         target_os = "cygwin",
+        target_os = "nuttx",
         all(target_os = "wasi", not(target_env = "p1")),
     )
 ))]
@@ -1295,6 +1296,7 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
         target_os = "tvos",
         target_os = "watchos",
         target_os = "cygwin",
+        target_os = "nuttx",
         all(target_os = "wasi", not(target_env = "p1")),
     ))]
     {

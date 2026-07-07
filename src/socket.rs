@@ -2262,6 +2262,7 @@ impl Socket {
             target_os = "tvos",
             target_os = "watchos",
             target_os = "cygwin",
+            target_os = "nuttx",
             all(target_os = "wasi", not(target_env = "p1")),
         )
     ))]
@@ -2295,6 +2296,7 @@ impl Socket {
             target_os = "watchos",
             target_os = "cygwin",
             target_os = "windows",
+            target_os = "nuttx",
             all(target_os = "wasi", not(target_env = "p1")),
         )
     ))]

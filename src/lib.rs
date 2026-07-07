@@ -541,6 +541,7 @@ impl TcpKeepalive {
         target_os = "watchos",
         target_os = "windows",
         target_os = "cygwin",
+        target_os = "nuttx",
         all(target_os = "wasi", not(target_env = "p1")),
     ))]
     pub const fn with_interval(self, interval: Duration) -> Self {
@@ -572,6 +573,7 @@ impl TcpKeepalive {
             target_os = "watchos",
             target_os = "cygwin",
             target_os = "windows",
+            target_os = "nuttx",
             all(target_os = "wasi", not(target_env = "p1")),
         )
     ))]
