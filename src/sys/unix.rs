@@ -135,7 +135,7 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 pub(crate) use libc::SO_OOBINLINE;
 // Used in `Socket`.
-#[cfg(not(target_os = "nto"))]
+#[cfg(not(any(target_os = "nto", target_os = "nuttx")))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
 #[cfg(all(feature = "all", target_os = "linux"))]
 pub(crate) use libc::IPV6_HDRINCL;
@@ -170,6 +170,7 @@ pub(crate) use libc::IPV6_RECVHOPLIMIT;
     target_os = "solaris",
     target_os = "haiku",
     target_os = "espidf",
+    target_os = "nuttx",
     target_os = "vita",
     target_os = "wasi",
     target_os = "horizon"
@@ -180,6 +181,7 @@ pub(crate) use libc::IPV6_RECVTCLASS;
     not(any(
         target_os = "redox",
         target_os = "espidf",
+        target_os = "nuttx",
         target_os = "wasi",
         target_os = "horizon"
     ))
@@ -198,6 +200,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "hurd",
     target_os = "nto",
     target_os = "espidf",
+    target_os = "nuttx",
     target_os = "vita",
     target_os = "wasi",
     target_os = "cygwin",
@@ -272,6 +275,7 @@ pub(crate) use libc::{
     target_os = "solaris",
     target_os = "tvos",
     target_os = "watchos",
+    target_os = "nuttx",
     target_os = "wasi",
 )))]
 pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
@@ -428,6 +432,7 @@ type IovLen = usize;
     target_os = "tvos",
     target_os = "watchos",
     target_os = "espidf",
+    target_os = "nuttx",
     target_os = "vita",
     target_os = "cygwin",
 ))]
@@ -2212,6 +2217,7 @@ impl crate::Socket {
             target_os = "solaris",
             target_os = "illumos",
             target_os = "cygwin",
+            target_os = "nuttx",
             target_os = "wasi"
         ))
     ))]
@@ -2233,6 +2239,7 @@ impl crate::Socket {
             target_os = "solaris",
             target_os = "illumos",
             target_os = "cygwin",
+            target_os = "nuttx",
             target_os = "wasi"
         ))
     ))]
