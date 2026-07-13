@@ -1,3 +1,12 @@
+# 0.6.5
+
+* Add support for Emscripten (wasm32)
+  (https://github.com/rust-lang/socket2/pull/660).
+* Add support for NuttX
+  (https://github.com/rust-lang/socket2/pull/663).
+* Enable `Socket::(set_)tos_v4` on illumos
+  (https://github.com/rust-lang/socket2/pull/662).
+
 # 0.6.4
 
 * Implement Send for `MsgHdr`(`Mut`)
