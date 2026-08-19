@@ -218,7 +218,20 @@ impl Socket {
         self.set_nonblocking(false)?;
 
         match res {
-            Ok(()) => return Ok(()),
+            Ok(()) => {
+                // On Apple platforms (macOS, iOS, tvOS, watchOS, visionOS) a
+                // non-blocking `connect(2)` may return success even though the
+                // connection is not yet established, so we always fall through
+                // to `poll_connect` to wait for the connection to complete.
+                #[cfg(not(any(
+                    target_os = "ios",
+                    target_os = "visionos",
+                    target_os = "macos",
+                    target_os = "tvos",
+                    target_os = "watchos",
+                )))]
+                return Ok(());
+            }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
             #[cfg(any(unix, all(target_os = "wasi", not(target_env = "p1"))))]
             Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
