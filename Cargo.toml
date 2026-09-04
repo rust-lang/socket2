@@ -50,7 +50,7 @@ targets = [
 features = ["all"]
 
 [target.'cfg(any(unix, target_os = "wasi"))'.dependencies]
-libc = "0.2.189"
+libc = "0.2.190"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = ">=0.60, <0.62"
