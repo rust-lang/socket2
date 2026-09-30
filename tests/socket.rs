@@ -1519,6 +1519,9 @@ test!(IPv6 freebind_v6, set_freebind_v6(true));
 
 test!(IPv4 ttl_v4, set_ttl_v4(40));
 
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+test!(IPv4 min_ttl_v4, set_min_ttl_v4(50));
+
 #[cfg(not(any(
     target_os = "fuchsia",
     target_os = "redox",
@@ -1551,6 +1554,9 @@ test!(IPv4 broadcast, set_broadcast(true));
 
 #[cfg(not(target_os = "vita"))]
 test!(IPv6 unicast_hops_v6, set_unicast_hops_v6(20));
+
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+test!(IPv6 min_hopcount_v6, set_min_hopcount_v6(30));
 
 #[cfg(not(any(
     windows,
@@ -1969,4 +1975,28 @@ fn set_busy_poll() {
         socket.set_busy_poll(i).unwrap();
         assert!(socket.busy_poll().unwrap() == i);
     }
+}
+
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+#[test]
+fn min_ttl_v4_preserves_outbound_ttl() {
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
+
+    socket.set_ttl_v4(61).unwrap();
+    socket.set_min_ttl_v4(197).unwrap();
+
+    assert_eq!(socket.min_ttl_v4().unwrap(), 197);
+    assert_eq!(socket.ttl_v4().unwrap(), 61);
+}
+
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+#[test]
+fn min_hopcount_v6_preserves_outbound_hops() {
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
+
+    socket.set_unicast_hops_v6(61).unwrap();
+    socket.set_min_hopcount_v6(197).unwrap();
+
+    assert_eq!(socket.min_hopcount_v6().unwrap(), 197);
+    assert_eq!(socket.unicast_hops_v6().unwrap(), 61);
 }
