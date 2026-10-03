@@ -305,6 +305,8 @@ pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
 pub(crate) use libc::{
     IPV6_JOIN_GROUP as IPV6_ADD_MEMBERSHIP, IPV6_LEAVE_GROUP as IPV6_DROP_MEMBERSHIP,
 };
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+pub(crate) use libc::{IPV6_MINHOPCOUNT, IP_MINTTL};
 #[cfg(not(target_os = "wasi"))]
 pub(crate) use libc::{IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IP_MULTICAST_IF, MSG_OOB};
 #[cfg(all(

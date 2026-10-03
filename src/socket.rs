@@ -1631,6 +1631,28 @@ impl Socket {
         unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_TTL, ttl as c_int) }
     }
 
+    /// Get the value of the `IP_MINTTL` option for this socket.
+    ///
+    /// For more information about this option, see [`set_min_ttl_v4`].
+    ///
+    /// [`set_min_ttl_v4`]: Socket::set_min_ttl_v4
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+    pub fn min_ttl_v4(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MINTTL)
+                .map(|ttl| ttl as u32)
+        }
+    }
+
+    /// Set the value of the `IP_MINTTL` option for this socket.
+    ///
+    /// If enabled, received IPv4 packets are discarded if the value of the
+    /// time-to-live field of the IPv4 header is lower than the option value.
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+    pub fn set_min_ttl_v4(&self, ttl: u32) -> io::Result<()> {
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_MINTTL, ttl as c_int) }
+    }
+
     /// Set the value of the `IP_TOS` option for this socket.
     ///
     /// This value sets the type-of-service field that is used in every packet
@@ -2052,6 +2074,35 @@ impl Socket {
                 self.as_raw(),
                 sys::IPPROTO_IPV6,
                 sys::IPV6_UNICAST_HOPS,
+                hops as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_MINHOPCOUNT` option for this socket.
+    ///
+    /// For more information about this option, see [`set_min_hopcount_v6`].
+    ///
+    /// [`set_min_hopcount_v6`]: Socket::set_min_hopcount_v6
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+    pub fn min_hopcount_v6(&self) -> io::Result<u32> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_MINHOPCOUNT)
+                .map(|hops| hops as u32)
+        }
+    }
+
+    /// Set the value of the `IPV6_MINHOPCOUNT` option for this socket.
+    ///
+    /// If enabled, received IPv6 packets are discarded if the value of the
+    /// hop limit field of the IPv6 header is lower than the option value.
+    #[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
+    pub fn set_min_hopcount_v6(&self, hops: u32) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                sys::IPV6_MINHOPCOUNT,
                 hops as c_int,
             )
         }
