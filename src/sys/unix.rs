@@ -833,9 +833,9 @@ pub(crate) fn iucv_sockaddr(userid: &str, name: &str) -> io::Result<SockAddr> {
 pub(crate) use libc::msghdr;
 
 #[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
-pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
-    msg.msg_name = name.as_ptr() as *mut _;
-    msg.msg_namelen = name.len();
+pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: *mut SockAddrStorage, name_len: socklen_t) {
+    msg.msg_name = name as *mut _;
+    msg.msg_namelen = name_len;
 }
 
 #[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
