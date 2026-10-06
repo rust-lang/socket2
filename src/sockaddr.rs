@@ -266,6 +266,11 @@ impl SockAddr {
         &self.storage as *const sockaddr_storage as *const SockAddrStorage
     }
 
+    /// Returns a raw mutable pointer to the address.
+    pub fn as_mut_ptr(&mut self) -> *mut SockAddrStorage {
+        &mut self.storage as *mut sockaddr_storage as *mut SockAddrStorage
+    }
+
     /// Returns the address as the storage.
     pub const fn as_storage(self) -> SockAddrStorage {
         SockAddrStorage {
