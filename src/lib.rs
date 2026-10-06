@@ -622,7 +622,9 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
     /// and `namelen` on Windows.
     pub fn with_addr(mut self, addr: &'addr SockAddr) -> Self {
-        sys::set_msghdr_name(&mut self.inner, addr);
+        // SAFETY: we're casting a const pointer to a mut pointer only to assign
+        // it, this type doesn't use the pointer mutably.
+        sys::set_msghdr_name(&mut self.inner, addr.as_ptr().cast_mut(), addr.len());
         self
     }
 
@@ -697,9 +699,8 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     ///
     /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
     /// and `namelen` on Windows.
-    #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
-        sys::set_msghdr_name(&mut self.inner, addr);
+        sys::set_msghdr_name(&mut self.inner, addr.as_mut_ptr(), addr.len());
         self
     }
 
@@ -745,3 +746,33 @@ impl<'name, 'bufs, 'control> fmt::Debug for MsgHdrMut<'name, 'bufs, 'control> {
 
 #[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
 unsafe impl Send for MsgHdrMut<'_, '_, '_> {}
+
+#[test]
+#[cfg(not(any(target_os = "redox", target_os = "wasi", target_os = "horizon")))]
+fn regression_673() {
+    // NOTE: ideally this would be moved into the tests directory, but at the
+    // time of writing Miri doesn't support recvmsg.
+
+    use std::mem::MaybeUninit;
+    use std::net::{Ipv4Addr, SocketAddrV4};
+
+    use crate::sys::sockaddr;
+    use crate::{MaybeUninitSlice, SockAddr};
+
+    let mut addr = SockAddr::from(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 80));
+    let mut buf = [MaybeUninit::new(0); 8];
+    let mut bufs = [MaybeUninitSlice::new(&mut buf)];
+
+    let hdr = MsgHdrMut::new()
+        .with_addr(&mut addr)
+        .with_buffers(&mut bufs);
+
+    // Mimic what recvmsg(2) does, write to the address.
+    #[cfg(windows)]
+    let name = hdr.inner.name as *mut sockaddr;
+    #[cfg(not(windows))]
+    let name = hdr.inner.msg_name as *mut sockaddr;
+    unsafe { (*name).sa_family = 255 }; // Family.
+
+    assert_eq!(addr.family(), 255);
+}

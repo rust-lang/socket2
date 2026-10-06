@@ -250,9 +250,9 @@ impl<'a> MaybeUninitSlice<'a> {
 // Used in `MsgHdr`.
 pub(crate) use windows_sys::Win32::Networking::WinSock::WSAMSG as msghdr;
 
-pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: &SockAddr) {
-    msg.name = name.as_ptr() as *mut _;
-    msg.namelen = name.len();
+pub(crate) fn set_msghdr_name(msg: &mut msghdr, name: *mut SockAddrStorage, name_len: socklen_t) {
+    msg.name = name as *mut _;
+    msg.namelen = name_len;
 }
 
 pub(crate) fn set_msghdr_iov(msg: &mut msghdr, ptr: *mut WSABUF, len: usize) {
