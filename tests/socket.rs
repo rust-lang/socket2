@@ -345,8 +345,8 @@ pub fn assert_nonblocking(_: &Socket, _: bool) {
     // No way to get this information...
 }
 
-#[cfg(all(unix, feature = "all", not(target_os = "vita")))]
 #[test]
+#[cfg(all(unix, feature = "all", not(target_os = "vita")))]
 fn set_cloexec() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_close_on_exec(&socket, true);
@@ -358,6 +358,7 @@ fn set_cloexec() {
     assert_close_on_exec(&socket, true);
 }
 
+#[test]
 #[cfg(all(
     feature = "all",
     any(
@@ -371,7 +372,6 @@ fn set_cloexec() {
         target_os = "openbsd"
     )
 ))]
-#[test]
 fn type_cloexec() {
     let ty = Type::STREAM.cloexec();
     let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
@@ -389,8 +389,8 @@ where
     assert_eq!(flags & libc::FD_CLOEXEC != 0, want, "CLOEXEC option");
 }
 
-#[cfg(all(feature = "all", windows))]
 #[test]
+#[cfg(all(feature = "all", windows))]
 fn set_no_inherit() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_flag_no_inherit(&socket, true);
@@ -402,8 +402,8 @@ fn set_no_inherit() {
     assert_flag_no_inherit(&socket, true);
 }
 
-#[cfg(all(feature = "all", windows))]
 #[test]
+#[cfg(all(feature = "all", windows))]
 fn type_no_inherit() {
     let ty = Type::STREAM.no_inherit();
     let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
@@ -429,8 +429,8 @@ where
     );
 }
 
-#[cfg(all(feature = "all", windows))]
 #[test]
+#[cfg(all(feature = "all", windows))]
 fn type_registered_io() {
     let ty = Type::DGRAM.registered_io();
     let socket = Socket::new(Domain::IPV4, ty, None).unwrap();
@@ -471,6 +471,7 @@ where
     }
 }
 
+#[test]
 #[cfg(all(
     feature = "all",
     any(
@@ -481,7 +482,6 @@ where
         target_os = "watchos",
     )
 ))]
-#[test]
 fn set_nosigpipe() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_flag_no_sigpipe(&socket, true);
@@ -1044,8 +1044,8 @@ fn tcp_keepalive() {
     assert_eq!(socket.tcp_keepalive_retries().unwrap(), 10);
 }
 
-#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 #[test]
+#[cfg(all(feature = "all", any(target_os = "fuchsia", target_os = "linux")))]
 #[ignore = "setting `SO_BINDTODEVICE` requires the `CAP_NET_RAW` capability (works when running as root)"]
 fn device() {
     // Some common network interface on Linux.
@@ -1252,6 +1252,7 @@ fn sendfile() {
     }
 }
 
+#[test]
 #[cfg(all(
     feature = "all",
     any(
@@ -1261,7 +1262,6 @@ fn sendfile() {
         target_os = "linux",
     )
 ))]
-#[test]
 fn is_listener() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP)).unwrap();
     assert_eq!(socket.is_listener().unwrap(), false);
@@ -1270,6 +1270,7 @@ fn is_listener() {
     assert_eq!(socket.is_listener().unwrap(), true);
 }
 
+#[test]
 #[cfg(all(
     feature = "all",
     any(
@@ -1280,7 +1281,6 @@ fn is_listener() {
         target_os = "linux",
     )
 ))]
-#[test]
 fn domain() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
     assert_eq!(socket.domain().unwrap(), Domain::IPV4);
@@ -1292,6 +1292,7 @@ fn domain() {
     assert_eq!(socket.domain().unwrap(), Domain::UNIX);
 }
 
+#[test]
 #[cfg(all(
     feature = "all",
     any(
@@ -1302,7 +1303,6 @@ fn domain() {
         target_os = "windows",
     )
 ))]
-#[test]
 fn protocol() {
     let socket = Socket::new(Domain::UNIX, Type::STREAM, None).unwrap();
     assert_eq!(socket.protocol().unwrap(), None);
@@ -1353,8 +1353,8 @@ fn r#type() {
     }
 }
 
-#[cfg(all(feature = "all", target_os = "linux"))]
 #[test]
+#[cfg(all(feature = "all", target_os = "linux"))]
 fn cpu_affinity() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 
@@ -1935,8 +1935,8 @@ fn cookie() {
     }
 }
 
-#[cfg(all(unix, target_os = "linux"))]
 #[test]
+#[cfg(all(unix, target_os = "linux"))]
 fn set_passcred() {
     let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
     assert!(!socket.passcred().unwrap());
@@ -1951,8 +1951,8 @@ fn set_passcred() {
     assert!(socket.passcred().unwrap());
 }
 
-#[cfg(all(feature = "all", target_os = "linux"))]
 #[test]
+#[cfg(all(feature = "all", target_os = "linux"))]
 fn set_priority() {
     let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
     assert!(socket.priority().unwrap() == 0);
@@ -1964,8 +1964,8 @@ fn set_priority() {
     }
 }
 
-#[cfg(all(feature = "all", target_os = "linux"))]
 #[test]
+#[cfg(all(feature = "all", target_os = "linux"))]
 fn set_busy_poll() {
     let socket = Socket::new(Domain::UNIX, Type::DGRAM, None).unwrap();
     assert!(socket.busy_poll().unwrap() == 0);
@@ -1977,8 +1977,8 @@ fn set_busy_poll() {
     }
 }
 
-#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
 #[test]
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
 fn min_ttl_v4_preserves_outbound_ttl() {
     let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
 
@@ -1989,8 +1989,8 @@ fn min_ttl_v4_preserves_outbound_ttl() {
     assert_eq!(socket.ttl_v4().unwrap(), 61);
 }
 
-#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
 #[test]
+#[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
 fn min_hopcount_v6_preserves_outbound_hops() {
     let socket = Socket::new(Domain::IPV6, Type::STREAM, None).unwrap();
 
