@@ -523,6 +523,8 @@ impl Type {
             target_os = "redox",
             target_os = "solaris",
             target_os = "cygwin",
+            target_os = "qnx",
+            target_os = "nto",
         )
     ))]
     pub const fn cloexec(self) -> Type {
@@ -543,6 +545,8 @@ impl Type {
         target_os = "redox",
         target_os = "solaris",
         target_os = "cygwin",
+        target_os = "qnx",
+        target_os = "nto",
     ))]
     pub(crate) const fn _cloexec(self) -> Type {
         Type(self.0 | libc::SOCK_CLOEXEC)
