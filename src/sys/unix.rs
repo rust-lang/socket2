@@ -143,7 +143,10 @@ pub(crate) use libc::MSG_TRUNC;
 #[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 pub(crate) use libc::SO_OOBINLINE;
 // Used in `Socket`.
-#[cfg(not(any(target_os = "nto", target_os = "nuttx")))]
+#[cfg(not(any(
+    all(target_os = "nto", not(target_env = "nto71_iosock")),
+    target_os = "nuttx"
+)))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
 #[cfg(all(feature = "all", target_os = "linux"))]
 pub(crate) use libc::IPV6_HDRINCL;
@@ -206,7 +209,7 @@ pub(crate) use libc::IP_HDRINCL;
     target_os = "solaris",
     target_os = "haiku",
     target_os = "hurd",
-    target_os = "nto",
+    all(target_os = "nto", not(target_env = "nto71_iosock")),
     target_os = "espidf",
     target_os = "nuttx",
     target_os = "vita",
@@ -260,7 +263,7 @@ pub(crate) use libc::{
     target_os = "openbsd",
     target_os = "redox",
     target_os = "fuchsia",
-    target_os = "nto",
+    all(target_os = "nto", not(target_env = "nto71_iosock")),
     target_os = "espidf",
     target_os = "vita",
     target_os = "wasi",
@@ -278,7 +281,7 @@ pub(crate) use libc::{
     target_os = "visionos",
     target_os = "macos",
     target_os = "netbsd",
-    target_os = "nto",
+    all(target_os = "nto", target_env = "nto71_iosock"),
     target_os = "qnx",
     target_os = "openbsd",
     target_os = "solaris",
@@ -298,6 +301,7 @@ pub(crate) use libc::{IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP};
     target_os = "macos",
     target_os = "netbsd",
     target_os = "openbsd",
+    all(target_os = "nto", target_env = "nto71_iosock"),
     target_os = "qnx",
     target_os = "solaris",
     target_os = "tvos",
@@ -1335,7 +1339,7 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
     #[cfg(not(any(
         target_os = "haiku",
         target_os = "openbsd",
-        target_os = "nto",
+        all(target_os = "nto", not(target_env = "nto71_iosock")),
         target_os = "vita"
     )))]
     if let Some(time) = keepalive.time {
@@ -1355,6 +1359,7 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
         target_os = "ios",
         target_os = "visionos",
         target_os = "linux",
+        all(target_os = "nto", target_env = "nto71_iosock"),
         target_os = "qnx",
         target_os = "macos",
         target_os = "netbsd",
@@ -1375,7 +1380,7 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
         }
     }
 
-    #[cfg(target_os = "nto")]
+    #[cfg(all(target_os = "nto", not(target_env = "nto71_iosock")))]
     if let Some(time) = keepalive.time {
         let secs = into_timeval(Some(time));
         unsafe { setsockopt(fd, libc::IPPROTO_TCP, KEEPALIVE_TIME, secs)? }
@@ -1387,7 +1392,7 @@ pub(crate) fn set_tcp_keepalive(fd: RawSocket, keepalive: &TcpKeepalive) -> io::
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "openbsd",
-    target_os = "nto",
+    all(target_os = "nto", not(target_env = "nto71_iosock")),
     target_os = "vita"
 )))]
 fn into_secs(duration: Duration) -> c_int {
@@ -1493,7 +1498,7 @@ pub(crate) fn from_in6_addr(addr: in6_addr) -> Ipv6Addr {
     target_os = "openbsd",
     target_os = "redox",
     target_os = "solaris",
-    target_os = "nto",
+    all(target_os = "nto", not(target_env = "nto71_iosock")),
     target_os = "espidf",
     target_os = "vita",
     target_os = "cygwin",
