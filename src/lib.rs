@@ -624,7 +624,8 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     pub fn with_addr(mut self, addr: &'addr SockAddr) -> Self {
         // SAFETY: we're casting a const pointer to a mut pointer only to assign
         // it, this type doesn't use the pointer mutably.
-        sys::set_msghdr_name(&mut self.inner, addr.as_ptr().cast_mut(), addr.len());
+        let len = addr.len(); // Get length first to not invalidate raw pointer.
+        sys::set_msghdr_name(&mut self.inner, addr.as_ptr().cast_mut(), len);
         self
     }
 
@@ -633,8 +634,9 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
     /// and `dwBufferCount` on Windows.
     pub fn with_buffers(mut self, bufs: &'bufs [IoSlice<'_>]) -> Self {
+        let len = bufs.len(); // Get length first to not invalidate raw pointer.
         let ptr = bufs.as_ptr() as *mut _;
-        sys::set_msghdr_iov(&mut self.inner, ptr, bufs.len());
+        sys::set_msghdr_iov(&mut self.inner, ptr, len);
         self
     }
 
@@ -643,8 +645,9 @@ impl<'addr, 'bufs, 'control> MsgHdr<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
     /// `Control` on Windows.
     pub fn with_control(mut self, buf: &'control [u8]) -> Self {
+        let len = buf.len(); // Get length first to not invalidate raw pointer.
         let ptr = buf.as_ptr() as *mut _;
-        sys::set_msghdr_control(&mut self.inner, ptr, buf.len());
+        sys::set_msghdr_control(&mut self.inner, ptr, len);
         self
     }
 
@@ -700,7 +703,8 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_name` and `msg_namelen` on Unix and `name`
     /// and `namelen` on Windows.
     pub fn with_addr(mut self, addr: &'addr mut SockAddr) -> Self {
-        sys::set_msghdr_name(&mut self.inner, addr.as_mut_ptr(), addr.len());
+        let len = addr.len(); // Get length first to not invalidate raw pointer.
+        sys::set_msghdr_name(&mut self.inner, addr.as_mut_ptr(), len);
         self
     }
 
@@ -709,7 +713,8 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_iov` and `msg_iovlen` on Unix and `lpBuffers`
     /// and `dwBufferCount` on Windows.
     pub fn with_buffers(mut self, bufs: &'bufs mut [MaybeUninitSlice<'_>]) -> Self {
-        sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), bufs.len());
+        let len = bufs.len(); // Get length first to not invalidate raw pointer.
+        sys::set_msghdr_iov(&mut self.inner, bufs.as_mut_ptr().cast(), len);
         self
     }
 
@@ -718,7 +723,8 @@ impl<'addr, 'bufs, 'control> MsgHdrMut<'addr, 'bufs, 'control> {
     /// Corresponds to setting `msg_control` and `msg_controllen` on Unix and
     /// `Control` on Windows.
     pub fn with_control(mut self, buf: &'control mut [MaybeUninit<u8>]) -> Self {
-        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), buf.len());
+        let len = buf.len(); // Get length first to not invalidate raw pointer.
+        sys::set_msghdr_control(&mut self.inner, buf.as_mut_ptr().cast(), len);
         self
     }
 
