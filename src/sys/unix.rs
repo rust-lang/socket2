@@ -937,7 +937,17 @@ impl SockAddr {
     /// Should not be called on unnamed addresses.
     fn path_len(&self, storage: &libc::sockaddr_un) -> usize {
         debug_assert!(!self.is_unnamed());
-        self.len() as usize - offset_of_path(storage) - 1
+        let len = self.len() as usize - offset_of_path(storage);
+        if storage.sun_path[0] == 0 {
+            // Abstract name: skip the initial null byte.
+            len - 1
+        } else if storage.sun_path[len - 1] == 0 {
+            // Pathname whose length includes the terminating null byte (e.g. Linux).
+            len - 1
+        } else {
+            // Pathname whose length does not include it (e.g. FreeBSD, NetBSD, QNX).
+            len
+        }
     }
 
     /// Get a u8 slice for the bytes of the pathname or abstract name.
