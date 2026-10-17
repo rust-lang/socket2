@@ -1106,9 +1106,10 @@ impl crate::Socket {
     ///
     /// This is the opposite of `SO_REUSEADDR` (see [`set_reuse_address`]): it
     /// prevents other sockets from binding to the same address and port as
-    /// this socket, even when they set `SO_REUSEADDR`. Without this option
-    /// another socket that sets `SO_REUSEADDR` can bind to the address and port
-    /// this socket is bound to and take over its traffic.
+    /// this socket, even when they set `SO_REUSEADDR`. On Windows (unlike
+    /// Unix), without this option another socket that sets `SO_REUSEADDR` can
+    /// bind to the address and port this socket is bound to and take over its
+    /// traffic.
     ///
     /// # Notes
     ///
