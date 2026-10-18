@@ -1453,6 +1453,8 @@ test!(
 #[cfg(not(any(target_os = "redox", target_os = "wasi")))]
 test!(out_of_band_inline, set_out_of_band_inline(true));
 test!(reuse_address, set_reuse_address(true));
+#[cfg(all(feature = "all", windows))]
+test!(exclusive_address, set_exclusive_address(true));
 #[cfg(all(
     feature = "all",
     not(any(

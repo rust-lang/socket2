@@ -35,7 +35,7 @@ use windows_sys::Win32::Networking::WinSock::{
 
 #[cfg(feature = "all")]
 use windows_sys::Win32::Networking::WinSock::{
-    IP6T_SO_ORIGINAL_DST, SOL_IP, SO_ORIGINAL_DST, SO_PROTOCOL_INFOW,
+    IP6T_SO_ORIGINAL_DST, SOL_IP, SO_EXCLUSIVEADDRUSE, SO_ORIGINAL_DST, SO_PROTOCOL_INFOW,
 };
 use windows_sys::Win32::System::Threading::INFINITE;
 
@@ -1086,6 +1086,46 @@ impl crate::Socket {
             Err(io::Error::last_os_error())
         } else {
             Ok(())
+        }
+    }
+
+    /// Get the value of the `SO_EXCLUSIVEADDRUSE` option on this socket.
+    ///
+    /// For more information about this option, see [`set_exclusive_address`].
+    ///
+    /// [`set_exclusive_address`]: crate::Socket::set_exclusive_address
+    #[cfg(feature = "all")]
+    pub fn exclusive_address(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<Bool>(self.as_raw(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE)
+                .map(|exclusive| exclusive != 0)
+        }
+    }
+
+    /// Set value for the `SO_EXCLUSIVEADDRUSE` option on this socket.
+    ///
+    /// This is the opposite of `SO_REUSEADDR` (see [`set_reuse_address`]): it
+    /// prevents other sockets from binding to the same address and port as
+    /// this socket, even when they set `SO_REUSEADDR`. On Windows (unlike
+    /// Unix), without this option another socket that sets `SO_REUSEADDR` can
+    /// bind to the address and port this socket is bound to and take over its
+    /// traffic.
+    ///
+    /// # Notes
+    ///
+    /// This option must be set before calling [`bind`] to have any effect.
+    ///
+    /// [`set_reuse_address`]: crate::Socket::set_reuse_address
+    /// [`bind`]: crate::Socket::bind
+    #[cfg(feature = "all")]
+    pub fn set_exclusive_address(&self, exclusive: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                SOL_SOCKET,
+                SO_EXCLUSIVEADDRUSE,
+                exclusive as c_int,
+            )
         }
     }
 
