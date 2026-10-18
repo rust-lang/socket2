@@ -1522,6 +1522,31 @@ test!(IPv4 ttl_v4, set_ttl_v4(40));
 #[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
 test!(IPv4 min_ttl_v4, set_min_ttl_v4(50));
 
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "freebsd",
+        target_os = "illumos",
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "macos",
+        target_os = "solaris",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "windows",
+    )
+))]
+#[test]
+fn dontfrag_v4() {
+    // Windows only accepts the option on message oriented sockets.
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    assert!(!socket.dontfrag_v4().unwrap());
+    socket.set_dontfrag_v4(true).unwrap();
+    assert!(socket.dontfrag_v4().unwrap());
+    socket.set_dontfrag_v4(false).unwrap();
+    assert!(!socket.dontfrag_v4().unwrap());
+}
+
 #[cfg(not(any(
     target_os = "fuchsia",
     target_os = "redox",
@@ -1557,6 +1582,32 @@ test!(IPv6 unicast_hops_v6, set_unicast_hops_v6(20));
 
 #[cfg(all(feature = "all", any(target_os = "linux", target_os = "illumos")))]
 test!(IPv6 min_hopcount_v6, set_min_hopcount_v6(30));
+
+#[cfg(any(
+    target_os = "android",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "illumos",
+    target_os = "ios",
+    target_os = "visionos",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "watchos",
+    target_os = "windows",
+))]
+#[test]
+fn dontfrag_v6() {
+    let socket = Socket::new(Domain::IPV6, Type::DGRAM, None).unwrap();
+    assert!(!socket.dontfrag_v6().unwrap());
+    socket.set_dontfrag_v6(true).unwrap();
+    assert!(socket.dontfrag_v6().unwrap());
+    socket.set_dontfrag_v6(false).unwrap();
+    assert!(!socket.dontfrag_v6().unwrap());
+}
 
 #[cfg(not(any(
     windows,

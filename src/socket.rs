@@ -1758,6 +1758,63 @@ impl Socket {
         }
     }
 
+    /// Get the value of the `IP_DONTFRAG` option for this socket.
+    ///
+    /// For more information about this option, see [`set_dontfrag_v4`].
+    ///
+    /// [`set_dontfrag_v4`]: Socket::set_dontfrag_v4
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "solaris",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "windows",
+        )
+    ))]
+    pub fn dontfrag_v4(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_DONTFRAG)
+                .map(|dontfrag| dontfrag != 0)
+        }
+    }
+
+    /// Set the value of the `IP_DONTFRAG` option for this socket.
+    ///
+    /// If enabled, the Don't Fragment flag is set on outgoing IPv4 packets, so
+    /// they are not fragmented on the way and a datagram that is larger than
+    /// the path MTU fails to send instead. On Windows this is the
+    /// `IP_DONTFRAGMENT` option.
+    #[cfg(all(
+        feature = "all",
+        any(
+            target_os = "freebsd",
+            target_os = "illumos",
+            target_os = "ios",
+            target_os = "visionos",
+            target_os = "macos",
+            target_os = "solaris",
+            target_os = "tvos",
+            target_os = "watchos",
+            target_os = "windows",
+        )
+    ))]
+    pub fn set_dontfrag_v4(&self, dontfrag: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IP,
+                sys::IP_DONTFRAG,
+                dontfrag as c_int,
+            )
+        }
+    }
+
     /// Get the value for the `SO_ORIGINAL_DST` option on this socket.
     #[cfg(all(
         feature = "all",
@@ -2262,6 +2319,65 @@ impl Socket {
                 sys::IPPROTO_IPV6,
                 sys::IPV6_RECVHOPLIMIT,
                 recv_hoplimit as c_int,
+            )
+        }
+    }
+
+    /// Get the value of the `IPV6_DONTFRAG` option for this socket.
+    ///
+    /// For more information about this option, see [`set_dontfrag_v6`].
+    ///
+    /// [`set_dontfrag_v6`]: Socket::set_dontfrag_v6
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "illumos",
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "solaris",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "windows",
+    ))]
+    pub fn dontfrag_v6(&self) -> io::Result<bool> {
+        unsafe {
+            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_DONTFRAG)
+                .map(|dontfrag| dontfrag != 0)
+        }
+    }
+
+    /// Set the value of the `IPV6_DONTFRAG` option for this socket.
+    ///
+    /// If enabled, outgoing IPv6 packets are not fragmented by the sender, and
+    /// a datagram that is larger than the path MTU fails to send instead.
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "illumos",
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "solaris",
+        target_os = "tvos",
+        target_os = "watchos",
+        target_os = "windows",
+    ))]
+    pub fn set_dontfrag_v6(&self, dontfrag: bool) -> io::Result<()> {
+        unsafe {
+            setsockopt(
+                self.as_raw(),
+                sys::IPPROTO_IPV6,
+                sys::IPV6_DONTFRAG,
+                dontfrag as c_int,
             )
         }
     }

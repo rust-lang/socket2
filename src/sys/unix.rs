@@ -145,6 +145,22 @@ pub(crate) use libc::SO_OOBINLINE;
 // Used in `Socket`.
 #[cfg(not(any(target_os = "nuttx")))]
 pub(crate) use libc::ipv6_mreq as Ipv6Mreq;
+#[cfg(any(
+    target_os = "android",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "illumos",
+    target_os = "ios",
+    target_os = "visionos",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "solaris",
+    target_os = "tvos",
+    target_os = "watchos",
+))]
+pub(crate) use libc::IPV6_DONTFRAG;
 #[cfg(all(feature = "all", target_os = "linux"))]
 pub(crate) use libc::IPV6_HDRINCL;
 #[cfg(all(
@@ -184,6 +200,20 @@ pub(crate) use libc::IPV6_RECVHOPLIMIT;
     target_os = "horizon"
 )))]
 pub(crate) use libc::IPV6_RECVTCLASS;
+#[cfg(all(
+    feature = "all",
+    any(
+        target_os = "freebsd",
+        target_os = "illumos",
+        target_os = "ios",
+        target_os = "visionos",
+        target_os = "macos",
+        target_os = "solaris",
+        target_os = "tvos",
+        target_os = "watchos",
+    )
+))]
+pub(crate) use libc::IP_DONTFRAG;
 #[cfg(all(
     feature = "all",
     not(any(
