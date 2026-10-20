@@ -218,7 +218,10 @@ impl Socket {
         self.set_nonblocking(false)?;
 
         match res {
-            Ok(()) => return Ok(()),
+            Ok(()) => {
+                #[cfg(not(target_vendor = "apple"))]
+                return Ok(());
+            }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {}
             #[cfg(any(unix, all(target_os = "wasi", not(target_env = "p1"))))]
             Err(ref e) if e.raw_os_error() == Some(libc::EINPROGRESS) => {}
