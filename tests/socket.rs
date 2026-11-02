@@ -174,6 +174,29 @@ fn socket_address_unix() {
 }
 
 #[test]
+#[cfg(all(unix, not(target_os = "wasi")))]
+fn socket_address_unix_invalid_pathname() {
+    // SockAddr preserves the supplied bytes, but the standard library cannot
+    // represent a pathname containing a null byte.
+    for path in ["a\0b", "a\0", "a\0b\0c"] {
+        let addr = SockAddr::unix(path).unwrap();
+        assert_eq!(addr.as_pathname(), Some(Path::new(path)));
+        assert!(addr.as_unix().is_none());
+    }
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "wasi")))]
+fn socket_address_unix_non_utf8_pathname() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let path = Path::new(OsStr::from_bytes(b"socket-\xff"));
+    let addr = SockAddr::unix(path).unwrap();
+    assert_eq!(addr.as_unix().unwrap().as_pathname(), Some(path));
+}
+
+#[test]
 #[cfg(not(target_os = "wasi"))]
 fn socket_address_unix_unnamed() {
     let addr = SockAddr::unix("").unwrap();
@@ -208,6 +231,7 @@ fn socket_address_unix_abstract_namespace() {
     // The first byte is the opening null bytes of an abstract address, should not be included.
     assert_eq!(addr.as_abstract_namespace(), Some(&path.as_bytes()[1..]));
     assert!(addr.as_pathname().is_none());
+    assert!(addr.as_unix().is_none());
     assert!(!addr.is_unnamed());
 }
 

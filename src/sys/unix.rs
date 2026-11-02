@@ -961,12 +961,11 @@ impl SockAddr {
     }
 
     /// Returns this address as Unix `SocketAddr` if it is an `AF_UNIX` pathname
-    /// address, otherwise returns `None`.
+    /// address that can be represented by the standard library, otherwise returns
+    /// `None`.
     pub fn as_unix(&self) -> Option<std::os::unix::net::SocketAddr> {
         let path = self.as_pathname()?;
-        // SAFETY: we can represent this as a valid pathname, then so can the
-        // standard library.
-        Some(std::os::unix::net::SocketAddr::from_pathname(path).unwrap())
+        std::os::unix::net::SocketAddr::from_pathname(path).ok()
     }
 
     /// Returns this address as a `Path` reference if it is an `AF_UNIX`
