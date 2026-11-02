@@ -758,6 +758,12 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
                 "path must be shorter than SUN_LEN",
             ));
         }
+        if bytes.first() != Some(&0) && bytes.contains(&0) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must not contain null bytes",
+            ));
+        }
 
         storage.sun_family = libc::AF_UNIX as sa_family_t;
         // SAFETY: `bytes` and `addr.sun_path` are not overlapping and
@@ -961,12 +967,11 @@ impl SockAddr {
     }
 
     /// Returns this address as Unix `SocketAddr` if it is an `AF_UNIX` pathname
-    /// address, otherwise returns `None`.
+    /// address that can be represented by the standard library, otherwise returns
+    /// `None`.
     pub fn as_unix(&self) -> Option<std::os::unix::net::SocketAddr> {
         let path = self.as_pathname()?;
-        // SAFETY: we can represent this as a valid pathname, then so can the
-        // standard library.
-        Some(std::os::unix::net::SocketAddr::from_pathname(path).unwrap())
+        std::os::unix::net::SocketAddr::from_pathname(path).ok()
     }
 
     /// Returns this address as a `Path` reference if it is an `AF_UNIX`
