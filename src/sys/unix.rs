@@ -758,6 +758,12 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
                 "path must be shorter than SUN_LEN",
             ));
         }
+        if bytes.first() != Some(&0) && bytes.contains(&0) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must not contain null bytes",
+            ));
+        }
 
         storage.sun_family = libc::AF_UNIX as sa_family_t;
         // SAFETY: `bytes` and `addr.sun_path` are not overlapping and

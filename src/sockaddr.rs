@@ -214,7 +214,8 @@ impl SockAddr {
 
     /// Constructs a `SockAddr` with the family `AF_UNIX` and the provided path.
     ///
-    /// Returns an error if the path is longer than `SUN_LEN`.
+    /// Returns an error if a pathname contains a null byte or the path is longer
+    /// than `SUN_LEN`.
     #[cfg(not(target_os = "wasi"))]
     pub fn unix<P>(path: P) -> io::Result<SockAddr>
     where
