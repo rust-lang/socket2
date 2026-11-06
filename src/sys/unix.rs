@@ -1315,7 +1315,7 @@ fn into_timeval(duration: Option<Duration>) -> libc::timeval {
         #[cfg_attr(target_env = "musl", allow(deprecated))]
         Some(duration) => libc::timeval {
             tv_sec: min(duration.as_secs(), libc::time_t::MAX as u64) as libc::time_t,
-            tv_usec: duration.subsec_micros() as libc::suseconds_t,
+            tv_usec: duration.subsec_micros() as _,
         },
         None => libc::timeval {
             tv_sec: 0,
