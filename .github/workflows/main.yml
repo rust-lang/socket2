@@ -125,6 +125,21 @@ jobs:
       run: cargo hack check -Z build-std=std,panic_abort --feature-powerset --target ${{ matrix.target }}
     - name: Check docs
       run: RUSTDOCFLAGS="-D warnings --cfg docsrs" cargo doc -Z build-std=std,panic_abort --no-deps --all-features --target ${{ matrix.target }}
+  CheckTime64:
+    name: Check 64-bit time (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [i686-unknown-linux-gnu, armv7-unknown-linux-gnueabihf]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+    - name: Check build with 64-bit time
+      env:
+        RUSTFLAGS: --cfg=libc_unstable_time64
+      run: cargo check --all-targets --all-features --target ${{ matrix.target }}
   Clippy:
     name: Clippy
     runs-on: ubuntu-latest
