@@ -190,3 +190,16 @@ jobs:
           run: |
             . $HOME/.cargo/env
             cargo hack test --target ${{ matrix.target }} --feature-powerset
+  openbsd:
+    name: OpenBSD/x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test on OpenBSD
+        uses: vmactions/openbsd-vm@v1
+        with:
+          release: "8.0"
+          prepare: |
+            pkg_add rust  # `rustup` has no toolchain for OpenBSD
+          run: |
+            cargo test && cargo test --features all

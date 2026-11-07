@@ -94,6 +94,8 @@ pub(crate) use windows_sys::Win32::Networking::WinSock::{
 pub(crate) const IPPROTO_IP: c_int = windows_sys::Win32::Networking::WinSock::IPPROTO_IP as c_int;
 pub(crate) const SOL_SOCKET: c_int = windows_sys::Win32::Networking::WinSock::SOL_SOCKET as c_int;
 
+pub(crate) type IpMulticastOpt = c_int;
+
 // This is so we can special case MaybeUninit::assume_init for Bool.
 // See Bool for why.
 pub(crate) trait GetsockoptOutput: Sized {
