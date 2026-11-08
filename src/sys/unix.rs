@@ -339,6 +339,21 @@ pub(crate) use libc::{TCP_KEEPCNT, TCP_KEEPINTVL};
 pub(crate) type Bool = c_int;
 
 #[cfg(any(
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "solaris",
+))]
+pub(crate) type IpMulticastOpt = libc::c_uchar;
+#[cfg(not(any(
+    target_os = "illumos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "solaris",
+)))]
+pub(crate) type IpMulticastOpt = c_int;
+
+#[cfg(any(
     target_os = "ios",
     target_os = "visionos",
     target_os = "macos",
