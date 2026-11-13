@@ -2009,7 +2009,7 @@ fn join_and_leave_multicast_v4_by_index() {
     use socket2::InterfaceIndexOrAddress;
 
     let group = Ipv4Addr::new(224, 0, 0, 251);
-    let lo0 = unsafe { libc::if_nametoindex(c"lo0".as_ptr()) };
+    let lo0 = unsafe { libc::if_nametoindex(b"lo0\0".as_ptr().cast()) };
     assert_ne!(lo0, 0);
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
     let by_index = InterfaceIndexOrAddress::Index(lo0);
