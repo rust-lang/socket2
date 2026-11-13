@@ -1524,6 +1524,20 @@ pub(crate) const fn to_mreqn(
     }
 }
 
+#[cfg(target_vendor = "apple")]
+pub(crate) use libc::{group_req, MCAST_JOIN_GROUP, MCAST_LEAVE_GROUP};
+
+/// The `group_req` that joins or leaves `multiaddr` on interface `interface_index`.
+#[cfg(target_vendor = "apple")]
+pub(crate) fn to_group_req(multiaddr: &Ipv4Addr, interface_index: u32) -> group_req {
+    let group = SockAddr::from(std::net::SocketAddrV4::new(*multiaddr, 0));
+    group_req {
+        gr_interface: interface_index,
+        // SAFETY: `SockAddrStorage` is `repr(transparent)` over `sockaddr_storage`.
+        gr_group: unsafe { group.as_ptr().cast::<libc::sockaddr_storage>().read() },
+    }
+}
+
 #[cfg(all(
     feature = "all",
     any(target_os = "android", target_os = "fuchsia", target_os = "linux")
