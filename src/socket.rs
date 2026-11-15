@@ -1779,7 +1779,7 @@ impl Socket {
     ))]
     pub fn dontfrag_v4(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_DONTFRAG)
+            getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_IP, sys::IP_DONTFRAG)
                 .map(|dontfrag| dontfrag != 0)
         }
     }
@@ -2346,7 +2346,7 @@ impl Socket {
     ))]
     pub fn dontfrag_v6(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_DONTFRAG)
+            getsockopt::<Bool>(self.as_raw(), sys::IPPROTO_IPV6, sys::IPV6_DONTFRAG)
                 .map(|dontfrag| dontfrag != 0)
         }
     }
