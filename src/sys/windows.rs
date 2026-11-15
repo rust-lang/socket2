@@ -80,9 +80,11 @@ pub(crate) type sa_family_t = windows_sys::Win32::Networking::WinSock::ADDRESS_F
 pub(crate) type socklen_t = windows_sys::Win32::Networking::WinSock::socklen_t;
 // Used in `Socket`.
 #[cfg(feature = "all")]
+pub(crate) use windows_sys::Win32::Networking::WinSock::IP_DONTFRAGMENT as IP_DONTFRAG;
+#[cfg(feature = "all")]
 pub(crate) use windows_sys::Win32::Networking::WinSock::IP_HDRINCL;
 pub(crate) use windows_sys::Win32::Networking::WinSock::{
-    IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, IPV6_DROP_MEMBERSHIP, IPV6_MREQ as Ipv6Mreq,
+    IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, IPV6_DONTFRAG, IPV6_DROP_MEMBERSHIP, IPV6_MREQ as Ipv6Mreq,
     IPV6_MULTICAST_HOPS, IPV6_MULTICAST_IF, IPV6_MULTICAST_LOOP, IPV6_RECVTCLASS,
     IPV6_UNICAST_HOPS, IPV6_V6ONLY, IP_ADD_MEMBERSHIP, IP_ADD_SOURCE_MEMBERSHIP,
     IP_DROP_MEMBERSHIP, IP_DROP_SOURCE_MEMBERSHIP, IP_MREQ as IpMreq,
