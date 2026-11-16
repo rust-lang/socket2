@@ -1292,8 +1292,9 @@ const fn from_timeval(duration: libc::timeval) -> Option<Duration> {
     if duration.tv_sec == 0 && duration.tv_usec == 0 {
         None
     } else {
-        let sec = duration.tv_sec as u64;
-        let nsec = (duration.tv_usec as u32) * 1000;
+        let usec = duration.tv_usec as u64;
+        let sec = duration.tv_sec as u64 + usec / 1_000_000;
+        let nsec = (usec % 1_000_000) as u32 * 1000;
         Some(Duration::new(sec, nsec))
     }
 }
@@ -3162,4 +3163,72 @@ fn in6_addr_convertion() {
     let want = [32, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7];
     assert_eq!(raw.s6_addr, want);
     assert_eq!(from_in6_addr(raw), ip);
+}
+
+#[test]
+fn from_timeval_zero() {
+    assert_eq!(
+        from_timeval(libc::timeval {
+            tv_sec: 0,
+            tv_usec: 0,
+        }),
+        None,
+    );
+}
+
+#[test]
+fn from_timeval_normalised() {
+    for (sec, usec) in [(0, 1), (1, 0), (12, 999_999)] {
+        assert_eq!(
+            from_timeval(libc::timeval {
+                tv_sec: sec,
+                tv_usec: usec,
+            }),
+            Some(Duration::new(sec as u64, usec as u32 * 1000)),
+        );
+    }
+}
+
+#[test]
+#[cfg_attr(target_env = "musl", allow(deprecated))]
+fn from_timeval_non_normalised() {
+    for (usec, expected) in [
+        (1_000_000, Duration::new(8, 0)),
+        (4_294_967, Duration::new(11, 294_967_000)),
+        (4_294_968, Duration::new(11, 294_968_000)),
+        (i32::MAX, Duration::new(2_154, 483_647_000)),
+    ] {
+        assert_eq!(
+            from_timeval(libc::timeval {
+                tv_sec: 7,
+                tv_usec: usec.into(),
+            }),
+            Some(expected),
+        );
+    }
+
+    if let Ok(usec) = libc::suseconds_t::try_from(u64::from(u32::MAX) + 1) {
+        assert_eq!(
+            from_timeval(libc::timeval {
+                tv_sec: 7,
+                tv_usec: usec,
+            }),
+            Some(Duration::new(4_301, 967_296_000)),
+        );
+    }
+}
+
+#[test]
+#[cfg_attr(target_env = "musl", allow(deprecated))]
+fn from_timeval_max() {
+    let sec = libc::time_t::MAX;
+    let usec = libc::suseconds_t::MAX;
+    let expected = Duration::from_secs(sec as u64) + Duration::from_micros(usec as u64);
+    assert_eq!(
+        from_timeval(libc::timeval {
+            tv_sec: sec,
+            tv_usec: usec,
+        }),
+        Some(expected),
+    );
 }
