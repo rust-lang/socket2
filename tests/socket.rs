@@ -175,6 +175,44 @@ fn socket_address_unix() {
 
 #[test]
 #[cfg(not(target_os = "wasi"))]
+fn socket_address_unix_invalid_pathname() {
+    for path in ["a\0b", "a\0", "a\0b\0c"] {
+        let err = SockAddr::unix(path).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+    }
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "wasi")))]
+fn socket_address_unix_padded_raw_pathname() {
+    let original = SockAddr::unix("socket").unwrap();
+    // SAFETY: a null-terminated pathname and zero padding form a valid
+    // sockaddr_un. Raw callers can supply the full structure length.
+    let (_, addr) = unsafe {
+        SockAddr::try_init(|storage, len| {
+            std::ptr::copy_nonoverlapping(original.as_ptr(), storage, 1);
+            *len = mem::size_of::<libc::sockaddr_un>() as _;
+            Ok(())
+        })
+    }
+    .unwrap();
+    assert!(addr.as_pathname().unwrap().as_os_str().len() > "socket".len());
+    assert!(addr.as_unix().is_none());
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "wasi")))]
+fn socket_address_unix_non_utf8_pathname() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    let path = Path::new(OsStr::from_bytes(b"socket-\xff"));
+    let addr = SockAddr::unix(path).unwrap();
+    assert_eq!(addr.as_unix().unwrap().as_pathname(), Some(path));
+}
+
+#[test]
+#[cfg(not(target_os = "wasi"))]
 fn socket_address_unix_unnamed() {
     let addr = SockAddr::unix("").unwrap();
     assert!(addr.as_socket_ipv4().is_none());
@@ -208,7 +246,20 @@ fn socket_address_unix_abstract_namespace() {
     // The first byte is the opening null bytes of an abstract address, should not be included.
     assert_eq!(addr.as_abstract_namespace(), Some(&path.as_bytes()[1..]));
     assert!(addr.as_pathname().is_none());
+    assert!(addr.as_unix().is_none());
     assert!(!addr.is_unnamed());
+}
+
+#[test]
+#[cfg(any(target_os = "linux", target_os = "android", target_os = "cygwin"))]
+fn socket_address_unix_abstract_null_bytes() {
+    for path in ["\0", "\0\0", "\0abstract\0payload"] {
+        let addr = SockAddr::unix(path).unwrap();
+        assert_eq!(addr.as_abstract_namespace(), Some(&path.as_bytes()[1..]));
+        assert!(addr.as_pathname().is_none());
+        assert!(addr.as_unix().is_none());
+        assert!(!addr.is_unnamed());
+    }
 }
 
 #[test]
