@@ -566,18 +566,39 @@ fn connect_timeout_unbound() {
 #[test]
 #[cfg(not(target_os = "wasi"))] // WASI uses start-connect/finish-connect, no connect_timeout.
 fn connect_timeout_valid() {
-    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    socket
-        .bind(&"127.0.0.1:0".parse::<SocketAddr>().unwrap().into())
-        .unwrap();
-    socket.listen(128).unwrap();
+    connect_timeout_valid_for("127.0.0.1:0".parse().unwrap());
+    #[cfg(not(any(target_os = "redox", target_os = "vita")))]
+    connect_timeout_valid_for("[::1]:0".parse().unwrap());
+}
 
-    let addr = socket.local_addr().unwrap();
+#[cfg(not(target_os = "wasi"))]
+fn connect_timeout_valid_for(address: SocketAddr) {
+    let listener = Socket::new(Domain::for_address(address), Type::STREAM, None).unwrap();
+    listener.bind(&address.into()).unwrap();
+    listener.listen(128).unwrap();
 
-    let socket = Socket::new(Domain::IPV4, Type::STREAM, None).unwrap();
-    socket
-        .connect_timeout(&addr, Duration::from_millis(250))
+    let address = listener.local_addr().unwrap();
+    let socket_address = address.as_socket().unwrap();
+    let mut client = Socket::new(Domain::for_address(socket_address), Type::STREAM, None).unwrap();
+    client
+        .connect_timeout(&address, Duration::from_millis(250))
         .unwrap();
+
+    assert_nonblocking(&client, false);
+    assert_eq!(
+        client.peer_addr().unwrap().as_socket(),
+        Some(socket_address)
+    );
+
+    let (mut accepted, peer_address) = listener.accept().unwrap();
+    assert_eq!(
+        peer_address.as_socket(),
+        client.local_addr().unwrap().as_socket()
+    );
+    client.write_all(DATA).unwrap();
+    let mut buffer = [0; DATA.len()];
+    accepted.read_exact(&mut buffer).unwrap();
+    assert_eq!(&buffer, DATA);
 }
 
 #[test]
