@@ -1047,6 +1047,12 @@ pub(crate) fn unix_sockaddr(path: &Path) -> io::Result<SockAddr> {
                 "path must be shorter than SUN_LEN",
             ));
         }
+        if bytes.first() != Some(&0) && bytes.contains(&0) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path must not contain null bytes",
+            ));
+        }
 
         storage.sun_family = crate::sys::AF_UNIX as sa_family_t;
         // SAFETY: casting `[u8]` to `[i8]` is safe.
