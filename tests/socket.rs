@@ -2002,3 +2002,26 @@ fn min_hopcount_v6_preserves_outbound_hops() {
     assert_eq!(socket.min_hopcount_v6().unwrap(), 197);
     assert_eq!(socket.unicast_hops_v6().unwrap(), 61);
 }
+
+#[test]
+#[cfg(target_vendor = "apple")]
+fn join_and_leave_multicast_v4_by_index() {
+    use socket2::InterfaceIndexOrAddress;
+
+    let group = Ipv4Addr::new(224, 0, 0, 251);
+    let lo0 = unsafe { libc::if_nametoindex(b"lo0\0".as_ptr().cast()) };
+    assert_ne!(lo0, 0);
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+    let by_index = InterfaceIndexOrAddress::Index(lo0);
+
+    // Crossing index and lo0's address only works if the index really picks lo0,
+    // not an interface the kernel chose by route.
+    socket.join_multicast_v4_n(&group, &by_index).unwrap();
+    socket
+        .leave_multicast_v4(&group, &Ipv4Addr::LOCALHOST)
+        .unwrap();
+    socket
+        .join_multicast_v4(&group, &Ipv4Addr::LOCALHOST)
+        .unwrap();
+    socket.leave_multicast_v4_n(&group, &by_index).unwrap();
+}

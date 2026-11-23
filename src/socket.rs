@@ -1343,6 +1343,10 @@ impl Socket {
     /// The address must be a valid multicast address, and `interface` specifies
     /// the local interface with which the system should join the multicast
     /// group. See [`InterfaceIndexOrAddress`].
+    ///
+    /// On Apple platforms an [`InterfaceIndexOrAddress::Index`] is joined with
+    /// `MCAST_JOIN_GROUP`, because `IP_ADD_MEMBERSHIP` ignores the index there and
+    /// picks the interface by address.
     #[cfg(not(any(
         target_os = "aix",
         target_os = "haiku",
@@ -1363,6 +1367,15 @@ impl Socket {
         multiaddr: &Ipv4Addr,
         interface: &InterfaceIndexOrAddress,
     ) -> io::Result<()> {
+        // Index 0 means no interface, so the kernel picks one by route as before.
+        #[cfg(target_vendor = "apple")]
+        if let InterfaceIndexOrAddress::Index(index @ 1..) = interface {
+            let req = sys::to_group_req(multiaddr, *index);
+            return unsafe {
+                setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::MCAST_JOIN_GROUP, req)
+            };
+        }
+
         let mreqn = sys::to_mreqn(multiaddr, interface);
         unsafe {
             setsockopt(
@@ -1379,6 +1392,9 @@ impl Socket {
     /// For more information about this option, see [`join_multicast_v4_n`].
     ///
     /// [`join_multicast_v4_n`]: Socket::join_multicast_v4_n
+    ///
+    /// On Apple platforms an [`InterfaceIndexOrAddress::Index`] is left with
+    /// `MCAST_LEAVE_GROUP`, see [`join_multicast_v4_n`].
     #[cfg(not(any(
         target_os = "aix",
         target_os = "haiku",
@@ -1399,6 +1415,15 @@ impl Socket {
         multiaddr: &Ipv4Addr,
         interface: &InterfaceIndexOrAddress,
     ) -> io::Result<()> {
+        // Index 0 means no interface, so the kernel picks one by route as before.
+        #[cfg(target_vendor = "apple")]
+        if let InterfaceIndexOrAddress::Index(index @ 1..) = interface {
+            let req = sys::to_group_req(multiaddr, *index);
+            return unsafe {
+                setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::MCAST_LEAVE_GROUP, req)
+            };
+        }
+
         let mreqn = sys::to_mreqn(multiaddr, interface);
         unsafe {
             setsockopt(
