@@ -20,7 +20,7 @@ use std::os::fd::{FromRawFd, IntoRawFd};
 use std::os::windows::io::{FromRawSocket, IntoRawSocket};
 use std::time::Duration;
 
-use crate::sys::{self, c_int, getsockopt, setsockopt, Bool};
+use crate::sys::{self, c_int, getsockopt, setsockopt, Bool, IpMulticastOpt};
 #[cfg(all(unix, not(any(target_os = "redox", target_os = "horizon"))))]
 use crate::MsgHdrMut;
 use crate::{Domain, Protocol, SockAddr, TcpKeepalive, Type};
@@ -1562,7 +1562,7 @@ impl Socket {
     /// [`set_multicast_loop_v4`]: Socket::set_multicast_loop_v4
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
+            getsockopt::<IpMulticastOpt>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_LOOP)
                 .map(|loop_v4| loop_v4 != 0)
         }
     }
@@ -1577,7 +1577,7 @@ impl Socket {
                 self.as_raw(),
                 sys::IPPROTO_IP,
                 sys::IP_MULTICAST_LOOP,
-                loop_v4 as c_int,
+                IpMulticastOpt::from(loop_v4),
             )
         }
     }
@@ -1589,7 +1589,7 @@ impl Socket {
     /// [`set_multicast_ttl_v4`]: Socket::set_multicast_ttl_v4
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
         unsafe {
-            getsockopt::<c_int>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
+            getsockopt::<IpMulticastOpt>(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL)
                 .map(|ttl| ttl as u32)
         }
     }
@@ -1602,14 +1602,10 @@ impl Socket {
     ///
     /// Note that this may not have any affect on IPv6 sockets.
     pub fn set_multicast_ttl_v4(&self, ttl: u32) -> io::Result<()> {
-        unsafe {
-            setsockopt(
-                self.as_raw(),
-                sys::IPPROTO_IP,
-                sys::IP_MULTICAST_TTL,
-                ttl as c_int,
-            )
-        }
+        let ttl = IpMulticastOpt::try_from(ttl).map_err(|_| {
+            io::Error::new(io::ErrorKind::InvalidInput, "multicast TTL out of range")
+        })?;
+        unsafe { setsockopt(self.as_raw(), sys::IPPROTO_IP, sys::IP_MULTICAST_TTL, ttl) }
     }
 
     /// Get the value of the `IP_TTL` option for this socket.

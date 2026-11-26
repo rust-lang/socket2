@@ -1649,6 +1649,57 @@ test!(IPv4 multicast_all_v4, set_multicast_all_v4(false));
 test!(IPv6 multicast_all_v6, set_multicast_all_v6(false));
 
 #[test]
+fn multicast_loop_v4() {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+
+    let initial = socket
+        .multicast_loop_v4()
+        .expect("failed to get initial value");
+
+    assert_ne!(initial, false, "initial value and argument are the same");
+
+    socket
+        .set_multicast_loop_v4(false)
+        .expect("failed to set option");
+
+    let got = socket.multicast_loop_v4().expect("failed to get value");
+
+    assert_eq!(got, false, "set and get values differ");
+}
+
+#[test]
+fn multicast_ttl_v4() {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+
+    let initial = socket
+        .multicast_ttl_v4()
+        .expect("failed to get initial value");
+
+    assert_ne!(initial, 255, "initial value and argument are the same");
+
+    socket
+        .set_multicast_ttl_v4(255)
+        .expect("failed to set option");
+
+    let got = socket.multicast_ttl_v4().expect("failed to get value");
+
+    assert_eq!(got, 255, "set and get values differ");
+}
+
+#[test]
+fn multicast_ttl_v4_out_of_range() {
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+
+    for ttl in [256, u32::MAX] {
+        match socket.set_multicast_ttl_v4(ttl) {
+            Ok(()) => panic!("unexpected success for {}", ttl),
+            Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => {}
+            Err(err) => panic!("unexpected error {}", err),
+        }
+    }
+}
+
+#[test]
 #[cfg(not(any(
     target_os = "haiku",
     target_os = "illumos",
